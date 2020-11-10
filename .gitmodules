@@ -1,12 +1,12 @@
 [submodule "c/third_party/librtcm"]
 	path = c/third_party/librtcm
-	url = https://github.com/swift-nav/librtcm.git
+	url = git@github.com:swift-nav/librtcm-private.git
 [submodule "c/third_party/libsbp"]
 	path = c/third_party/libsbp
 	url = https://github.com/swift-nav/libsbp.git
 [submodule "c/third_party/libswiftnav"]
 	path = c/third_party/libswiftnav
-	url = https://github.com/swift-nav/libswiftnav.git
+	url = git@github.com:swift-nav/libswiftnav-private.git
 [submodule "c/cmake/common"]
 	path = c/cmake/common
 	url = https://github.com/swift-nav/cmake.git
@@ -15,7 +15,7 @@
 	url = https://github.com/swift-nav/check.git
 [submodule "c/third_party/libubx"]
 	path = c/third_party/libubx
-	url = https://github.com/swift-nav/libubx.git
+	url = git@github.com:swift-nav/libubx-private.git
 [submodule "c/third_party/libixcom"]
 	path = c/third_party/libixcom
-	url = https://github.com/swift-nav/libixcom.git
+	url = git@github.com:swift-nav/libixcom-private.git
