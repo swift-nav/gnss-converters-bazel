@@ -17,12 +17,15 @@ option(gnss-converters_BUILD_BINARIES "" true)
 include(ClangFormat)
 swift_setup_clang_format()
 include(ClangTidy)
+
 if(CMAKE_C_COMPILER_ID MATCHES "GNU")
   # clang-tidy doesn't like -Wno-psabi which it picks up from compile_commands.json
   # when using a GNU compiler. Doesn't apply when using clang compiler.
   set(clang_tidy_extra_args "EXTRA_ARGS" "-extra-arg=-Wno-unknown-warning-option")
 endif()
-swift_setup_clang_tidy(PATTERNS 'src/*.c' ${clang_tidy_extra_args})
+
+swift_setup_clang_tidy(PATTERNS 'src/*.c' 'src/*.cc' ${clang_tidy_extra_args})
+
 include(CodeCoverage)
 add_code_coverage_all_targets()
 
@@ -43,6 +46,14 @@ find_package(Ubx REQUIRED)
 
 option(libixcom_ENABLE_TESTS "" OFF)
 find_package(Ixcom REQUIRED)
+
+option(PROJ_TESTS "" OFF)
+option(BUILD_TESTING "" OFF)
+option(BUILD_PROJSYNC "" OFF)
+
+find_package(PROJ REQUIRED)
+
+target_compile_options(swiftnav PRIVATE "-fPIC")
 
 # If NDEBUG is defined, all asserts() will be knocked out, and
 # currently we rely on asserts() for correct behavior.

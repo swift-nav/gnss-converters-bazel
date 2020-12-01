@@ -10,32 +10,35 @@ set -o pipefail
 function build_haskell () {
     cd haskell
     stack build --test
-    cd ../
+    cd ..
 }
 
 function build_rust () {
-  cargo build --release
+  cargo build --release -vv
+  cargo build --release -vv --features nov2sbp --bin nov2sbp
 }
 
 function build_c() {
     cd c
     mkdir build
     cd build
-    /usr/bin/cmake -DCMAKE_INSTALL_PREFIX=./test_install ../
+    /usr/bin/cmake -DCMAKE_INSTALL_PREFIX=test_install ..
     make -j8 VERBOSE=1
+    make do-all-tests
+    make run_test_novatel_parser
     make install
-    cd ../
-    cd ../
+    cd ../..
 }
 
 function build_codecov() {
     cd c
     mkdir build
     cd build
-    /usr/bin/cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ../
-    make -j8 ccov-all
-    cd ../
-    cd ../
+    /usr/bin/cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug .. 2>&1 >cmake.log
+    tail cmake.log
+    make -j8 ccov-all 2>&1 >ccov.log
+    tail ccov.log
+    cd ../..
 }
 
 if [ "$TESTENV" == "stack" ]; then

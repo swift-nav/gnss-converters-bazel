@@ -1,6 +1,4 @@
-# See: http://releases.llvm.org/6.0.1/tools/clang/tools/extra/docs/clang-tidy/checks/list.html
-
-Checks: "*,
-         -hicpp-signed-bitwise,
-         -cert-err34-c,
-         -llvm-include-order"
+Checks: "-*,cert-*,google-*,misc-*,readability-*,clang-analyzer-*,modernize-*,performance-*,-clang-analyzer-alpha*,cppcoreguidelines-*,cert-*,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-pro-type-vararg,-modernize-pass-by-value,-modernize-deprecated-headers,-modernize-use-default-member-init,-modernize-redundant-void-arg,-modernize-use-using,-modernize-use-equals-delete,-modernize-use-equals-default,-modernize-use-bool-literals,-modernize-use-auto,-modernize-use-emplace,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-type-member-init,-readability-avoid-const-params-in-decls,-readability-non-const-parameter,-readability-redundant-member-init,-readability-redundant-declaration,-cert-err34-c,-cert-err58-cpp,-performance-unnecessary-value-param,-google-runtime-references,-clang-analyzer-optin.cplusplus.VirtualCall,-clang-analyzer-core.CallAndMessage,-clang-analyzer-core.UndefinedBinaryOperatorResult,-clang-analyzer-core.uninitialized.Assign,-cppcoreguidelines-owning-memory,-clang-analyzer-core.uninitialized.UndefReturn,-cert-dcl21-cpp,-modernize-return-braced-init-list"
+HeaderFilterRegex: 'gnss-converters/.*'
+AnalyzeTemporaryDtors: true
+...

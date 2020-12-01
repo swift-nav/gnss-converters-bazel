@@ -23,6 +23,7 @@ matrix:
           packages:
             - cmake
             - g++-6
+            - sqlite3
       env: GCCVER=6 TESTENV=gcc6
 
     - os: linux
@@ -45,7 +46,7 @@ matrix:
 
     - os: linux
       language: rust
-      rust: nightly-2020-05-25
+      rust: stable
       addons:
         apt:
           sources:
@@ -57,23 +58,24 @@ matrix:
           packages:
             - cmake
             - clang-6.0
+            - sqlite3
       env: TESTENV=rust CC=clang-6.0 CXX=clang++-6.0
 
     - os: osx
       osx_image: xcode10
       language: rust
-      rust: nightly-2020-05-25
+      rust: stable
       env: TESTENV=rust CC=clang CXX=clang++
 
-#    - os: windows
-#      language: rust
-#      rust: nightly-2020-05-25-x86_64-pc-windows-gnu
-#      env:
-#        - TESTENV=rust
-#        - CMAKE_GENERATOR="MinGW Makefiles"
-#        - CC=gcc
-#        - CXX=g++
-#
+    - os: windows
+      language: rust
+      rust: stable-x86_64-pc-windows-gnu
+      env:
+        - TESTENV=rust
+        - CMAKE_GENERATOR="MinGW Makefiles"
+        - CC=gcc
+        - CXX=g++
+
 cache:
   apt: true
   directories:
@@ -113,6 +115,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
       choco uninstall -y mingw;
       choco install -y --no-progress mingw --version=6.4.0;
+      choco install -y --no-progress sqlite;
     fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]] && [[ "$TESTENV" == "rust" ]]; then
       export CMAKE=/usr/bin/cmake;
@@ -130,7 +133,8 @@ script:
   - bash ./travis.sh
   - if [[ "$TESTENV" == "rust" ]] && [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
       cd target/release;
-      7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe;
+      strip.exe rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe;
+      7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe;
       cd ../..;
       VERSION="$(git describe --always --tags --dirty)";
       BUILD_TRIPLET="$($CC -dumpmachine)";
@@ -138,14 +142,16 @@ script:
       ls -l;
     fi
   - if [[ "$TESTENV" == "rust" ]] && [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-      tar -C "target/release" -czf gnss_converters_osx.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp;
+      (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp);
+      tar -C "target/release" -czf gnss_converters_osx.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp;
       VERSION="$(git describe --always --tags --dirty)";
       BUILD_TRIPLET="$($CC -dumpmachine)";
       mv gnss_converters_osx.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
       ls -l;
     fi
   - if [[ "$TESTENV" == "rust" ]] && [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-      tar -C "target/release" -czf gnss_converters_linux.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp;
+      (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp);
+      tar -C "target/release" -czf gnss_converters_linux.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp;
       VERSION="$(git describe --always --tags --dirty)";
       BUILD_TRIPLET="$($CC -dumpmachine)";
       mv gnss_converters_linux.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
