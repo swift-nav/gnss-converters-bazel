@@ -22,7 +22,7 @@ function build_c() {
     cd c
     mkdir build
     cd build
-    /usr/bin/cmake -DCMAKE_INSTALL_PREFIX=test_install ..
+    /usr/bin/cmake -DCMAKE_INSTALL_PREFIX=test_install -Dnov2sbp_BUILD=true ..
     make -j8 VERBOSE=1
     make do-all-tests
     make run_test_novatel_parser
@@ -34,7 +34,7 @@ function build_codecov() {
     cd c
     mkdir build
     cd build
-    /usr/bin/cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug .. 2>&1 >cmake.log
+    /usr/bin/cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -Dnov2sbp_BUILD=true .. 2>&1 >cmake.log
     tail cmake.log
     make -j8 ccov-all 2>&1 >ccov.log
     tail ccov.log

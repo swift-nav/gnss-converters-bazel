@@ -53,6 +53,7 @@ fn invoke_cmake(
     let mut cmake = cmake::Config::new(src_dir);
 
     cmake.define("gnss-converters_ENABLE_TESTS", "OFF");
+    cmake.define("nov2sbp_BUILD", "ON");
 
     cmake.define("CMAKE_CXX_STANDARD", "14");
     cmake.define("BUILD_SHARED_LIBS", "OFF");

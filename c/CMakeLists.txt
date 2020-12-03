@@ -47,11 +47,14 @@ find_package(Ubx REQUIRED)
 option(libixcom_ENABLE_TESTS "" OFF)
 find_package(Ixcom REQUIRED)
 
+option(nov2sbp_BUILD "" OFF)
 option(PROJ_TESTS "" OFF)
 option(BUILD_TESTING "" OFF)
 option(BUILD_PROJSYNC "" OFF)
 
-find_package(PROJ REQUIRED)
+if (nov2sbp_BUILD)
+  find_package(PROJ REQUIRED)
+endif()
 
 target_compile_options(swiftnav PRIVATE "-fPIC")
 
