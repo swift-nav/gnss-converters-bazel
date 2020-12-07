@@ -65,7 +65,8 @@ static void pack_sbas_data(const u8 *buffer,
  * @param data context data
  * @param prn transmitter's PRN
  * @param subframe the array of full subframe (32 bit words)
- * @param sz must be 8 (number of 32 bit words per one SBAS message)
+ * @param sz must be 8 (number of 32 bit words per one SBAS message) or 9
+ * (workaround for an alleged bug on u-blox F9 series receivers)
  */
 void sbas_decode_subframe(struct ubx_sbp_state *data,
                           int prn,
@@ -74,12 +75,14 @@ void sbas_decode_subframe(struct ubx_sbp_state *data,
   assert(data);
   assert(prn >= SBAS_FIRST_PRN);
   assert(prn < (SBAS_FIRST_PRN + NUM_SATS_SBAS));
-  assert(8 == sz || 9 == sz);
+  assert(8 == sz || 9 == sz);  // sz == 9 is a workaround for an apparent bug on
+                               // u-blox F9 series
 
+  const int kNumberOfWords = 8;
   u8 buffer[32];
 
   /* copy the input word buffer into byte buffer, swapping byte endianness */
-  for (int i = 0; i < sz; i++) {
+  for (int i = 0; i < kNumberOfWords; i++) {
     buffer[i * 4] = (words[i] >> 24U) & 0xFFU;
     buffer[i * 4 + 1] = (words[i] >> 16U) & 0xFFU;
     buffer[i * 4 + 2] = (words[i] >> 8U) & 0xFFU;

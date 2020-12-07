@@ -1012,6 +1012,15 @@ START_TEST(test_rxm_sfrbx_sbas) {
 }
 END_TEST
 
+START_TEST(test_rxm_sfrbx_sbas_f9_series) {
+  struct ubx_sbp_state state;
+  ubx_sbp_init(&state, ubx_sbp_callback_rxm_sfrbx_sbas, NULL);
+  state.last_tow_ms = 250709100;
+
+  test_UBX(&state, RELATIVE_PATH_PREFIX "/data/rxm_sfrbx_sbas_f9.ubx");
+}
+END_TEST
+
 START_TEST(test_esf_meas) {
   struct ubx_sbp_state state;
   ubx_sbp_init(&state, ubx_sbp_callback_esf_meas, NULL);
@@ -1377,6 +1386,7 @@ Suite *ubx_suite(void) {
   tcase_add_test(tc_rxm, test_rxm_sfrbx_bds);
   tcase_add_test(tc_rxm, test_rxm_sfrbx_gal);
   tcase_add_test(tc_rxm, test_rxm_sfrbx_sbas);
+  tcase_add_test(tc_rxm, test_rxm_sfrbx_sbas_f9_series);
   suite_add_tcase(s, tc_rxm);
 
   return s;
