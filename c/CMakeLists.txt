@@ -56,8 +56,6 @@ if (nov2sbp_BUILD)
   find_package(PROJ REQUIRED)
 endif()
 
-target_compile_options(swiftnav PRIVATE "-fPIC")
-
 # If NDEBUG is defined, all asserts() will be knocked out, and
 # currently we rely on asserts() for correct behavior.
 add_compile_options(-UNDEBUG)
