@@ -16,6 +16,8 @@
 #include <strings.h>
 #include <unistd.h>
 
+#include "ubx2sbp_main.h"
+
 static int readfn(uint8_t *buf, size_t len, void *context) {
   (void)context;
   return read(STDIN_FILENO, buf, len);
@@ -26,11 +28,6 @@ static int writefn(uint8_t *buff, uint32_t n, void *context) {
   return write(STDOUT_FILENO, buff, sizeof(uint8_t) * n);
 }
 
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
-
-extern int ubx2sbp_main(int argc, char **argv, readfn_ptr, writefn_ptr, void *);
-
 int main(int argc, char **argv) {
-  return ubx2sbp_main(argc, argv, readfn, writefn, 0);
+  return ubx2sbp_main(argc, argv, NULL, readfn, writefn, 0);
 }

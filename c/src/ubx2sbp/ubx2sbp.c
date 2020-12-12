@@ -16,6 +16,7 @@
 #include <string.h>
 
 #include <gnss-converters/ubx_sbp.h>
+#include "ubx2sbp_main.h"
 
 sbp_state_t sbp_state;
 
