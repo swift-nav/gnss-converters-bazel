@@ -20,9 +20,6 @@
 
 sbp_state_t sbp_state;
 
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
-
 writefn_ptr g_writefn;
 
 static void sbp_write(
