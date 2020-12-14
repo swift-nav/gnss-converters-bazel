@@ -505,30 +505,24 @@ static int fill_msg_vel_ecef(const u8 buf[], msg_vel_ecef_t *msg) {
   return 0;
 }
 
-static int fill_msg_pos_llh_hnr(const u8 buf[], msg_pos_llh_t *msg) {
-  ubx_hnr_pvt hnr_pvt;
-  if (ubx_decode_hnr_pvt(buf, &hnr_pvt) != RC_OK) {
-    return -1;
-  }
-
-  msg->tow = hnr_pvt.i_tow;
-  msg->lat = UBX_SBP_LAT_LON_SCALING * hnr_pvt.lat;
-  msg->lon = UBX_SBP_LAT_LON_SCALING * hnr_pvt.lon;
+static void fill_msg_pos_llh_hnr(const ubx_hnr_pvt *hnr_pvt,
+                                 msg_pos_llh_t *msg) {
+  msg->tow = hnr_pvt->i_tow;
+  msg->lat = UBX_SBP_LAT_LON_SCALING * hnr_pvt->lat;
+  msg->lon = UBX_SBP_LAT_LON_SCALING * hnr_pvt->lon;
   /* convert from mm to m */
-  msg->height = UBX_SBP_HEIGHT_SCALING * hnr_pvt.height;
+  msg->height = UBX_SBP_HEIGHT_SCALING * hnr_pvt->height;
   /* bounding u32 -> u16 conversion */
   u16 max_accuracy = UINT16_MAX;
-  msg->h_accuracy = (u16)(hnr_pvt.horizontal_accuracy > max_accuracy
+  msg->h_accuracy = (u16)(hnr_pvt->horizontal_accuracy > max_accuracy
                               ? max_accuracy
-                              : hnr_pvt.horizontal_accuracy);
-  msg->v_accuracy = (u16)(hnr_pvt.vertical_accuracy > max_accuracy
+                              : hnr_pvt->horizontal_accuracy);
+  msg->v_accuracy = (u16)(hnr_pvt->vertical_accuracy > max_accuracy
                               ? max_accuracy
-                              : hnr_pvt.vertical_accuracy);
+                              : hnr_pvt->vertical_accuracy);
 
   msg->n_sats = pvt_state.num_sats;
   msg->flags = pvt_state.flags;
-
-  return 0;
 }
 
 static int fill_msg_fwd(const u8 buf[], const u16 buf_len, msg_fwd_t *msg) {
@@ -931,27 +925,48 @@ static void handle_esf_raw(struct ubx_sbp_state *state, u8 *inbuf) {
 }
 
 static void handle_hnr_pvt(struct ubx_sbp_state *state, u8 *inbuf) {
+  ubx_hnr_pvt hnr_pvt;
   msg_pos_llh_t sbp_pos_llh;
-  if (fill_msg_pos_llh_hnr(inbuf, &sbp_pos_llh) == 0) {
-    state->last_tow_ms = sbp_pos_llh.tow;
-    if (state->use_hnr) {
-      state->cb_ubx_to_sbp(SBP_MSG_POS_LLH,
-                           sizeof(sbp_pos_llh),
-                           (u8 *)&sbp_pos_llh,
-                           state->sender_id,
-                           state->context);
-    }
+  msg_orient_euler_t *sbp_orient_euler = &state->last_orient_euler;
+  if (ubx_decode_hnr_pvt(inbuf, &hnr_pvt) != RC_OK) {
+    return;
+  }
+
+  fill_msg_pos_llh_hnr(&hnr_pvt, &sbp_pos_llh);
+  state->last_tow_ms = sbp_pos_llh.tow;
+
+  sbp_orient_euler->tow = hnr_pvt.i_tow;
+  sbp_orient_euler->yaw = hnr_pvt.heading_vehicle * UBX_NAV_ATT_SCALING;
+  sbp_orient_euler->yaw_accuracy =
+      (float)(hnr_pvt.heading_acc * UBX_NAV_ATT_ACC_SCALING);
+
+  if (state->use_hnr) {
+    state->cb_ubx_to_sbp(SBP_MSG_POS_LLH,
+                         sizeof(sbp_pos_llh),
+                         (u8 *)&sbp_pos_llh,
+                         state->sender_id,
+                         state->context);
+    state->cb_ubx_to_sbp(SBP_MSG_ORIENT_EULER,
+                         sizeof(*sbp_orient_euler),
+                         (u8 *)sbp_orient_euler,
+                         state->sender_id,
+                         state->context);
   }
 }
 
 static void handle_nav_att(struct ubx_sbp_state *state, u8 *inbuf) {
   msg_orient_euler_t sbp_orient_euler;
   if (fill_msg_orient_euler(inbuf, &sbp_orient_euler) == 0) {
-    state->cb_ubx_to_sbp(SBP_MSG_ORIENT_EULER,
-                         sizeof(sbp_orient_euler),
-                         (u8 *)&sbp_orient_euler,
-                         state->sender_id,
-                         state->context);
+    memcpy(&state->last_orient_euler,
+           &sbp_orient_euler,
+           sizeof(msg_orient_euler_t));
+    if (!state->use_hnr) {
+      state->cb_ubx_to_sbp(SBP_MSG_ORIENT_EULER,
+                           sizeof(sbp_orient_euler),
+                           (u8 *)&sbp_orient_euler,
+                           state->sender_id,
+                           state->context);
+    }
   }
 }
 
