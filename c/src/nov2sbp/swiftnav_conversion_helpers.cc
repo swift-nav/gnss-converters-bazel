@@ -377,6 +377,7 @@ void convert_bestvel_to_vel_ned(const BinaryHeader *header,
   vel_ned->d = -double_to_s32(1000. * bestvel->vert_speed);
   vel_ned->h_accuracy = 0;
   vel_ned->v_accuracy = 0;
+  vel_ned->n_sats = 0;
   /*
    * Note: flags are only non-zero if the BESTPOS message for this epoch
    * is present in the log before the corresponding BESTVEL message

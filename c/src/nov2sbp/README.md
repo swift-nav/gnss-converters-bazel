@@ -1,9 +1,9 @@
 # Novatel Support
 Functionality and tools for processing Novatel data.
-Compilation of these tools is gated on the `BUILD_NOVATEL_SUPPORT` CMake option.
+Compilation of these tools is gated on the `nov2sbp_BUILD` CMake option.
 
 When creating a new build, enable Novatel support like so:
-    cmake -DBUILD_NOVATEL_SUPPORT=ON <project_dir> 
+    cmake -Dnov2sbp_BUILD=true <project_dir>
 
 # Targets
 * libnovatel-parser
