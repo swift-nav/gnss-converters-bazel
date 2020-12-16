@@ -1185,7 +1185,8 @@ START_TEST(test_nav_status) {
   msg_rawx.rcv_tow = 567.8;
   msg_rawx.class_id = UBX_CLASS_RXM;
   msg_rawx.msg_id = UBX_MSG_RXM_RAWX;
-  msg_rawx.length = 16;
+  msg_rawx.num_meas = 1;
+  msg_rawx.length = 16 + 32 * msg_rawx.num_meas;
   buffer[0] = UBX_SYNC_CHAR_1;
   buffer[1] = UBX_SYNC_CHAR_2;
   n_bytes = ubx_encode_rawx(&msg_rawx, &buffer[2]);

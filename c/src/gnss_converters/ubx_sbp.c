@@ -909,7 +909,7 @@ static void handle_esf_raw(struct ubx_sbp_state *state, u8 *inbuf) {
     // Check if the current IMU message is complete (all axes received) and
     // output an SBP message if it is.
     if (check_imu_message_complete(received_number_msgs, current_msg_number)) {
-      if (state->esf_state.imu_raw_msgs_sent % 100 == 0) {
+      if (state->esf_state.imu_raw_msgs_sent % 20 == 0) {
         send_imu_aux(state);
         state->esf_state.imu_raw_msgs_sent = 0;
       }
@@ -1086,7 +1086,7 @@ static void handle_nav_status(struct ubx_sbp_state *state, u8 *inbuf) {
                         (nav_status.fix_type == fix_type_gnss_dr)) &&
                        (nav_status.status_flags & gps_fix_ok);
 
-  const u8 weeknumber_ok = 0b0100;
+  const u8 weeknumber_ok = 0b1000;
   const u8 tow_ok = 0b0100;
   bool time_good = (nav_status.status_flags & weeknumber_ok) &&
                    (nav_status.status_flags & tow_ok);
@@ -1157,7 +1157,8 @@ static void handle_rxm_rawx(struct ubx_sbp_state *state,
     return;
   }
 
-  if (state->esf_state.weeknumber_set) {
+  if (rxm_rawx.num_meas != 0 && rxm_rawx.rcv_wn != 0 &&
+      state->esf_state.weeknumber_set) {
     state->esf_state.last_obs_time_gnss.tow = rxm_rawx.rcv_tow;
     state->esf_state.last_obs_time_gnss.wn = rxm_rawx.rcv_wn;
   }
