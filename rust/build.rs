@@ -77,6 +77,11 @@ fn invoke_cmake(
     }
 
     cmake.always_configure(false);
+    if let Ok(verbose) = env::var("VERBOSE") {
+        if verbose == "1" {
+            cmake.build_arg("VERBOSE=1");
+        }
+    }
 
     if let Ok(generator) = env::var("CMAKE_GENERATOR") {
         cmake.generator(generator);

@@ -3,6 +3,12 @@
 sudo: required
 dist: bionic
 
+branches:
+  only:
+    - master
+    - /^v.*$/
+    - /^starling-v.*$/
+
 language: c
 
 git:
