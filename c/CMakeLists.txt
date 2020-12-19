@@ -54,6 +54,8 @@ option(BUILD_PROJSYNC "" OFF)
 
 if (nov2sbp_BUILD)
   find_package(PROJ REQUIRED)
+  target_compile_options(swiftnav PRIVATE -DGEOID_MODEL_FULL_RESOLUTION)
+  set(CMAKE_C_FLAGS "-DGEOID_MODEL_FULL_RESOLUTION ${CMAKE_C_FLAGS}")
 endif()
 
 # If NDEBUG is defined, all asserts() will be knocked out, and
