@@ -19,6 +19,3 @@
 [submodule "c/third_party/libixcom"]
 	path = c/third_party/libixcom
 	url = git@github.com:swift-nav/libixcom-private.git
-[submodule "c/third_party/PROJ"]
-	path = c/third_party/PROJ
-	url = https://github.com/swift-nav/PROJ.git
