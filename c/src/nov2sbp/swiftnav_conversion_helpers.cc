@@ -12,7 +12,7 @@
 
 #include <string>
 
-#include <proj.h>
+#include <swiftnav/geoid_model.h>
 #include "swiftnav_conversion_helpers.h"
 
 /**
@@ -56,52 +56,6 @@ static class PositionFlagsTracker {
     return 0;
   }
 } last_position_flags;
-
-// wrapper for proj, used to calculate geoidal separation
-class Transformer {
- private:
-  PJ *proj;
-  PJ_CONTEXT *proj_context;
-
-  // proj pipeline generated with `projinfo -s EGM96 -t WGS84 --3d`
-  // requires /usr/share/proj/egm96_15.gtx
-  static constexpr const char *proj_pipeline =
-      "+proj=vgridshift +grids=egm96_15.gtx +multiplier=1";
-
- public:
-  Transformer() { proj = proj_create(PJ_DEFAULT_CTX, proj_pipeline); }
-
-  ~Transformer() {
-    if (proj != nullptr) {
-      proj_destroy(proj);
-    }
-  }
-
-  double get_geoidal_separation(double latitude, double longitude) {
-    if (proj != nullptr) {
-      PJ_COORD input =
-          proj_coord(proj_torad(longitude), proj_torad(latitude), 0., 0.);
-      PJ_COORD output = proj_trans(proj, PJ_FWD, input);
-      return output.v[2];
-    }
-
-    return 0.;
-  }
-
-  static Transformer *get() {
-    static Transformer *instance = nullptr;
-    if (instance == nullptr) {
-      instance = new Transformer();
-    }
-    return instance;
-  }
-};
-
-extern "C" void nov2sbp_proj_context_set_search_paths(const char *path) {
-  std::string paths(path);
-  const char *paths_cstr = paths.c_str();
-  proj_context_set_search_paths(PJ_DEFAULT_CTX, 1, &paths_cstr);
-}
 
 namespace Novatel {
 
@@ -335,7 +289,7 @@ static uint8_t get_position_flags(uint32_t pos_type) {
  * height above WGS84 ellipsoid
  */
 static double convert_to_wgs84_height(double lat, double lon, double hgt) {
-  double sep = Transformer::get()->get_geoidal_separation(lat, lon);
+  double sep = get_geoid_offset(lat * D2R, lon * D2R);
   return hgt + sep;
 }
 

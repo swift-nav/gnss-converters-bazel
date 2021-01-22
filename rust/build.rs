@@ -128,7 +128,6 @@ fn main() -> Result<(), Error> {
         println!("cargo:rustc-link-lib=static=sbp");
         println!("cargo:rustc-link-lib=static=ubx");
         println!("cargo:rustc-link-lib=static=ixcom");
-        println!("cargo:rustc-link-lib=static=proj");
         println!("cargo:rustc-link-lib=dylib=m");
     } else {
         return Err("Unknown target OS...".into());

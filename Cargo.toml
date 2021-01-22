@@ -32,13 +32,11 @@ path = "rust/lib.rs"
 
 [features]
 default = []
-nov2sbp = ["xz2", "tempdir"]
+nov2sbp = []
 
 [dependencies]
 libc = "0.2"
 lazy_static = "1"
-xz2 = { version = "0.1", optional = true }
-tempdir = { version = "0.3", optional = true }
 
 [build-dependencies]
 num_cpus = "1"

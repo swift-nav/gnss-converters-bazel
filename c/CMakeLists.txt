@@ -48,12 +48,11 @@ option(libixcom_ENABLE_TESTS "" OFF)
 find_package(Ixcom REQUIRED)
 
 option(nov2sbp_BUILD "" OFF)
-option(PROJ_TESTS "" OFF)
 option(BUILD_TESTING "" OFF)
-option(BUILD_PROJSYNC "" OFF)
 
 if (nov2sbp_BUILD)
-  find_package(PROJ REQUIRED)
+  target_compile_options(swiftnav PRIVATE -DGEOID_MODEL_15_MINUTE_RESOLUTION)
+  set(CMAKE_C_FLAGS "-DGEOID_MODEL_15_MINUTE_RESOLUTION ${CMAKE_C_FLAGS}")
 endif()
 
 # If NDEBUG is defined, all asserts() will be knocked out, and
