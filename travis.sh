@@ -53,4 +53,3 @@ function git_update_submodules() {
 
 git_update_submodules
 build
-
