@@ -945,7 +945,7 @@ rtcm3_rc rtcm3_decode_1230(const uint8_t buff[], rtcm_msg_1230 *msg_1230) {
   }
   if (msg_1230->fdma_signal_mask & 0x01) {
     msg_1230->L2_P_cpb_meter = rtcm_getbits(buff, bit, 16) * 0.02;
-    bit += 16;
+    bit += 16;  // NOLINT
   } else {
     msg_1230->L2_P_cpb_meter = 0.0;
   }
@@ -1228,6 +1228,14 @@ static rtcm3_rc rtcm3_decode_msm_internal(const uint8_t buff[],
   double cnr[num_cells];
   double fine_range_rate_m_s[num_cells];
   flag_bf flags[num_cells];
+
+  memset(fine_pr_ms, 0, sizeof(fine_pr_ms));
+  memset(fine_cp_ms, 0, sizeof(fine_cp_ms));
+  memset(lock_time, 0, sizeof(lock_time));
+  memset(hca_indicator, 0, sizeof(hca_indicator));
+  memset(cnr, 0, sizeof(cnr));
+  memset(fine_range_rate_m_s, 0, sizeof(fine_range_rate_m_s));
+  memset(flags, 0, sizeof(flags));
 
   for (uint8_t i = 0; i < num_cells; i++) {
     flags[i].data = 0;
