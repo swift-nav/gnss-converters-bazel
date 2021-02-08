@@ -31,12 +31,12 @@ static int readfn(uint8_t *bytes, uint32_t n_bytes, void *context) {
   if (feof(stdin) != 0) {
     return -1;
   }
-  return fread(bytes, sizeof(*bytes), n_bytes, stdin);
+  return static_cast<int>(fread(bytes, sizeof(*bytes), n_bytes, stdin));
 }
 
 static int32_t writefn(uint8_t *bytes, uint32_t n_bytes, void *context) {
   (void)context;
-  return fwrite(bytes, sizeof(*bytes), n_bytes, stdout);
+  return static_cast<int>(fwrite(bytes, sizeof(*bytes), n_bytes, stdout));
 }
 
 int main(int argc, char **argv) {

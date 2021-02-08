@@ -85,8 +85,7 @@ void convert_gpsephem_to_ephemeris_gps(const Message::GPSEPHEM_t *gpsephem,
  * standard used in SwiftNav.
  */
 void convert_gloephemeris_to_ephemeris_glo(
-    const Message::GLOEPHEMERIS_t *gloephem, msg_ephemeris_glo_t *ephem)
-    __attribute__((noreturn));
+    const Message::GLOEPHEMERIS_t *gloephem, msg_ephemeris_glo_t *ephem);
 
 /**
  * This is a subset of all the fields in a navigation_measurement_t.

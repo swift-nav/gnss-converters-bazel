@@ -18,6 +18,7 @@
 namespace Novatel {
 
 void Message::RAWIMUSX_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   size_t i = 0;
   imu_info = bytes[i++];
   imu_type = bytes[i++];
@@ -40,6 +41,7 @@ void Message::RAWIMUSX_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
   x_gyro = Util::read_le_int32(bytes + i);
   i += sizeof(int32_t);
 
+  (void)i;
   assert(i == n_bytes);
 }
 }  // namespace Novatel

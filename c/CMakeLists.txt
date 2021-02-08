@@ -6,6 +6,8 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake" "${CMAKE_CURRENT_LIST_DI
 include(GNUInstallDirs)
 include(CCache)
 include(SwiftCmakeOptions)
+include(LanguageStandards)
+include(CompileOptions)
 
 swift_create_project_options(
     HAS_TESTS
@@ -53,17 +55,6 @@ option(BUILD_TESTING "" OFF)
 if (nov2sbp_BUILD)
   target_compile_options(swiftnav PRIVATE -DGEOID_MODEL_15_MINUTE_RESOLUTION)
   set(CMAKE_C_FLAGS "-DGEOID_MODEL_15_MINUTE_RESOLUTION ${CMAKE_C_FLAGS}")
-endif()
-
-# If NDEBUG is defined, all asserts() will be knocked out, and
-# currently we rely on asserts() for correct behavior.
-add_compile_options(-UNDEBUG)
-
-# Some compiler options used globally
-set(CMAKE_C_FLAGS "-Wall -Wextra -Wno-strict-prototypes -Werror -std=gnu99 -fno-unwind-tables -fno-asynchronous-unwind-tables -Wimplicit -Wshadow -Wswitch-default -Wswitch-enum -Wundef -Wuninitialized -Wcast-align -Wformat=2 -Wimplicit-function-declaration -Wredundant-decls -Wformat-security -ggdb ${CMAKE_C_FLAGS}")
-
-if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR CMAKE_C_COMPILER_VERSION VERSION_GREATER 5.0)
-  set(CMAKE_C_FLAGS "-Wfloat-conversion ${CMAKE_C_FLAGS}")
 endif()
 
 add_subdirectory(src)

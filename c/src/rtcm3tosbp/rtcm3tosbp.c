@@ -47,7 +47,7 @@ static void parse_glonass_phase_biases(char *arg);
 static void update_obs_time(const msg_obs_t *msg) {
   gps_time_t obs_time;
   obs_time.tow = msg[0].header.t.tow / 1000.0; /* ms to sec */
-  obs_time.wn = msg[0].header.t.wn;
+  obs_time.wn = (s16)msg[0].header.t.wn;
   /* Some receivers output a TOW 0 whenever it's in a denied environment
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {

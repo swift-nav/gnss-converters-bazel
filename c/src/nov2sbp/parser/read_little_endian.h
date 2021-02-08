@@ -35,37 +35,47 @@ namespace Novatel {
 
 namespace Util {
 
-static const bool kIsBigEndianHost = ((*(const uint16_t *)"\0\xff") < 0x100);
+static const bool kIsBigEndianHost =
+    // NOLINTNEXTLINE
+    ((*reinterpret_cast<const uint16_t *>("\0\xff")) < 0x100);
 static const size_t kBitsPerByte = 8;
 
-static inline uint16_t _le16toh(uint16_t);
-static inline uint32_t _le32toh(uint32_t);
-static inline uint64_t _le64toh(uint64_t);
+static inline uint16_t _le16toh(uint16_t le);
+static inline uint32_t _le32toh(uint32_t le);
+static inline uint64_t _le64toh(uint64_t le);
 
 static inline uint16_t read_le_uint16(const uint8_t *bytes) {
+  // NOLINTNEXTLINE
   return _le16toh(*reinterpret_cast<const uint16_t *>(bytes));
 }
 
 static inline uint32_t read_le_uint32(const uint8_t *bytes) {
+  // NOLINTNEXTLINE
   return _le32toh(*reinterpret_cast<const uint32_t *>(bytes));
 }
 
 static inline int32_t read_le_int32(const uint8_t *bytes) {
+  // NOLINTNEXTLINE
   uint32_t swapped = _le32toh(*reinterpret_cast<const uint32_t *>(bytes));
+  // NOLINTNEXTLINE
   return *reinterpret_cast<int32_t *>(&swapped);
 }
 
 static inline double read_le_double(const uint8_t *bytes) {
   static_assert(sizeof(double) == sizeof(uint64_t),
                 "Bad assumption on double size.");
+  // NOLINTNEXTLINE
   uint64_t swapped = _le64toh(*reinterpret_cast<const uint64_t *>(bytes));
+  // NOLINTNEXTLINE
   return *reinterpret_cast<double *>(&swapped);
 }
 
 static inline float read_le_float(const uint8_t *bytes) {
   static_assert(sizeof(float) == sizeof(uint32_t),
                 "Bad assumption on float size.");
+  // NOLINTNEXTLINE
   uint32_t swapped = _le32toh(*reinterpret_cast<const uint32_t *>(bytes));
+  // NOLINTNEXTLINE
   return *reinterpret_cast<float *>(&swapped);
 }
 
@@ -77,7 +87,7 @@ static inline uint64_t read_le_bits64(const uint8_t *bytes,
   for (size_t i = 0; i < n_bits; ++i) {
     const size_t byte_index = (bit_offset + i) / kBitsPerByte;
     const size_t bit_index = (bit_offset + i) % kBitsPerByte;
-    val |= ((bytes[byte_index] & (1 << bit_index)) ? (1LL << i) : 0LL);
+    val |= (((bytes[byte_index] & (1 << bit_index)) != 0) ? (1LL << i) : 0LL);
   }
   return val;
 }

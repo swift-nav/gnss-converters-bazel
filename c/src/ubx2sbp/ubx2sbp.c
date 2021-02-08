@@ -75,7 +75,7 @@ int ubx2sbp_main(int argc,
         break;
 
       case 's':
-        ubx_set_sender_id(&state, strtol(optarg, NULL, 0));
+        ubx_set_sender_id(&state, (u16)strtol(optarg, NULL, 0));
         break;
 
       case 'h':

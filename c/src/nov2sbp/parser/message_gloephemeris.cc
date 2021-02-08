@@ -18,6 +18,7 @@
 namespace Novatel {
 
 void Message::GLOEPHEMERIS_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   size_t i = 0;
 
   // clang-format off
@@ -51,6 +52,7 @@ void Message::GLOEPHEMERIS_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
   flags        = Util::read_le_uint32(bytes + i); i += sizeof(uint32_t);
   // clang-format on
 
+  (void)i;
   assert(i == n_bytes);
 }
 }  // namespace Novatel

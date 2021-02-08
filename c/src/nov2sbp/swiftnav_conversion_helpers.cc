@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <cmath>
 #include <string>
 
 #include <swiftnav/geoid_model.h>
@@ -19,11 +20,11 @@
  * Helpers for rounding and truncating values.
  */
 static inline uint16_t float_to_u16(float value) {
-  return MIN(round(value), UINT16_MAX);
+  return MIN(static_cast<uint16_t>(round(value)), UINT16_MAX);
 }
 
 static inline int32_t double_to_s32(double value) {
-  return MIN(round(value), INT32_MAX);
+  return MIN(static_cast<int32_t>(round(value)), INT32_MAX);
 }
 
 static inline double radians_to_microdegrees(double val) {
@@ -41,7 +42,7 @@ static class PositionFlagsTracker {
   uint8_t flags_;
 
  public:
-  PositionFlagsTracker() : tow_(~0), flags_(0) {}
+  PositionFlagsTracker() : tow_(~0u), flags_(0) {}
 
   void set(uint32_t tow, uint8_t flags) {
     tow_ = tow;
@@ -307,9 +308,9 @@ void convert_bestpos_to_pos_llh(const BinaryHeader *header,
   pos_llh->lon = bestpos->lon;
   pos_llh->height =
       convert_to_wgs84_height(bestpos->lat, bestpos->lon, bestpos->hgt);
-  pos_llh->v_accuracy = float_to_u16(1000.0 * bestpos->hgt_stddev);
+  pos_llh->v_accuracy = float_to_u16(1000.0f * bestpos->hgt_stddev);
   pos_llh->h_accuracy = float_to_u16(
-      fmax(1000.0 * bestpos->lat_stddev, 1000.0 * bestpos->lon_stddev));
+      fmax(1000.0f * bestpos->lat_stddev, 1000.0f * bestpos->lon_stddev));
   pos_llh->n_sats = bestpos->num_sv_in_soln;
   uint8_t flags = get_position_flags(bestpos->pos_type);
   pos_llh->flags = flags;
@@ -380,17 +381,17 @@ void convert_gpsephem_to_ephemeris_gps(const Message::GPSEPHEM_t *gpsephem,
   ephem->common.sid.code = 0x0;  // 0x0 = GPS_L1CA
   ephem->common.toe.tow = static_cast<uint32_t>(gpsephem->toe);
   ephem->common.toe.wn = static_cast<uint16_t>(gpsephem->week);
-  ephem->common.ura = sqrt(gpsephem->URA);
+  ephem->common.ura = static_cast<float>(sqrt(gpsephem->URA));
   ephem->common.fit_interval = 14400;  // Four hours in seconds.
   ephem->common.valid = 0x1;
-  ephem->common.health_bits = gpsephem->health;
-  ephem->tgd = gpsephem->tgd;
-  ephem->c_rc = gpsephem->crc;
-  ephem->c_rs = gpsephem->crs;
-  ephem->c_uc = gpsephem->cuc;
-  ephem->c_us = gpsephem->cus;
-  ephem->c_ic = gpsephem->cic;
-  ephem->c_is = gpsephem->cis;
+  ephem->common.health_bits = static_cast<uint8_t>(gpsephem->health);
+  ephem->tgd = static_cast<float>(gpsephem->tgd);
+  ephem->c_rc = static_cast<float>(gpsephem->crc);
+  ephem->c_rs = static_cast<float>(gpsephem->crs);
+  ephem->c_uc = static_cast<float>(gpsephem->cuc);
+  ephem->c_us = static_cast<float>(gpsephem->cus);
+  ephem->c_ic = static_cast<float>(gpsephem->cic);
+  ephem->c_is = static_cast<float>(gpsephem->cis);
   ephem->dn = gpsephem->delta_N;
   ephem->m0 = gpsephem->M0;
   ephem->ecc = gpsephem->ecc;
@@ -400,13 +401,13 @@ void convert_gpsephem_to_ephemeris_gps(const Message::GPSEPHEM_t *gpsephem,
   ephem->w = gpsephem->omega;
   ephem->inc = gpsephem->I0;
   ephem->inc_dot = gpsephem->I_dot;
-  ephem->af0 = gpsephem->af0;
-  ephem->af1 = gpsephem->af1;
-  ephem->af2 = gpsephem->af2;
+  ephem->af0 = static_cast<float>(gpsephem->af0);
+  ephem->af1 = static_cast<float>(gpsephem->af1);
+  ephem->af2 = static_cast<float>(gpsephem->af2);
   ephem->toc.tow = static_cast<uint32_t>(gpsephem->toc);
   ephem->toc.wn = static_cast<uint16_t>(gpsephem->week);
-  ephem->iode = gpsephem->iode1;
-  ephem->iodc = gpsephem->iodc;
+  ephem->iode = static_cast<uint8_t>(gpsephem->iode1);
+  ephem->iodc = static_cast<uint16_t>(gpsephem->iodc);
 }
 
 /**
@@ -425,19 +426,19 @@ void convert_gloephemeris_to_ephemeris_glo(
   ephem->common.fit_interval = 0;
   ephem->common.valid = 0x1;      //
   ephem->common.health_bits = 0;  // THIS NEEDS CONVERSION.
-  ephem->gamma = gloephem->gamma;
-  ephem->tau = gloephem->tau_n;
-  ephem->d_tau = gloephem->delta_tau_n;
+  ephem->gamma = static_cast<float>(gloephem->gamma);
+  ephem->tau = static_cast<float>(gloephem->tau_n);
+  ephem->d_tau = static_cast<float>(gloephem->delta_tau_n);
   ephem->pos[0] = gloephem->pos_x;
   ephem->pos[1] = gloephem->pos_y;
   ephem->pos[2] = gloephem->pos_z;
   ephem->vel[0] = gloephem->vel_x;
   ephem->vel[1] = gloephem->vel_y;
   ephem->vel[2] = gloephem->vel_z;
-  ephem->acc[0] = gloephem->LS_acc_x;
-  ephem->acc[1] = gloephem->LS_acc_y;
-  ephem->acc[2] = gloephem->LS_acc_z;
-  ephem->fcn = gloephem->sloto;
+  ephem->acc[0] = static_cast<float>(gloephem->LS_acc_x);
+  ephem->acc[1] = static_cast<float>(gloephem->LS_acc_y);
+  ephem->acc[2] = static_cast<float>(gloephem->LS_acc_z);
+  ephem->fcn = static_cast<uint8_t>(gloephem->sloto);
   ephem->iod = static_cast<uint8_t>(gloephem->issue);
 }
 

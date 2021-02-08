@@ -51,9 +51,10 @@ extern "C" {
  * \{ */
 
 static void round_time_nano(const gps_time_t *t_in, sbp_gps_time_t *t_out) {
-  t_out->wn = t_in->wn;
-  t_out->tow = round(t_in->tow * 1e3);
-  t_out->ns_residual = round((t_in->tow - t_out->tow / 1e3) * 1e9);
+  t_out->wn = static_cast<uint16_t>(t_in->wn);
+  t_out->tow = static_cast<uint32_t>(round(t_in->tow * 1e3));
+  t_out->ns_residual =
+      static_cast<int32_t>(round((t_in->tow - t_out->tow / 1e3) * 1e9));
   /* week roll-over */
   if (t_out->tow >= WEEK_MS) {
     t_out->wn++;
@@ -63,8 +64,8 @@ static void round_time_nano(const gps_time_t *t_in, sbp_gps_time_t *t_out) {
 
 static sbp_gnss_signal_t sid_to_sbp(const gnss_signal_t from) {
   sbp_gnss_signal_t sbp_sid;
-  sbp_sid.sat = from.sat;
-  sbp_sid.code = from.code;
+  sbp_sid.sat = static_cast<uint8_t>(from.sat);
+  sbp_sid.code = static_cast<uint8_t>(from.code);
   return sbp_sid;
 }
 
@@ -73,8 +74,8 @@ static void pack_obs_header(const gps_time_t *t,
                             u8 count,
                             observation_header_t *msg) {
   round_time_nano(t, &msg->t);
-  msg->n_obs =
-      ((total << MSG_OBS_HEADER_SEQ_SHIFT) | (count & MSG_OBS_HEADER_SEQ_MASK));
+  msg->n_obs = static_cast<uint8_t>(((total << MSG_OBS_HEADER_SEQ_SHIFT) |
+                                     (count & MSG_OBS_HEADER_SEQ_MASK)));
 }
 
 static u8 nm_flags_to_sbp(nav_meas_flags_t from) {
@@ -131,7 +132,7 @@ static s8 pack_obs_content(double P,
     return -1;
   }
 
-  msg->P = P_fp;
+  msg->P = static_cast<uint32_t>(P_fp);
 
   double Li = floor(-L);
   if (Li < INT32_MIN || Li > INT32_MAX) {
@@ -140,13 +141,13 @@ static s8 pack_obs_content(double P,
 
   double Lf = -L - Li;
 
-  msg->L.i = Li;
-  u16 frac_part_cp = round(Lf * MSG_OBS_LF_MULTIPLIER);
+  msg->L.i = static_cast<int32_t>(Li);
+  u16 frac_part_cp = static_cast<uint16_t>(round(Lf * MSG_OBS_LF_MULTIPLIER));
   if (frac_part_cp >= MSG_OBS_LF_OVERFLOW) {
     frac_part_cp = 0;
     msg->L.i += 1;
   }
-  msg->L.f = frac_part_cp;
+  msg->L.f = static_cast<uint8_t>(frac_part_cp);
 
   double Di = floor(D);
   if (Di < INT16_MIN || Di > INT16_MAX) {
@@ -155,21 +156,21 @@ static s8 pack_obs_content(double P,
 
   double Df = D - Di;
 
-  msg->D.i = Di;
-  u16 frac_part_d = round(Df * MSG_OBS_DF_MULTIPLIER);
+  msg->D.i = static_cast<int16_t>(Di);
+  u16 frac_part_d = static_cast<uint16_t>(round(Df * MSG_OBS_DF_MULTIPLIER));
   if (frac_part_d >= MSG_OBS_DF_OVERFLOW) {
     frac_part_d = 0;
     msg->D.i += 1;
   }
-  msg->D.f = frac_part_d;
+  msg->D.f = static_cast<uint8_t>(frac_part_d);
 
   if (0 != (flags & NAV_MEAS_FLAG_CN0_VALID)) {
-    s32 cn0_fp = lround(cn0 * MSG_OBS_CN0_MULTIPLIER);
+    s32 cn0_fp = static_cast<int32_t>(lround(cn0 * MSG_OBS_CN0_MULTIPLIER));
     if (cn0 < 0 || cn0_fp > UINT8_MAX) {
       return -1;
     }
 
-    msg->cn0 = cn0_fp;
+    msg->cn0 = static_cast<uint8_t>(cn0_fp);
   } else {
     msg->cn0 = 0;
   }
@@ -214,8 +215,11 @@ void send_sbp_obs_messages(uint8_t n,
 
   u8 obs_i = 0;
   for (u8 count = 0; count < total; count++) {
-    u8 curr_n = MIN(n - obs_i, obs_in_msg);
-    pack_obs_header(t, total, count, (observation_header_t *)buff);  // NOLINT
+    u8 curr_n = MIN(n - obs_i, static_cast<uint8_t>(obs_in_msg));
+    pack_obs_header(t,
+                    static_cast<uint8_t>(total),
+                    count,
+                    (observation_header_t *)buff);  // NOLINT
     packed_obs_content_t *obs =
         (packed_obs_content_t *)&buff[sizeof(observation_header_t)];  // NOLINT
 

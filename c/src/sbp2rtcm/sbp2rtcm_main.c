@@ -26,7 +26,7 @@ static int32_t readfn(uint8_t *buff, uint32_t n, void *context) {
     /* EOF */
     exit(EXIT_SUCCESS);
   }
-  return read_bytes;
+  return (int32_t)read_bytes;
 }
 
 /* Write the RTCM frame to STDOUT. */
@@ -37,7 +37,7 @@ static int32_t writefn(uint8_t *buffer, uint16_t n, void *context) {
     fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
     exit(EXIT_FAILURE);
   }
-  return numwritten;
+  return (int32_t)numwritten;
 }
 
 typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);

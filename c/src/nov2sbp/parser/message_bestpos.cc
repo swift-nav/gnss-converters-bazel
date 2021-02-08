@@ -18,6 +18,7 @@
 namespace Novatel {
 
 void Message::BESTPOS_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   size_t i = 0;
   sol_stat = Util::read_le_uint32(bytes + i);
   i += sizeof(uint32_t);
@@ -57,6 +58,7 @@ void Message::BESTPOS_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
   galileo_beidou_mask = bytes[i++];
   gps_glonass_mask = bytes[i++];
 
+  (void)i;
   assert(i == n_bytes);
 }
 }  // namespace Novatel

@@ -35,7 +35,7 @@
 #include "check_ubx.h"
 #include "config.h"
 
-FILE *fp;
+static FILE *fp;
 static char tmp_file_name[FILENAME_MAX] = {0};
 
 static void tmp_file_teardown() {

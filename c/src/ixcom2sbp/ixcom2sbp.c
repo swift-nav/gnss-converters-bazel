@@ -66,7 +66,7 @@ int ixcom2sbp_main(int argc,
          -1) {
     switch (opt) {
       case 's':
-        ixcom_set_sender_id(&state, strtol(optarg, NULL, 0));
+        ixcom_set_sender_id(&state, (u16)strtol(optarg, NULL, 0));
         break;
 
       case 'h':

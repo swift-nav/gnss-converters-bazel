@@ -17,12 +17,12 @@
 
 static int readfn(uint8_t *buf, size_t len, void *context) {
   (void)context; /* squash warning */
-  return read(STDIN_FILENO, buf, len);
+  return (int)read(STDIN_FILENO, buf, len);
 }
 
 static int writefn(const uint8_t *buf, size_t count, void *context) {
   (void)context;
-  return write(STDOUT_FILENO, buf, count);
+  return (int)write(STDOUT_FILENO, buf, count);
 }
 
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);

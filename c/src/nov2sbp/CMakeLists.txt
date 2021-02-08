@@ -8,7 +8,12 @@ target_link_libraries(nov2sbp_main novatel-parser swiftnav sbp)
 add_executable(nov2sbp nov2sbp_main.cc)
 target_link_libraries(nov2sbp nov2sbp_main)
 
-target_compile_options(nov2sbp PRIVATE ${STARLING_COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-effc++ -Wno-conversion -Wno-extern-c-compat)
+swift_set_language_standards(nov2sbp_main)
+swift_set_compile_options(nov2sbp_main REMOVE -Wconversion ADD -Wno-extern-c-compat)
+target_compile_options(nov2sbp_main PRIVATE -UNDEBUG)
+swift_set_language_standards(nov2sbp)
+swift_set_compile_options(nov2sbp REMOVE -Wconversion ADD -Wno-extern-c-compat)
+target_compile_options(nov2sbp PRIVATE -UNDEBUG)
 
 install(TARGETS nov2sbp_main DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(TARGETS nov2sbp DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})

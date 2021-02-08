@@ -18,6 +18,7 @@
 namespace Novatel {
 
 void Message::INSATT_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   size_t i = 0;
   gnss_week = Util::read_le_uint32(bytes + i);
   i += sizeof(uint32_t);
@@ -32,6 +33,7 @@ void Message::INSATT_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
   status = Util::read_le_uint32(bytes + i);
   i += sizeof(uint32_t);
 
+  (void)i;
   assert(i == n_bytes);
 }
 }  // namespace Novatel

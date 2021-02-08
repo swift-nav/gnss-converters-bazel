@@ -68,7 +68,7 @@ class Parser {
   uint32_t parse_regular_message() const;
   uint32_t parse_short_message() const;
   void parse_body(const BinaryHeader &header, const uint8_t *data) const;
-  void invoke_callback(const BinaryHeader &header, const void *) const;
+  void invoke_callback(const BinaryHeader &header, const void *data) const;
   void warn(const char *format, ...) const
       __attribute__((format(printf, 2, 3)));
 };

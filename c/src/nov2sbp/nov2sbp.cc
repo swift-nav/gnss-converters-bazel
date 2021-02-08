@@ -52,8 +52,12 @@ extern "C" void send_sbp_obs_messages(uint8_t n,
                                                        uint8_t *));
 
 static void send_sbp_fn(uint32_t msg_id, size_t n_bytes, uint8_t *bytes) {
-  auto ret = sbp_send_message(
-      &sbp, msg_id, kNovatelSbpSenderId, n_bytes, bytes, g_writefn);
+  auto ret = sbp_send_message(&sbp,
+                              static_cast<uint16_t>(msg_id),
+                              kNovatelSbpSenderId,
+                              static_cast<uint8_t>(n_bytes),
+                              bytes,
+                              g_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -89,15 +93,18 @@ static void write_sbp_range_cmp(const BinaryHeader *header, const void *data) {
       reinterpret_cast<const Message::RANGECMP_t *>(data);  // NOLINT
   assert(rangecmp->n_records <= MAX_CHANNELS);
 
-  std::array<mini_navigation_measurement_t, MAX_CHANNELS> nm;
+  std::array<mini_navigation_measurement_t, MAX_CHANNELS> nm{};
   for (size_t i = 0; i < rangecmp->n_records; ++i) {
     convert_rangecmp_record_to_mini_navmeas(rangecmp->records.data() + i,
                                             nm.data() + i);
   }
   gps_time_t gps_time;
-  gps_time.wn = header->week;
+  gps_time.wn = static_cast<int16_t>(header->week);
   gps_time.tow = header->ms / 1000.0;
-  send_sbp_obs_messages(rangecmp->n_records, nm.data(), &gps_time, send_sbp_fn);
+  send_sbp_obs_messages(static_cast<uint8_t>(rangecmp->n_records),
+                        nm.data(),
+                        &gps_time,
+                        send_sbp_fn);
 }
 
 /**

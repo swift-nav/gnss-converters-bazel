@@ -28,6 +28,7 @@ namespace Novatel {
  * proper sign extension.
  */
 void Message::RANGECMP_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   assert(n_bytes >= sizeof(uint32_t));
 
   n_records = Util::read_le_uint32(bytes);
@@ -35,6 +36,7 @@ void Message::RANGECMP_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
 
   size_t n_record_bytes =
       n_records * Message::RANGECMP_record_t::kRecordBinarySize;
+  (void)n_record_bytes;
   assert(n_bytes == sizeof(uint32_t) + n_record_bytes);
 
   if (n_records > MAX_CHANNELS) {

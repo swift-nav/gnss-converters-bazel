@@ -18,6 +18,7 @@
 namespace Novatel {
 
 void Message::GPSEPHEM_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
+  (void)n_bytes;
   size_t i = 0;
 
   prn = Util::read_le_uint32(bytes + i);
@@ -85,6 +86,7 @@ void Message::GPSEPHEM_t::FromBytes(const uint8_t *bytes, size_t n_bytes) {
   URA = Util::read_le_double(bytes + i);
   i += sizeof(double);
 
+  (void)i;
   assert(i == n_bytes);
 }
 }  // namespace Novatel
