@@ -205,4 +205,13 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
 void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state);
 
+static inline u16 rtcm_stn_to_sbp_sender_id(u16 rtcm_id) {
+  /* To avoid conflicts with reserved low number sender ID's we or
+   * on the highest nibble as RTCM sender ID's are 12 bit */
+  return rtcm_id | 0xF080;
+}
+
+void handle_ndf_frame(const rtcm_msg_ndf *msg_ndf,
+                      struct rtcm3_sbp_state *state);
+
 #endif /* GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H */

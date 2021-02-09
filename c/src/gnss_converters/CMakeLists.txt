@@ -14,7 +14,7 @@ add_library(gnss_converters
   ubx_ephemeris/gal.c
   ubx_ephemeris/glo.c
   ubx_ephemeris/gps.c
-  ubx_ephemeris/sbas.c
+  ephemeris/sbas.c
   ubx_sbp.c
 )
 

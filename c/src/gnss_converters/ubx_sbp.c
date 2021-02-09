@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <ephemeris/sbas.h>
 #include <gnss-converters/ubx_sbp.h>
 #include <libsbp/imu.h>
 #include <libsbp/logging.h>
@@ -30,7 +31,6 @@
 #include <ubx_ephemeris/gal.h>
 #include <ubx_ephemeris/glo.h>
 #include <ubx_ephemeris/gps.h>
-#include <ubx_ephemeris/sbas.h>
 
 /* TODO(STAR-918) should probably consolidate these into central .h file */
 #define SBP_OBS_LF_MULTIPLIER 256
@@ -1225,7 +1225,28 @@ static void handle_rxm_sfrbx(struct ubx_sbp_state *state, u8 *buf, int sz) {
     glo_decode_string(
         state, prn, sfrbx.freq_id, sfrbx.data_words, sfrbx.num_words);
   } else if (UBX_GNSS_ID_SBAS == sfrbx.gnss_id) {
-    sbas_decode_subframe(state, prn, sfrbx.data_words, sfrbx.num_words);
+    u32 tow_ms = state->last_tow_ms;
+    if (tow_ms > WEEK_MS) {
+      /* TOW not yet set */
+      return;
+    }
+
+    /* Fill in the approximate time of transmission of the start of the SBAS
+     * message. The best guess for it we have is the current solution time
+     * minus 1 s (length of the message) minus 120 ms (~= 36000km / 3e8m/s). */
+    tow_ms -= 1120;
+    if (tow_ms < 0.0) {
+      tow_ms += WEEK_MS;
+    }
+
+    sbas_decode_subframe(&state->eph_data,
+                         tow_ms,
+                         prn,
+                         sfrbx.data_words,
+                         sfrbx.num_words,
+                         state->sender_id,
+                         state->context,
+                         state->cb_ubx_to_sbp);
   }
 }
 

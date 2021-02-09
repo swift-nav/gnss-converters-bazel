@@ -68,10 +68,15 @@ static void pack_sbas_data(const u8 *buffer,
  * @param sz must be 8 (number of 32 bit words per one SBAS message) or 9
  * (workaround for an alleged bug on u-blox F9 series receivers)
  */
-void sbas_decode_subframe(struct ubx_sbp_state *data,
-                          int prn,
-                          const u32 words[],
-                          int sz) {
+void sbas_decode_subframe(
+    struct eph_sat_data *data,
+    uint32_t tow_ms,
+    int prn,
+    const u32 words[],
+    int sz,
+    u16 sender_id,
+    void *context,
+    void (*sbp_cb)(u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx)) {
   assert(data);
   assert(prn >= SBAS_FIRST_PRN);
   assert(prn < (SBAS_FIRST_PRN + NUM_SATS_SBAS));
@@ -110,28 +115,10 @@ void sbas_decode_subframe(struct ubx_sbp_state *data,
     return;
   }
 
-  u32 tow_ms = data->last_tow_ms;
-  if (tow_ms > WEEK_MS) {
-    /* TOW not yet set */
-    return;
-  }
-
-  /* Fill in the approximate time of transmission of the start of the SBAS
-   * message. The best guess for it we have is the current solution time
-   * minus 1 s (length of the message) minus 120 ms (~= 36000km / 3e8m/s). */
-  tow_ms -= 1120;
-  if (tow_ms < 0.0) {
-    tow_ms += WEEK_MS;
-  }
-
   msg_sbas_raw_t msg;
   memset(&msg, 0, sizeof(msg));
   pack_sbas_data(buffer, prn, tow_ms, message_type, &msg);
 
-  assert(data->cb_ubx_to_sbp);
-  data->cb_ubx_to_sbp(SBP_MSG_SBAS_RAW,
-                      (u8)sizeof(msg),
-                      (u8 *)&msg,
-                      data->sender_id,
-                      data->context);
+  assert(sbp_cb);
+  sbp_cb(SBP_MSG_SBAS_RAW, (u8)sizeof(msg), (u8 *)&msg, sender_id, context);
 }

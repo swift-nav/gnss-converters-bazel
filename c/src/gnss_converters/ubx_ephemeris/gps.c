@@ -83,7 +83,7 @@ void gps_decode_subframe(struct ubx_sbp_state *data,
     return;
   }
 
-  struct sat_data *sat = &data->gps_sat[prn - 1];
+  struct sat_data *sat = &data->eph_data.gps_sat_data[prn - 1];
   sat->vmask |= 1U << sf_idx;
   memcpy(&sat->sf[sf_idx].words, words, sz * 4);
   if (0x7 != (sat->vmask & 0x7U)) {

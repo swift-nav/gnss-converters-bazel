@@ -111,7 +111,7 @@ void gal_decode_page(struct ubx_sbp_state *data,
     return; /* only word types 1,2,3,4,5 contain ephemeris data, WN and TOW */
   }
 
-  struct gal_sat_data *sat = &data->gal_sat[prn - 1];
+  struct gal_sat_data *sat = &data->eph_data.gal_sat_data[prn - 1];
   sat->vmask |= 1U << (wtype - 1);
   assert(wtype <= (int)ARRAY_SIZE(sat->pg));
   memcpy(&sat->pg[wtype - 1].words, words, sizeof(sat->pg[wtype - 1].words));

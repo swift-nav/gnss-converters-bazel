@@ -46,6 +46,7 @@
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/logging.h>
 #include <rtcm3/ssr_decode.h>
+#include <rtcm3/sta_decode.h>
 #include <swiftnav/edc.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/fifo_byte.h>
@@ -118,12 +119,6 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   rtcm_init_logging(&rtcm_log_callback_fn, state);
 
   fifo_init(&(state->fifo), state->fifo_buf, RTCM3_FIFO_SIZE);
-}
-
-static u16 rtcm_stn_to_sbp_sender_id(u16 rtcm_id) {
-  /* To avoid conflicts with reserved low number sender ID's we or
-   * on the highest nibble as RTCM sender ID's are 12 bit */
-  return rtcm_id | 0xF080;
 }
 
 void rtcm2sbp_decode_payload(const uint8_t *payload,
@@ -531,6 +526,13 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               swift_msg.data,
                               swift_msg.sender_id,
                               state->context);
+      }
+      break;
+    }
+    case 4075: {
+      rtcm_msg_ndf ndf_msg;
+      if (RC_OK == rtcm3_decode_4075(payload, &ndf_msg)) {
+        handle_ndf_frame(&ndf_msg, state);
       }
       break;
     }

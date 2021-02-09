@@ -15,6 +15,7 @@
 #include <swiftnav/constants.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/float_equality.h>
+#include "ephemeris/sbas.h"
 #include "rtcm3_sbp_internal.h"
 #include "rtcm3_utils.h"
 
@@ -373,4 +374,42 @@ void rtcm3_bds_eph_to_sbp(rtcm_msg_eph *msg_eph,
   // What happens if toc and toe straddle the week boundary?
   sbp_bds_eph->toc = get_time_from_bds_wn_tow(
       BEIDOU_TOC_RESOLUTION, msg_eph->wn, msg_eph->kepler.toc);
+}
+
+void handle_ndf_frame(const rtcm_msg_ndf *msg_ndf,
+                      struct rtcm3_sbp_state *state) {
+  assert(msg_ndf);
+
+  for (uint8_t i = 0; i < msg_ndf->frame_count; i++) {
+    u32 frame_data_size_words = msg_ndf->frames[i].frame_data_size_bits / 32;
+    if (msg_ndf->frames[i].frame_data_size_bits % 32 > 0) {
+      frame_data_size_words++;
+    }
+
+    fprintf(stderr,
+            "NDF %u %u %u\n",
+            msg_ndf->frames[i].sat_sys,
+            msg_ndf->frames[i].sat_num,
+            msg_ndf->frames[i].sig_type);
+
+    switch (msg_ndf->frames[i].sat_sys) {
+      case NDF_SYS_SBAS:
+        sbas_decode_subframe(&state->eph_data,
+                             msg_ndf->frames[i].epoch_time,
+                             msg_ndf->frames[i].sat_num + 120,
+                             msg_ndf->frames[i].frame_data,
+                             frame_data_size_words,
+                             rtcm_stn_to_sbp_sender_id(msg_ndf->stn_id),
+                             state->context,
+                             state->cb_rtcm_to_sbp);
+        break;
+      case NDF_SYS_GPS:
+      case NDF_SYS_GLO:
+      case NDF_SYS_GAL:
+      case NDF_SYS_QZS:
+      case NDF_SYS_BDS:
+      default:
+        break;
+    }
+  }
 }

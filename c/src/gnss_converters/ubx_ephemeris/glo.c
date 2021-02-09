@@ -95,7 +95,7 @@ void glo_decode_string(
     return;
   }
 
-  struct glo_sat_data *sat = &data->glo_sat[prn - 1];
+  struct glo_sat_data *sat = &data->eph_data.glo_sat_data[prn - 1];
   if (sat->curr_superframe_id != (words[3] >> 16)) {
     sat->vmask = 0;
     sat->curr_superframe_id = (words[3] >> 16);

@@ -13,6 +13,7 @@
 #ifndef GNSS_CONVERTERS_RTCM3_SBP_INTERFACE_H
 #define GNSS_CONVERTERS_RTCM3_SBP_INTERFACE_H
 
+#include <gnss-converters/eph_sat_data.h>
 #include <libsbp/observation.h>
 #include <libsbp/sbp.h>
 #include <rtcm3/messages.h>
@@ -91,6 +92,7 @@ struct rtcm3_sbp_state {
   ssr_orbit_clock_cache orbit_clock_cache[CONSTELLATION_COUNT];
   uint8_t fifo_buf[RTCM3_FIFO_SIZE];
   fifo_t fifo;
+  struct eph_sat_data eph_data;
 };
 
 void rtcm2sbp_decode_frame(const uint8_t *frame,
