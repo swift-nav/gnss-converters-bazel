@@ -357,7 +357,11 @@ static int fill_msg_obs(const ubx_rxm_rawx *rxm_rawx, msg_obs_t *msg) {
     msg->header.t.tow += 1;
   }
 
-  msg->header.t.wn = rxm_rawx->rcv_wn;
+  if (rxm_rawx->rcv_wn == 0) {
+    msg->header.t.wn = -1;
+  } else {
+    msg->header.t.wn = rxm_rawx->rcv_wn;
+  }
   /* Not proper SBP n_obs. Needed to pass total number of measurements
    * to handle_rxm_rawx
    */
