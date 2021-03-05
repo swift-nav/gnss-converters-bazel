@@ -1,7 +1,7 @@
 gnss-converters
 ===========
 
-[![Build status][1]][2]
+[![CI](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml/badge.svg)](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml)
 [![codecov.io status][3]][4]
 
 ## Quick install
@@ -83,9 +83,7 @@ stack install --resolver lts-10.10 sbp rtcm
 ```
 
 
-[1]: https://img.shields.io/travis/swift-nav/gnss-converters.svg?label=travis-build&logo=travis&style=flat-square
-[2]: https://travis-ci.org/swift-nav/gnss-converters
-[3]: https://img.shields.io/codecov/c/github/swift-nav/gnss-converters.svg?label=codecov.io&logo=codecov&style=flat-square
-[4]: https://codecov.io/gh/swift-nav/gnss-converters
-[5]: https://github.com/swift-nav/gnss-converters/releases
+[3]: https://img.shields.io/codecov/c/github/swift-nav/gnss-converters-private.svg?label=codecov.io&logo=codecov&style=flat-square
+[4]: https://codecov.io/gh/swift-nav/gnss-converters-private
+[5]: https://github.com/swift-nav/gnss-converters-private/releases
 [6]: https://www.rust-lang.org/tools/install

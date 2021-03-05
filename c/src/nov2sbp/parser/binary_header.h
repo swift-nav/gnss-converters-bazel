@@ -14,6 +14,7 @@
 #define NOVATEL_PARSER_BINARY_HEADER_H_
 
 #include <array>
+#include <cstdint>
 #include <limits>
 
 namespace Novatel {
