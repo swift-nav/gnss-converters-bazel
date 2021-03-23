@@ -386,12 +386,6 @@ void handle_ndf_frame(const rtcm_msg_ndf *msg_ndf,
       frame_data_size_words++;
     }
 
-    fprintf(stderr,
-            "NDF %u %u %u\n",
-            msg_ndf->frames[i].sat_sys,
-            msg_ndf->frames[i].sat_num,
-            msg_ndf->frames[i].sig_type);
-
     switch (msg_ndf->frames[i].sat_sys) {
       case NDF_SYS_SBAS:
         sbas_decode_subframe(&state->eph_data,
