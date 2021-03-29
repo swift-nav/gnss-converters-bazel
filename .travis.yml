@@ -34,22 +34,6 @@ matrix:
     # Unit and integration test builds with GCC.
     # ------------------------------------------------------------------
 
-    # GCC 4.8 / Unit Test.
-    # Support for older compilers is required due to need to build Python
-    # extensions for Python 2.7
-    - env: TEST_SUITE=unit CXX=g++-4.8 CMAKE=/usr/bin/cmake
-      compiler: gcc-4.8
-      addons: 
-        apt:
-          sources: 
-            - sourceline: 'deb https://apt.kitware.com/ubuntu/ bionic main'
-              key_url: https://apt.kitware.com/keys/kitware-archive-latest.asc
-            - ubuntu-toolchain-r-test
-          packages: 
-            - cmake
-            - gcc-4.8
-            - g++-4.8
-          
     # GCC 6 / Unit Test.
     - env: TEST_SUITE=unit CMAKE=/usr/bin/cmake
       compiler: gcc-6
