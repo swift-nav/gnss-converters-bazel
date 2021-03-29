@@ -48,28 +48,28 @@ typedef struct __attribute__((__packed__)) {
  * If an error occurs, the detailed status should be read.
  */
 typedef struct {
-  uint16_t HWERROR : 1;  /**< Unexpected hardware error. */
-  uint16_t COMERROR : 1; /**< Internal communication error between the
+  unsigned int HWERROR : 1;  /**< Unexpected hardware error. */
+  unsigned int COMERROR : 1; /**< Internal communication error between the
                             individual components. */
-  uint16_t
+  unsigned int
       NAVERROR : 1; /**< Internal error in the navigation solution. If this bit
                        is Critical set the INS solution should not be used. */
-  uint16_t CALERROR : 1;     /**< Internal error in the calibration table. */
-  uint16_t GYROVERRANGE : 1; /**< Gyro over range error. To see which axis is
-                                affected, the extended system status should be
-                                triggered. */
-  uint16_t ACCOVERRAGE : 1;  /**< Acceleration over range error. To see which
-                                axis is affected, the extended system status
-                                should be triggered. */
-  uint16_t GNSSINVALID : 1;  /**< GNSS solution is invalid */
-  uint16_t STANDBY : 1;      /**< System stays in standby mode. */
-  uint16_t DYNAMICALIGN : 1; /**< The INS is in dynamic alignment mode */
-  uint16_t TIMEINVALID : 1;  /**< The message time tag in the header represents
-                                internal system time and has not been set from
-                                GNSS. */
-  uint16_t NAVMODE : 1;      /**< The INS has reached the fine-heading mode */
-  uint16_t AHRSMODE : 1;     /**< The INS has reached the AHRS mode*/
-  uint16_t
+  unsigned int CALERROR : 1; /**< Internal error in the calibration table. */
+  unsigned int GYROVERRANGE : 1; /**< Gyro over range error. To see which axis
+                                is affected, the extended system status should
+                                be triggered. */
+  unsigned int ACCOVERRAGE : 1; /**< Acceleration over range error. To see which
+                               axis is affected, the extended system status
+                               should be triggered. */
+  unsigned int GNSSINVALID : 1; /**< GNSS solution is invalid */
+  unsigned int STANDBY : 1;     /**< System stays in standby mode. */
+  unsigned int DYNAMICALIGN : 1; /**< The INS is in dynamic alignment mode */
+  unsigned int TIMEINVALID : 1;  /**< The message time tag in the header
+                                represents  internal system time and has not been
+                                set from  GNSS. */
+  unsigned int NAVMODE : 1;  /**< The INS has reached the fine-heading mode */
+  unsigned int AHRSMODE : 1; /**< The INS has reached the AHRS mode*/
+  unsigned int
       ALIGNMODE : 2; /**< Alignment mode
                                                       0: LEVELLING: This
                         solution status is set during the levelling phase. 1:
@@ -84,7 +84,7 @@ typedef struct {
                         than THR_HEADING (set through parameter
                         PAREKF_HDGPOSTHR).
                                               */
-  uint16_t
+  unsigned int
       POSMODE : 2; /**< Position mode:
                                            0: POS_BAD_ACCURACY: This solution
                       status is set during alignment, if no valid position
