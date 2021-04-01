@@ -14,7 +14,8 @@ set(TEST_SOURCE_FILES
     check_utils.c
     check_options.c
     )
-swift_add_test(test-gnss-converters 
+swift_add_test(test-gnss-converters
+  UNIT_TEST
   POST_BUILD
   SRCS ${TEST_SOURCE_FILES}
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
