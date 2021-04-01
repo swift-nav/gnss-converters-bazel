@@ -28,7 +28,7 @@ rtcm3_rc sta_decode_rcc_config(const uint8_t buff[],
   uint16_t msg_num = rtcm_getbitu(buff, bit, 12);
   bit += 12;
   uint8_t subtype_id = rtcm_getbitu(buff, bit, 8);
-  bit += 8;
+  bit += 8;  // NOLINT
   /* this should never be called on anything other than msg 999:2 */
   assert(msg_num == 999 && subtype_id == 2);
   (void)msg_num;

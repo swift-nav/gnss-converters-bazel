@@ -28,7 +28,7 @@ add_library(rtcm
   logging.c
   )
 swift_set_language_standards(rtcm)
-swift_set_compile_options(rtcm REMOVE -Wconversion -Wstack-protector)
+swift_set_compile_options(rtcm ADD -pedantic REMOVE -Wconversion -Wstack-protector)
 
 target_include_directories(rtcm PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
