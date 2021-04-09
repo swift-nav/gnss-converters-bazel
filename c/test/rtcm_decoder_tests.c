@@ -10,8 +10,9 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include "test_assert.h"
+
 #include "rtcm_decoder_tests.h"
-#include <assert.h>
 #include <math.h>
 #include <rtcm3/messages.h>
 #include <stdio.h>
@@ -2131,7 +2132,10 @@ void test_logging(void) {
   rtcm_log(0, NULL, 0);
   assert(callback_count == 0);
   rtcm_init_logging(test_rtcm_log_callback, &callback_count);
-  rtcm_log(TEST_LOG_LEVEL, (const uint8_t *)TEST_LOG_MSG, TEST_LOG_LEN);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+  rtcm_log(TEST_LOG_LEVEL, (uint8_t *)TEST_LOG_MSG, TEST_LOG_LEN);
+#pragma GCC diagnostic pop
   assert(callback_count == 1);
 }
 

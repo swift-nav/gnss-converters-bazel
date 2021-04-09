@@ -10,7 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <assert.h>
+#include "test_assert.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
