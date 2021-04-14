@@ -75,6 +75,7 @@ static uint16_t extract_msg_len(const uint8_t *buf);
 static bool verify_crc(uint8_t *buf, uint16_t buf_len);
 
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
+                   const time_truth_t *time_truth,
                    void (*cb_rtcm_to_sbp)(u16 msg_id,
                                           u8 length,
                                           u8 *buffer,
@@ -82,6 +83,8 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
                                           void *context),
                    void (*cb_base_obs_invalid)(double timediff, void *context),
                    void *context) {
+  (void)time_truth;
+
   assert(IS_POWER_OF_TWO(RTCM3_FIFO_SIZE));
   assert(RTCM3_FIFO_SIZE > (RTCM3_MSG_OVERHEAD + RTCM3_MAX_MSG_LEN));
 

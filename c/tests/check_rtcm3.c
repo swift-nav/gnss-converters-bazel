@@ -692,7 +692,10 @@ void test_RTCM3(const char *filename,
                                        u16 sender_id,
                                        void *context),
                 gps_time_t current_time_) {
-  rtcm2sbp_init(&state, cb_rtcm_to_sbp, NULL, NULL);
+  time_truth_t time_truth;
+  time_truth_init(&time_truth);
+
+  rtcm2sbp_init(&state, &time_truth, cb_rtcm_to_sbp, NULL, NULL);
   rtcm2sbp_set_gps_time(&current_time_, &state);
   rtcm2sbp_set_leap_second(18, &state);
 
@@ -1489,8 +1492,12 @@ static void sbp_roundtrip_cb(
 START_TEST(test_sbp_to_msm_roundtrip) {
   current_time.wn = 2022;
   current_time.tow = 210853;
+
+  time_truth_t time_truth;
+  time_truth_init(&time_truth);
+
   sbp2rtcm_init(&out_state, rtcm_roundtrip_cb, NULL);
-  rtcm2sbp_init(&state, sbp_roundtrip_cb, NULL, NULL);
+  rtcm2sbp_init(&state, &time_truth, sbp_roundtrip_cb, NULL, NULL);
   sbp2rtcm_set_leap_second(18, &out_state);
   rtcm2sbp_set_leap_second(18, &state);
 

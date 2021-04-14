@@ -14,6 +14,7 @@
 #define GNSS_CONVERTERS_RTCM3_SBP_INTERFACE_H
 
 #include <gnss-converters/eph_sat_data.h>
+#include <gnss-converters/time_truth.h>
 #include <libsbp/observation.h>
 #include <libsbp/sbp.h>
 #include <rtcm3/messages.h>
@@ -78,6 +79,7 @@ struct rtcm3_sbp_state {
   gps_time_t last_glo_time;
   gps_time_t last_1230_received;
   gps_time_t last_msm_received;
+  const time_truth_t *time_truth;
   void (*cb_rtcm_to_sbp)(
       u16 msg_id, u8 len, u8 *buff, u16 sender_id, void *context);
   void (*cb_base_obs_invalid)(double time_diff, void *context);
@@ -113,6 +115,7 @@ void rtcm2sbp_set_glo_fcn(sbp_gnss_signal_t sid,
                           struct rtcm3_sbp_state *state);
 
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
+                   const time_truth_t *time_truth,
                    void (*cb_rtcm_to_sbp)(u16 msg_id,
                                           u8 length,
                                           u8 *buffer,

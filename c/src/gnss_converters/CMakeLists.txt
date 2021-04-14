@@ -10,6 +10,7 @@ add_library(gnss_converters
   sbp_nmea.c
   sbp_rtcm3.c
   sbp_rtcm3_ephemeris.c
+  time_truth.c
   ubx_ephemeris/bds.c
   ubx_ephemeris/gal.c
   ubx_ephemeris/glo.c
