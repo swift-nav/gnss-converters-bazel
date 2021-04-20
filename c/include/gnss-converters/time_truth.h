@@ -67,13 +67,16 @@ void time_truth_init(time_truth_t* instance);
  *
  * @param instance pointer to the state machine struct
  * @param source source in which the time information is based off of
- * @param time relative time represented in GPS time format
+ * @param time absolute time represented in GPS time format
  * @return true if the time truth time and/or state has been updated, otherwise
  * false
  *
- * @note "relative time" refers a direct representation of the information
- * coming from the data source. for instance, a time value for a source of
- * "EPH_GAL" is expected to be capped at {.tow = 604799, .wn = 4095}.
+ * @note invalid absolute GPS times are not permitted into the function, an
+ * warning log will be recorded and the return will be false. an absolute GPS
+ * time which is invalid for a constellation will be treated in similar manner,
+ * for instance, a EPH_GAL source with GPS time { .wn = 1000, .tow = 0 } would
+ * indicate a time prior to the GAL epoch of { .wn = 1024, .tow = 0 } and is
+ * therefore invalid.
  */
 bool time_truth_update(time_truth_t* instance,
                        enum time_truth_source source,

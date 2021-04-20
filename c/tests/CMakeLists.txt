@@ -13,6 +13,7 @@ set(TEST_SOURCE_FILES
     check_ixcom.c
     check_utils.c
     check_options.c
+    check_time_truth.c
     )
 swift_add_test(test-gnss-converters
   UNIT_TEST
@@ -21,6 +22,10 @@ swift_add_test(test-gnss-converters
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
   LINK gnss_converters check Threads::Threads
   )
+
+if (UNIX AND NOT APPLE)
+  target_link_libraries(test-gnss-converters PRIVATE atomic)
+endif()
 
 swift_set_language_standards(test-gnss-converters)
 swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal)
