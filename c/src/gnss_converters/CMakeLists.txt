@@ -19,6 +19,9 @@ add_library(gnss_converters
   ubx_sbp.c
 )
 
+# this is done to avoid issues with opaque time_truth_t type
+set_source_files_properties(time_truth.c PROPERTIES COMPILE_FLAGS -fno-strict-aliasing)
+
 swift_set_language_standards(gnss_converters)
 swift_set_compile_options(gnss_converters REMOVE -Wconversion -Wstack-protector)
 target_compile_options(gnss_converters PRIVATE "-UNDEBUG")

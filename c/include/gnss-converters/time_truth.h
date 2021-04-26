@@ -13,7 +13,18 @@
 #ifndef GNSS_CONVERTERS_TIME_TRUTH_H
 #define GNSS_CONVERTERS_TIME_TRUTH_H
 
+#include <stddef.h>
 #include <swiftnav/gnss_time.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** Time truth opaque type */
+typedef union {
+  max_align_t align;
+  uint8_t size[sizeof(uint64_t)];
+} time_truth_t;
 
 /**
  * Set of "time truth" states
@@ -38,22 +49,7 @@ enum time_truth_source {
 
   /** BeiDou ephemeride */
   TIME_TRUTH_EPH_BDS,
-
-  /** GLONASS ephemeride */
-  TIME_TRUTH_EPH_GLO,
 };
-
-/**
- * "Time truth" state machine structure
- */
-struct time_truth {
-  float tow;
-  s16 wn;
-  enum time_truth_state state;
-};
-
-/** Atomic time truth state machine type */
-typedef _Atomic struct time_truth time_truth_t;
 
 /**
  * Initializes the "time truth" state machine
@@ -92,5 +88,9 @@ bool time_truth_update(time_truth_t* instance,
 void time_truth_get(time_truth_t* instance,
                     enum time_truth_state* state,
                     gps_time_t* time);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // GNSS_CONVERTERS_TIME_TRUTH_H
