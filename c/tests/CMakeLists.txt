@@ -13,6 +13,7 @@ set(TEST_SOURCE_FILES
     check_ixcom.c
     check_utils.c
     check_options.c
+    check_rtcm3_time.c
     check_time_truth.c
     )
 swift_add_test(test-gnss-converters
