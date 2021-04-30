@@ -76,7 +76,7 @@ fn invoke_cmake(
         return Err("unknown target OS".into());
     }
 
-    cmake.always_configure(false);
+    cmake.always_configure(true);
     if let Ok(verbose) = env::var("VERBOSE") {
         if verbose == "1" {
             cmake.build_arg("VERBOSE=1");
