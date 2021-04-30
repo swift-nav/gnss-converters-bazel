@@ -143,6 +143,9 @@ int rtcm3tosbp_main(int argc,
 
   int opt;
   while ((opt = getopt(argc, argv, "hb:c:l:w:d:GRECJS:v")) != -1) {
+    if (optarg && *optarg == '=') {
+      optarg++;
+    }
     switch (opt) {
       case 'h':
         help(argv[0], additional_opts_help);
