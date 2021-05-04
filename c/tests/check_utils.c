@@ -32,8 +32,9 @@ void utils_setup(void) {
   memset(&out_state, 0, sizeof(out_state));
   state.time_from_rover_obs.wn = 1945;
   state.time_from_rover_obs.tow = 211190;
+  state.leap_seconds = 18;
+  state.leap_second_known = true;
 
-  rtcm2sbp_set_leap_second(18, &state);
   sbp2rtcm_set_leap_second(18, &out_state);
 }
 

@@ -69,13 +69,11 @@
 static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
                                      const gps_time_t *obs_time,
                                      const gps_time_t *rover_time);
-static void rtcm2sbp_set_leap_second_from_wn(u16 wn_ref,
-                                             struct rtcm3_sbp_state *state);
 static uint16_t extract_msg_len(const uint8_t *buf);
 static bool verify_crc(uint8_t *buf, uint16_t buf_len);
 
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
-                   const time_truth_t *time_truth,
+                   time_truth_t *time_truth,
                    void (*cb_rtcm_to_sbp)(u16 msg_id,
                                           u8 length,
                                           u8 *buffer,
@@ -83,12 +81,12 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
                                           void *context),
                    void (*cb_base_obs_invalid)(double timediff, void *context),
                    void *context) {
-  (void)time_truth;
-
   assert(IS_POWER_OF_TWO(RTCM3_FIFO_SIZE));
   assert(RTCM3_FIFO_SIZE > (RTCM3_MSG_OVERHEAD + RTCM3_MAX_MSG_LEN));
 
-  state->time_from_rover_obs.wn = INVALID_TIME;
+  state->time_truth = time_truth;
+
+  state->time_from_rover_obs.wn = WN_UNKNOWN;
   state->time_from_rover_obs.tow = 0;
 
   state->leap_seconds = 0;
@@ -99,13 +97,13 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   state->cb_base_obs_invalid = cb_base_obs_invalid;
   state->context = context;
 
-  state->last_gps_time.wn = INVALID_TIME;
+  state->last_gps_time.wn = WN_UNKNOWN;
   state->last_gps_time.tow = 0;
-  state->last_glo_time.wn = INVALID_TIME;
+  state->last_glo_time.wn = WN_UNKNOWN;
   state->last_glo_time.tow = 0;
-  state->last_1230_received.wn = INVALID_TIME;
+  state->last_1230_received.wn = WN_UNKNOWN;
   state->last_1230_received.tow = 0;
-  state->last_msm_received.wn = INVALID_TIME;
+  state->last_msm_received.wn = WN_UNKNOWN;
   state->last_msm_received.tow = 0;
 
   state->sent_msm_warning = false;
@@ -129,13 +127,64 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                              struct rtcm3_sbp_state *state) {
   (void)payload_length;
 
-  if (!gps_time_valid(&state->time_from_rover_obs)) {
-    return;
-  }
-
   uint16_t byte = 0;
   uint16_t message_type =
       (payload[byte] << 4) | ((payload[byte + 1] >> 4) & 0xf);
+
+  enum time_truth_state time_truth_state;
+  time_truth_get(
+      state->time_truth, &time_truth_state, &state->time_from_rover_obs);
+  switch (message_type) {
+    /** msg_base_pos_ecef_t messages */
+    case 1005:
+    case 1006:
+
+    /** log messages */
+    case 1029:
+
+    /** MSM warning messages */
+    case 1071:
+    case 1072:
+    case 1073:
+    case 1081:
+    case 1082:
+    case 1083:
+    case 1091:
+    case 1092:
+    case 1093:
+    case 1101:
+    case 1102:
+    case 1103:
+    case 1111:
+    case 1112:
+    case 1113:
+    case 1121:
+    case 1122:
+    case 1123:
+
+    /** Swift proprietary message */
+    case 4062:
+
+    /** NDF */
+    case 4075:
+
+    /** RTCM ephemerid messages for constellations GPS/BDS/GAL. GLO/QZSS is left
+     * out for the moment */
+    case 1019:
+    case 1042:
+    case 1045:
+    case 1046:
+      break;
+    default:
+      if (time_truth_state != TIME_TRUTH_SOLVED) {
+        return;
+      }
+  }
+
+  if (time_truth_state == TIME_TRUTH_SOLVED) {
+    state->leap_seconds = get_gps_utc_offset(&state->time_from_rover_obs, NULL);
+    state->leap_second_known = true;
+  }
 
   if (verbosity_level > VERB_HIGH) {
     log_info("MID: %5u", message_type);
@@ -219,7 +268,6 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               (u8 *)&sbp_gps_eph,
                               rtcm_stn_to_sbp_sender_id(0),
                               state->context);
-        rtcm2sbp_set_leap_second_from_wn(sbp_gps_eph.common.toe.wn, state);
       }
       break;
     }
@@ -275,7 +323,6 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               (u8 *)&sbp_gal_eph,
                               rtcm_stn_to_sbp_sender_id(0),
                               state->context);
-        rtcm2sbp_set_leap_second_from_wn(sbp_gal_eph.common.toe.wn, state);
       }
       break;
     }
@@ -291,7 +338,6 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               (u8 *)&sbp_gal_eph,
                               rtcm_stn_to_sbp_sender_id(0),
                               state->context);
-        rtcm2sbp_set_leap_second_from_wn(sbp_gal_eph.common.toe.wn, state);
       }
       break;
     }
@@ -1099,26 +1145,13 @@ static u8 sbp_fcn_to_rtcm(u8 sbp_fcn) {
 
 void rtcm2sbp_set_gps_time(const gps_time_t *current_time,
                            struct rtcm3_sbp_state *state) {
-  if (gps_time_valid(current_time)) {
-    state->time_from_rover_obs = *current_time;
-  }
+  (void)current_time;
+  (void)state;
 }
 
 void rtcm2sbp_set_leap_second(s8 leap_seconds, struct rtcm3_sbp_state *state) {
-  state->leap_seconds = leap_seconds;
-  state->leap_second_known = true;
-}
-
-static void rtcm2sbp_set_leap_second_from_wn(u16 wn_ref,
-                                             struct rtcm3_sbp_state *state) {
-  gps_time_t gpst_sec = state->time_from_rover_obs;
-  if (abs(gpst_sec.wn - wn_ref) > 1) {
-    /* this only corrects big discrepancies */
-    gpst_sec.wn = wn_ref;
-  }
-  gps_time_t gt = {.wn = gpst_sec.wn, .tow = gpst_sec.tow};
-  s8 gps_utc_offset = (s8)rint(get_gps_utc_offset(&gt, NULL));
-  rtcm2sbp_set_leap_second(gps_utc_offset, state);
+  (void)leap_seconds;
+  (void)state;
 }
 
 void rtcm2sbp_set_glo_fcn(sbp_gnss_signal_t sid,
@@ -1173,12 +1206,12 @@ void compute_glo_time(u32 tod_ms,
                       const gps_time_t *rover_time,
                       struct rtcm3_sbp_state *state) {
   if (!state->leap_second_known) {
-    obs_time->wn = INVALID_TIME;
+    obs_time->wn = WN_UNKNOWN;
     return;
   }
   if (tod_ms >= (DAY_SECS + 1) * SECS_MS) {
     log_error("Invalid GLO time received.");
-    obs_time->wn = INVALID_TIME;
+    obs_time->wn = WN_UNKNOWN;
     return;
   }
   assert(gps_time_valid(rover_time));

@@ -84,6 +84,9 @@ bool time_truth_update(time_truth_t* instance,
  * @param instance pointer to the state machine struct
  * @param state pointer to state object to fill in (NULL is valid)
  * @param time pointer to absolute gps time object to fill in (NULL is valid)
+ *
+ * @note if the time truth's state is TIME_TRUTH_UNKNOWN, then the returned
+ * time is always invalid.
  */
 void time_truth_get(time_truth_t* instance,
                     enum time_truth_state* state,

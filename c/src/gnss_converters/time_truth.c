@@ -14,6 +14,7 @@
 
 #include <stdalign.h>
 #include <stdatomic.h>
+#include <string.h>
 #include <swiftnav/ephemeris.h>
 
 /**
@@ -36,11 +37,13 @@ static_assert(
     "opaque type must be aligned to the highest alignment requirement");
 
 void time_truth_init(time_truth_t *instance) {
-  struct time_truth value = {
-      .wn = WN_UNKNOWN,
-      .tow = TOW_UNKNOWN,
-      .state = TIME_TRUTH_UNKNOWN,
-  };
+  struct time_truth value;
+  memset(&value, 0, sizeof(value));
+
+  value.wn = WN_UNKNOWN;
+  value.tow = TOW_UNKNOWN;
+  value.state = TIME_TRUTH_UNKNOWN;
+
   atomic_init((atomic_time_truth_t *)instance, value);
 }
 
@@ -57,9 +60,13 @@ bool time_truth_update(time_truth_t *instance,
     return false;
   }
 
-  struct time_truth current_time_truth =
-      atomic_load((atomic_time_truth_t *)instance);
+  struct time_truth current_time_truth;
   struct time_truth new_time_truth;
+
+  memset(&current_time_truth, 0, sizeof(current_time_truth));
+  memset(&new_time_truth, 0, sizeof(new_time_truth));
+
+  current_time_truth = atomic_load((atomic_time_truth_t *)instance);
 
   do {
     const gps_time_t current_time = {.wn = current_time_truth.wn,
