@@ -16,13 +16,6 @@
 #include <stdatomic.h>
 #include <swiftnav/ephemeris.h>
 
-/** Galileo epoch represented in GPS time */
-static const gps_time_t GAL_EPOCH_GPS_TIME = {.wn = GAL_WEEK_TO_GPS_WEEK,
-                                              .tow = 0};
-
-/** BeiDou epoch represented in GPS time  */
-static const gps_time_t BDS_EPOCH_GPS_TIME = {.wn = BDS_WEEK_TO_GPS_WEEK,
-                                              .tow = BDS_SECOND_TO_GPS_SECOND};
 /**
  * Time truth state machine data
  */
@@ -59,26 +52,9 @@ bool time_truth_update(time_truth_t *instance,
     return false;
   }
 
-  switch (source) {
-    case TIME_TRUTH_EPH_GAL:
-      if (gpsdifftime(&time, &GAL_EPOCH_GPS_TIME) < 0) {
-        log_warn(
-            "Invalid Galileo time submitted to time truth, predates "
-            "constellation's epoch");
-        return false;
-      }
-      break;
-    case TIME_TRUTH_EPH_BDS:
-      if (gpsdifftime(&time, &BDS_EPOCH_GPS_TIME) < 0) {
-        log_warn(
-            "Invalid BeiDou time submitted to time truth, predates "
-            "constellation's epoch");
-        return false;
-      }
-      break;
-    case TIME_TRUTH_EPH_GPS:
-    default:
-      break;
+  if (time.wn < GPS_WEEK_REFERENCE) {
+    log_warn("Time submitted to time truth predates build time");
+    return false;
   }
 
   struct time_truth current_time_truth =
@@ -92,13 +68,13 @@ bool time_truth_update(time_truth_t *instance,
     switch (current_time_truth.state) {
       case TIME_TRUTH_UNKNOWN:
         switch (source) {
+          case TIME_TRUTH_EPH_GPS:
           case TIME_TRUTH_EPH_GAL:
           case TIME_TRUTH_EPH_BDS:
             new_time_truth.wn = time.wn;
             new_time_truth.tow = (float)time.tow;
             new_time_truth.state = TIME_TRUTH_SOLVED;
             break;
-          case TIME_TRUTH_EPH_GPS:
           default:
             return false;
         }
@@ -140,7 +116,7 @@ bool time_truth_update(time_truth_t *instance,
         new_state_name = "-";
         break;
     }
-    log_info("Truth table state changed to \"%s\"", new_state_name);
+    log_info("Time truth state changed to \"%s\"", new_state_name);
   }
 
   return true;

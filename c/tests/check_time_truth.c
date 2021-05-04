@@ -12,7 +12,23 @@
 
 #include <check.h>
 #include <gnss-converters/time_truth.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <swiftnav/gnss_time.h>
 #include <swiftnav/logging.h>
+
+/** Build time */
+static const gps_time_t BUILD_GPS_TIME = {.wn = GPS_WEEK_REFERENCE, .tow = 0};
+
+/** Expected state change to SOLVED message */
+const char SOLVED_STATE_TRANSITION[] = "Time truth state changed to \"Solved\"";
+
+/** Expected invalid GPS time message */
+const char INVALID_TIME_MESSAGE[] = "Invalid time submitted to time truth";
+
+/** Expected GPS time predates build time message */
+const char PREDATES_BUILD_TIME_MESSAGE[] =
+    "Time submitted to time truth predates build time";
 
 /**
  * Fixture Data
@@ -20,10 +36,12 @@
 
 static bool log_invoked;
 static int log_level;
+static char log_message[100];
 
 static void reset_log_flags() {
   log_invoked = false;
   log_level = -1;
+  memset(log_message, 0, sizeof(log_message));
 }
 
 static void swiftnav_log(int level,
@@ -31,8 +49,17 @@ static void swiftnav_log(int level,
                          ...) {
   (void)level;
   (void)msg;
+
   log_invoked = true;
   log_level = level;
+
+  va_list ap;
+  va_start(ap, msg);
+  vsnprintf(log_message,
+            sizeof(log_message) / sizeof(log_message[0]),
+            msg,
+            ap);  // NOLINT
+  va_end(ap);
 }
 
 static void swiftnav_detailed_log(int level,
@@ -61,6 +88,8 @@ START_TEST(test_default_init) {
   time_truth_get(&time_truth, &state, &time);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
   ck_assert(!gps_time_valid(&time));
+
+  time_truth_get(&time_truth, NULL, NULL);
 }
 END_TEST
 
@@ -78,12 +107,16 @@ START_TEST(test_unknown_state_eph_gps) {
   time_in.wn = 2153;
   time_in.tow = 198581;
   ck_assert(gps_time_valid(&time_in));
-  ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_GPS, time_in));
-  ck_assert(!log_invoked);
+  ck_assert(time_truth_update(&time_truth, TIME_TRUTH_EPH_GPS, time_in));
+  ck_assert(log_invoked);
+  ck_assert(log_level == LOG_INFO);
+  ck_assert_str_eq(log_message, SOLVED_STATE_TRANSITION);
 
   time_truth_get(&time_truth, &state, &time_out);
-  ck_assert(state == TIME_TRUTH_UNKNOWN);
-  ck_assert(!gps_time_valid(&time_out));
+  ck_assert(state == TIME_TRUTH_SOLVED);
+  ck_assert(gps_time_valid(&time_out));
+  ck_assert_int_eq(time_out.wn, time_in.wn);
+  ck_assert_double_eq(time_out.tow, time_in.tow);
 }
 END_TEST
 
@@ -104,6 +137,7 @@ START_TEST(test_unknown_state_eph_gal) {
   ck_assert(time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_INFO);
+  ck_assert_str_eq(log_message, SOLVED_STATE_TRANSITION);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_SOLVED);
@@ -130,6 +164,7 @@ START_TEST(test_unknown_state_eph_bds) {
   ck_assert(time_truth_update(&time_truth, TIME_TRUTH_EPH_BDS, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_INFO);
+  ck_assert_str_eq(log_message, SOLVED_STATE_TRANSITION);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_SOLVED);
@@ -156,8 +191,8 @@ START_TEST(test_unknown_state_invalid_eph_gps) {
   ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_GPS, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, INVALID_TIME_MESSAGE);
 
-  time_truth_get(&time_truth, NULL, NULL);
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
   ck_assert(!gps_time_valid(&time_out));
@@ -166,6 +201,32 @@ END_TEST
 
 /**
  * STTT-6
+ */
+START_TEST(test_unknown_state_out_of_bounds_eph_gps) {
+  enum time_truth_state state;
+  gps_time_t time_in;
+  gps_time_t time_out;
+
+  time_truth_t time_truth;
+  time_truth_init(&time_truth);
+
+  time_in.wn = 0;
+  time_in.tow = 0;
+  ck_assert(gps_time_valid(&time_in));
+  ck_assert(gpsdifftime(&time_in, &BUILD_GPS_TIME) < 0);
+  ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_GPS, time_in));
+  ck_assert(log_invoked);
+  ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, PREDATES_BUILD_TIME_MESSAGE);
+
+  time_truth_get(&time_truth, &state, &time_out);
+  ck_assert(state == TIME_TRUTH_UNKNOWN);
+  ck_assert(!gps_time_valid(&time_out));
+}
+END_TEST
+
+/**
+ * STTT-7
  */
 START_TEST(test_unknown_state_invalid_eph_gal) {
   enum time_truth_state state;
@@ -181,6 +242,7 @@ START_TEST(test_unknown_state_invalid_eph_gal) {
   ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, INVALID_TIME_MESSAGE);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
@@ -189,7 +251,7 @@ START_TEST(test_unknown_state_invalid_eph_gal) {
 END_TEST
 
 /**
- * STTT-7
+ * STTT-8
  */
 START_TEST(test_unknown_state_out_of_bounds_eph_gal) {
   enum time_truth_state state;
@@ -202,9 +264,11 @@ START_TEST(test_unknown_state_out_of_bounds_eph_gal) {
   time_in.wn = 1023;
   time_in.tow = 604799;
   ck_assert(gps_time_valid(&time_in));
+  ck_assert(gpsdifftime(&time_in, &BUILD_GPS_TIME) < 0);
   ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, PREDATES_BUILD_TIME_MESSAGE);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
@@ -213,7 +277,7 @@ START_TEST(test_unknown_state_out_of_bounds_eph_gal) {
 END_TEST
 
 /**
- * STTT-8
+ * STTT-9
  */
 START_TEST(test_unknown_state_invalid_eph_bds) {
   enum time_truth_state state;
@@ -229,6 +293,7 @@ START_TEST(test_unknown_state_invalid_eph_bds) {
   ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_BDS, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, INVALID_TIME_MESSAGE);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
@@ -237,7 +302,7 @@ START_TEST(test_unknown_state_invalid_eph_bds) {
 END_TEST
 
 /**
- * STTT-9
+ * STTT-10
  */
 START_TEST(test_unknown_state_out_of_bounds_eph_bds) {
   enum time_truth_state state;
@@ -250,9 +315,11 @@ START_TEST(test_unknown_state_out_of_bounds_eph_bds) {
   time_in.wn = 1356;
   time_in.tow = 13;
   ck_assert(gps_time_valid(&time_in));
+  ck_assert(gpsdifftime(&time_in, &BUILD_GPS_TIME) < 0);
   ck_assert(!time_truth_update(&time_truth, TIME_TRUTH_EPH_BDS, time_in));
   ck_assert(log_invoked);
   ck_assert(log_level == LOG_WARN);
+  ck_assert_str_eq(log_message, PREDATES_BUILD_TIME_MESSAGE);
 
   time_truth_get(&time_truth, &state, &time_out);
   ck_assert(state == TIME_TRUTH_UNKNOWN);
@@ -261,7 +328,7 @@ START_TEST(test_unknown_state_out_of_bounds_eph_bds) {
 END_TEST
 
 /**
- * STTT-10
+ * STTT-11
  */
 START_TEST(test_solved_state_plus_one_second) {
   enum time_truth_state state;
@@ -300,7 +367,7 @@ START_TEST(test_solved_state_plus_one_second) {
 END_TEST
 
 /**
- * STTT-11
+ * STTT-12
  */
 START_TEST(test_solved_state_minus_one_second) {
   enum time_truth_state state;
@@ -359,6 +426,7 @@ Suite *time_truth_suite(void) {
   tcase_add_test(test_case_unknown, test_unknown_state_eph_gal);
   tcase_add_test(test_case_unknown, test_unknown_state_eph_bds);
   tcase_add_test(test_case_unknown, test_unknown_state_invalid_eph_gps);
+  tcase_add_test(test_case_unknown, test_unknown_state_out_of_bounds_eph_gps);
   tcase_add_test(test_case_unknown, test_unknown_state_invalid_eph_gal);
   tcase_add_test(test_case_unknown, test_unknown_state_out_of_bounds_eph_gal);
   tcase_add_test(test_case_unknown, test_unknown_state_invalid_eph_bds);
