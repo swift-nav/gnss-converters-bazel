@@ -1143,17 +1143,6 @@ static u8 sbp_fcn_to_rtcm(u8 sbp_fcn) {
   return rtcm_fcn;
 }
 
-void rtcm2sbp_set_gps_time(const gps_time_t *current_time,
-                           struct rtcm3_sbp_state *state) {
-  (void)current_time;
-  (void)state;
-}
-
-void rtcm2sbp_set_leap_second(s8 leap_seconds, struct rtcm3_sbp_state *state) {
-  (void)leap_seconds;
-  (void)state;
-}
-
 void rtcm2sbp_set_glo_fcn(sbp_gnss_signal_t sid,
                           u8 sbp_fcn,
                           struct rtcm3_sbp_state *state) {

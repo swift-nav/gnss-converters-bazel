@@ -34,6 +34,8 @@
 #define SBP_PREAMBLE 0x55
 #define STRCMP_EQ 0
 
+static time_truth_t time_truth;
+
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
 typedef int (*writefn_ptr)(const uint8_t *, size_t, void *);
 
@@ -51,7 +53,7 @@ static void update_obs_time(const msg_obs_t *msg) {
   /* Some receivers output a TOW 0 whenever it's in a denied environment
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
-    rtcm2sbp_set_gps_time(&obs_time, &state);
+    // TODO(SSTM-28) -  update time truth with observations
   }
 }
 
@@ -62,6 +64,35 @@ static void cb_rtcm_to_sbp(uint16_t msg_id,
                            uint8_t *buffer,
                            uint16_t sender_id,
                            void *context) {
+  bool time_update = true;
+  enum time_truth_source time_source;
+  gps_time_sec_t time;
+
+  switch (msg_id) {
+    case SBP_MSG_EPHEMERIS_GPS:
+      time_source = TIME_TRUTH_EPH_GPS;
+      time = ((const msg_ephemeris_gps_t *)buffer)->common.toe;
+      break;
+    case SBP_MSG_EPHEMERIS_GAL:
+      time_source = TIME_TRUTH_EPH_GAL;
+      time = ((const msg_ephemeris_gal_t *)buffer)->common.toe;
+      break;
+    case SBP_MSG_EPHEMERIS_BDS:
+      time_source = TIME_TRUTH_EPH_BDS;
+      time = ((const msg_ephemeris_bds_t *)buffer)->common.toe;
+      break;
+    default:
+      time_update = false;
+      break;
+  };
+
+  if (time_update) {
+    gps_time_t time_truth_time;
+    time_truth_time.wn = (s16)time.wn;
+    time_truth_time.tow = time.tow;
+    time_truth_update(&time_truth, time_source, time_truth_time);
+  }
+
   if (msg_id == SBP_MSG_OBS) {
     update_obs_time((msg_obs_t *)buffer);
   }
@@ -137,7 +168,7 @@ int rtcm3tosbp_main(int argc,
                     writefn_ptr writefn,
                     void *context) {
   /* initialize time from systime */
-  time_t ct_utc_unix = time(NULL);
+  time_t ct_utc_unix = 0;
 
   g_writefn = writefn;
 
@@ -220,22 +251,23 @@ int rtcm3tosbp_main(int argc,
     }
   }
 
-  /* set time, account for UTC<->GPS leap second difference */
-  gps_time_t noleapsec = time2gps_t(ct_utc_unix);
-  double gps_utc_offset = get_gps_utc_offset(&noleapsec, NULL);
-  ct_utc_unix += (s8)rint(gps_utc_offset);
-  gps_time_t withleapsec = time2gps_t(ct_utc_unix);
-  gps_time_t current_time;
-  current_time.tow = withleapsec.tow;
-  current_time.wn = withleapsec.wn;
-
-  time_truth_t time_truth;
   time_truth_init(&time_truth);
+
+  if (ct_utc_unix > 0) {
+    /* set time, account for UTC<->GPS leap second difference */
+    gps_time_t noleapsec = time2gps_t(ct_utc_unix);
+    double gps_utc_offset = get_gps_utc_offset(&noleapsec, NULL);
+    ct_utc_unix += (s8)rint(gps_utc_offset);
+    gps_time_t withleapsec = time2gps_t(ct_utc_unix);
+    gps_time_t current_time;
+    current_time.tow = withleapsec.tow;
+    current_time.wn = withleapsec.wn;
+
+    time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time);
+  }
 
   rtcm2sbp_init(
       &state, &time_truth, cb_rtcm_to_sbp, cb_base_obs_invalid, context);
-  rtcm2sbp_set_gps_time(&current_time, &state);
-  rtcm2sbp_set_leap_second((s8)lrint(gps_utc_offset), &state);
 
   /* todo: Do we want to return a non-zero value on an error? */
   ssize_t ret;
