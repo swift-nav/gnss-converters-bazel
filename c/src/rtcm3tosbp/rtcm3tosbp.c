@@ -132,8 +132,10 @@ static void cb_rtcm_to_sbp(uint16_t msg_id,
 }
 
 static void cb_base_obs_invalid(const double timediff, void *context) {
+  (void)timediff;
   (void)context; /* squash warning */
-  fprintf(stderr, "Invalid base observation! timediff: %lf\n", timediff);
+  // TODO(SSTM-30) reintroduce this message, also downgrade level to warning
+  // fprintf(stderr, "Invalid base observation! timediff: %lf\n", timediff);
 }
 
 static void help(char *arg, const char *additional_opts_help) {
