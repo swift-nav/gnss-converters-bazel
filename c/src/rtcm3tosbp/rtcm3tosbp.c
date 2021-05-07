@@ -64,34 +64,7 @@ static void cb_rtcm_to_sbp(uint16_t msg_id,
                            uint8_t *buffer,
                            uint16_t sender_id,
                            void *context) {
-  bool time_update = true;
-  enum time_truth_source time_source;
-  gps_time_sec_t time;
-
-  switch (msg_id) {
-    case SBP_MSG_EPHEMERIS_GPS:
-      time_source = TIME_TRUTH_EPH_GPS;
-      time = ((const msg_ephemeris_gps_t *)buffer)->common.toe;
-      break;
-    case SBP_MSG_EPHEMERIS_GAL:
-      time_source = TIME_TRUTH_EPH_GAL;
-      time = ((const msg_ephemeris_gal_t *)buffer)->common.toe;
-      break;
-    case SBP_MSG_EPHEMERIS_BDS:
-      time_source = TIME_TRUTH_EPH_BDS;
-      time = ((const msg_ephemeris_bds_t *)buffer)->common.toe;
-      break;
-    default:
-      time_update = false;
-      break;
-  };
-
-  if (time_update) {
-    gps_time_t time_truth_time;
-    time_truth_time.wn = (s16)time.wn;
-    time_truth_time.tow = time.tow;
-    time_truth_update(&time_truth, time_source, time_truth_time);
-  }
+  time_truth_update_from_sbp(&time_truth, msg_id, length, buffer);
 
   if (msg_id == SBP_MSG_OBS) {
     update_obs_time((msg_obs_t *)buffer);

@@ -15,6 +15,9 @@
 #include <stdalign.h>
 #include <stdatomic.h>
 #include <string.h>
+
+#include <libsbp/gnss.h>
+#include <libsbp/observation.h>
 #include <swiftnav/ephemeris.h>
 
 /**
@@ -141,4 +144,37 @@ void time_truth_get(time_truth_t *instance,
     time->wn = value.wn;
     time->tow = value.tow;
   }
+}
+
+bool time_truth_update_from_sbp(time_truth_t *instance,
+                                uint16_t message_type,
+                                uint8_t length,
+                                const uint8_t *payload) {
+  (void)length;
+
+  enum time_truth_source time_source;
+  gps_time_sec_t time;
+
+  switch (message_type) {
+    case SBP_MSG_EPHEMERIS_GPS:
+      time_source = TIME_TRUTH_EPH_GPS;
+      time = ((const msg_ephemeris_gps_t *)payload)->common.toe;
+      break;
+    case SBP_MSG_EPHEMERIS_GAL:
+      time_source = TIME_TRUTH_EPH_GAL;
+      time = ((const msg_ephemeris_gal_t *)payload)->common.toe;
+      break;
+    case SBP_MSG_EPHEMERIS_BDS:
+      time_source = TIME_TRUTH_EPH_BDS;
+      time = ((const msg_ephemeris_bds_t *)payload)->common.toe;
+      break;
+    default:
+      return false;
+  };
+
+  gps_time_t time_truth_time;
+  time_truth_time.wn = (s16)time.wn;
+  time_truth_time.tow = time.tow;
+
+  return time_truth_update(instance, time_source, time_truth_time);
 }

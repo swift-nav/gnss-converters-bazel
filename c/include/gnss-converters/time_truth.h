@@ -92,6 +92,21 @@ void time_truth_get(time_truth_t* instance,
                     enum time_truth_state* state,
                     gps_time_t* time);
 
+/**
+ * Updates the time truth instance based on the SBP message content.
+ *
+ * @param instance pointer to the state machine struct
+ * @param message_type SBP message type
+ * @param length length of the SBP message payload in bytes
+ * @param payload SBP message payload
+ * @return true if the time truth time and/or state has been updated, otherwise
+ * false
+ */
+bool time_truth_update_from_sbp(time_truth_t* instance,
+                                uint16_t message_type,
+                                uint8_t length,
+                                const uint8_t* payload);
+
 #ifdef __cplusplus
 }
 #endif
