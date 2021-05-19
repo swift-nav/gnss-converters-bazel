@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Swift Navigation Inc.
- * Contact: Pasi Miettinen <pasi.miettinen@exafore.com>
+ * Contact: Swift Navigation <dev@swiftnav.com>
  *
  * This source is subject to the license found in the file 'LICENSE' which must
  * be distributed together with this source. All other rights reserved.
@@ -67,6 +67,34 @@ const char* gpvtg_truth[] = {
 "$GPVTG,,T,,M,0.01,N,0.02,K,D*25",
 "$GPVTG,,T,,M,0.02,N,0.03,K,D*27",
 "$GPVTG,,T,,M,0.02,N,0.04,K,D*20"
+};
+
+const char* gpvtg_cog_forced_truth[] = {
+    "$GPVTG,206.6,T,,M,0.02,N,0.04,K,A*09",
+"$GPVTG,201.8,T,,M,0.01,N,0.02,K,A*05",
+"$GPVTG,180.0,T,,M,0.02,N,0.04,K,A*02",
+"$GPVTG,195.9,T,,M,0.01,N,0.03,K,A*0B",
+"$GPVTG,82.9,T,,M,0.02,N,0.03,K,A*3F",
+"$GPVTG,206.6,T,,M,0.01,N,0.02,K,A*0C",
+"$GPVTG,37.9,T,,M,0.02,N,0.04,K,A*36",
+"$GPVTG,270.0,T,,M,0.02,N,0.04,K,D*0B",
+"$GPVTG,45.0,T,,M,0.01,N,0.02,K,D*3A",
+"$GPVTG,305.5,T,,M,0.02,N,0.03,K,D*0A",
+"$GPVTG,145.0,T,,M,0.02,N,0.04,K,D*0E"
+};
+
+const char* gpvtg_cog_forced_truth_stationary_thresh[] = {
+    "$GPVTG,206.6,T,,M,0.02,N,0.04,K,A*09",
+"$GPVTG,206.6,T,,M,0.01,N,0.02,K,A*0C",
+"$GPVTG,180.0,T,,M,0.02,N,0.04,K,A*02",
+"$GPVTG,195.9,T,,M,0.01,N,0.03,K,A*0B",
+"$GPVTG,82.9,T,,M,0.02,N,0.03,K,A*3F",
+"$GPVTG,82.9,T,,M,0.01,N,0.02,K,A*3D",
+"$GPVTG,37.9,T,,M,0.02,N,0.04,K,A*36",
+"$GPVTG,270.0,T,,M,0.02,N,0.04,K,D*0B",
+"$GPVTG,270.0,T,,M,0.01,N,0.02,K,D*0E",
+"$GPVTG,305.5,T,,M,0.02,N,0.03,K,D*0A",
+"$GPVTG,145.0,T,,M,0.02,N,0.04,K,D*0E"
 };
 
 const char* gpgll_truth[] = {
