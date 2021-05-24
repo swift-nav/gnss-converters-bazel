@@ -106,7 +106,7 @@ typedef struct sbp2nmea_state {
    * otherwise use the last_non_stationary_cog.
    * This allows filtering out variations in the COG due to small amounts of
    * noise in the SOG. */
-  float cog_stationary_threshold_mps;
+  float cog_update_threshold_mps;
   double last_non_stationary_cog;
 } sbp2nmea_t;
 

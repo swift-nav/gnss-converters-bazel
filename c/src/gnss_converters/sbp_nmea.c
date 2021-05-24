@@ -408,7 +408,7 @@ void sbp2nmea_cog_threshold_set(sbp2nmea_t *state, float cog_thd_mps) {
 
 void sbp2nmea_cog_stationary_threshold_set(sbp2nmea_t *state,
                                            double cog_stationary_thd_mps) {
-  state->cog_stationary_threshold_mps = cog_stationary_thd_mps;
+  state->cog_update_threshold_mps = cog_stationary_thd_mps;
 }
 
 void sbp2nmea_init(sbp2nmea_t *state,
@@ -422,5 +422,5 @@ void sbp2nmea_init(sbp2nmea_t *state,
   state->requested_mode = mode;
   state->actual_mode = SBP2NMEA_MODE_GNSS;
   state->last_non_stationary_cog = 0;
-  state->cog_stationary_threshold_mps = 0;
+  state->cog_update_threshold_mps = NMEA_COG_STATIC_LIMIT_MPS;
 }

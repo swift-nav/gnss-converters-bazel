@@ -647,7 +647,7 @@ void send_gsa(sbp2nmea_t *state) {
  * \param[out] sog_kph                  speed over ground [kph]
  */
 static void calc_cog_sog(const msg_vel_ned_t *sbp_vel_ned,
-                         double cog_stationary_threshold_mps,
+                         double cog_update_threshold_mps,
                          double *last_non_stationary_cog,
                          double *cog,
                          double *sog_knots,
@@ -658,7 +658,7 @@ static void calc_cog_sog(const msg_vel_ned_t *sbp_vel_ned,
   *sog_knots = MS2KNOTS(vel_north_ms, vel_east_ms, 0);
   *sog_kph = MS2KMHR(vel_north_ms, vel_east_ms, 0);
 
-  if (*sog_knots > (MS2KNOTS_FACTOR * cog_stationary_threshold_mps)) {
+  if (*sog_knots >= (MS2KNOTS_FACTOR * cog_update_threshold_mps)) {
     *cog = R2D * atan2(vel_east_ms, vel_north_ms);
 
     /* Convert negative values to positive */
@@ -714,7 +714,7 @@ void send_gprmc(sbp2nmea_t *state) {
 
   double cog, sog_knots, sog_kph;
   calc_cog_sog(sbp_vel_ned,
-               state->cog_stationary_threshold_mps,
+               state->cog_update_threshold_mps,
                &state->last_non_stationary_cog,
                &cog,
                &sog_knots,
@@ -778,7 +778,7 @@ void send_gpvtg(sbp2nmea_t *state) {
 
   double cog, sog_knots, sog_kph;
   calc_cog_sog(sbp_vel_ned,
-               state->cog_stationary_threshold_mps,
+               state->cog_update_threshold_mps,
                &state->last_non_stationary_cog,
                &cog,
                &sog_knots,
@@ -1237,7 +1237,7 @@ void send_pubx(sbp2nmea_t *state) {
   // SOG COG Vvel
   double cog, sog_knots, sog_kph;
   calc_cog_sog(sbp_vel_ned,
-               state->cog_stationary_threshold_mps,
+               state->cog_update_threshold_mps,
                &state->last_non_stationary_cog,
                &cog,
                &sog_knots,
