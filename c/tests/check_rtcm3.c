@@ -145,7 +145,7 @@ static uint32_t crc24q(const uint8_t *buf, uint32_t len, uint32_t crc) {
 void update_obs_time(const msg_obs_t *msg) {
   gps_time_t obs_time = {.tow = (double)msg[0].header.t.tow / SECS_MS,
                          .wn = msg[0].header.t.wn};
-  state.time_from_rover_obs = obs_time;
+  state.time_from_input_data = obs_time;
   time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, obs_time);
 }
 
@@ -698,7 +698,7 @@ void test_RTCM3(const char *filename,
   time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time_);
 
   rtcm2sbp_init(&state, &time_truth, cb_rtcm_to_sbp, NULL, NULL);
-  state.time_from_rover_obs = current_time_;
+  state.time_from_input_data = current_time_;
   state.leap_seconds = 18;
   state.leap_second_known = true;
 
@@ -1436,7 +1436,7 @@ END_TEST
 START_TEST(tc_rtcm_eph_wn_rollover2) {
   current_time.wn = 2050;
   current_time.tow = 208800;
-  state.time_from_rover_obs = current_time;
+  state.time_from_input_data = current_time;
   /* short RTCM3 capture from a RTCM3EPH stream */
   test_RTCM3(RELATIVE_PATH_PREFIX "/data/wn-rollover2.rtcm",
              sbp_callback_eph_wn_rollover2,
@@ -1501,7 +1501,7 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   sbp2rtcm_set_leap_second(18, &out_state);
   state.leap_seconds = 18;
   state.leap_second_known = true;
-  state.time_from_rover_obs = current_time;
+  state.time_from_input_data = current_time;
 
   /* set the FCNs for couple of GLO satellites */
   sbp_gnss_signal_t sid = {2, CODE_GLO_L1OF};
@@ -1514,7 +1514,7 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   sbp2rtcm_set_glo_fcn(sid, 8, &out_state);
   rtcm2sbp_set_glo_fcn(sid, 8, &state);
 
-  state.time_from_rover_obs = current_time;
+  state.time_from_input_data = current_time;
 
   memcpy(out_state.sbp_obs_buffer, sbp_test_data, sizeof(sbp_test_data));
   out_state.n_sbp_obs = ARRAY_SIZE(sbp_test_data);
@@ -1864,7 +1864,7 @@ START_TEST(test_sbp_to_rtcm_1019_validity_decoding) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
-  state.time_from_rover_obs = (gps_time_t){.wn = 2022, .tow = 210853};
+  state.time_from_input_data = (gps_time_t){.wn = 2022, .tow = 210853};
   state.leap_second_known = true;
   state.leap_seconds = 18;
 
@@ -1878,7 +1878,7 @@ START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1020_roundtrip) {
-  state.time_from_rover_obs = (gps_time_t){.wn = 2022, .tow = 210853};
+  state.time_from_input_data = (gps_time_t){.wn = 2022, .tow = 210853};
   state.leap_second_known = true;
   state.leap_seconds = 18;
 

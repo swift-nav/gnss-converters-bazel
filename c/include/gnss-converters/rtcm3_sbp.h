@@ -71,7 +71,8 @@ typedef struct {
 } ssr_orbit_clock_cache;
 
 struct rtcm3_sbp_state {
-  gps_time_t time_from_rover_obs;
+  bool use_time_from_input_obs;
+  gps_time_t time_from_input_data;
   s8 leap_seconds;
   bool leap_second_known;
   u16 sender_id;

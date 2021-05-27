@@ -86,8 +86,9 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
 
   state->time_truth = time_truth;
 
-  state->time_from_rover_obs.wn = WN_UNKNOWN;
-  state->time_from_rover_obs.tow = 0;
+  state->use_time_from_input_obs = false;
+  state->time_from_input_data.wn = WN_UNKNOWN;
+  state->time_from_input_data.tow = 0;
 
   state->leap_seconds = 0;
   state->leap_second_known = false;
@@ -132,8 +133,12 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       (payload[byte] << 4) | ((payload[byte + 1] >> 4) & 0xf);
 
   enum time_truth_state time_truth_state;
-  time_truth_get(
-      state->time_truth, &time_truth_state, &state->time_from_rover_obs);
+  if (state->use_time_from_input_obs) {
+    time_truth_state = TIME_TRUTH_SOLVED;
+  } else {
+    time_truth_get(
+        state->time_truth, &time_truth_state, &state->time_from_input_data);
+  }
   switch (message_type) {
     /** msg_base_pos_ecef_t messages */
     case 1005:
@@ -182,7 +187,8 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
   }
 
   if (time_truth_state == TIME_TRUTH_SOLVED) {
-    state->leap_seconds = get_gps_utc_offset(&state->time_from_rover_obs, NULL);
+    state->leap_seconds =
+        get_gps_utc_offset(&state->time_from_input_data, NULL);
     state->leap_second_known = true;
   }
 
@@ -376,7 +382,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               (u8 *)&sbp_glo_cpb,
                               rtcm_stn_to_sbp_sender_id(msg_1230.stn_id),
                               state->context);
-        state->last_1230_received = state->time_from_rover_obs;
+        state->last_1230_received = state->time_from_input_data;
       }
       break;
     }
@@ -629,11 +635,11 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
   gps_time_t obs_time;
   compute_glo_time(new_rtcm_obs->header.tow_ms,
                    &obs_time,
-                   &state->time_from_rover_obs,
+                   &state->time_from_input_data,
                    state);
 
   if (!gps_time_valid(&obs_time) ||
-      fabs(gpsdifftime(&obs_time, &state->time_from_rover_obs) -
+      fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
            state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
     /* GLO time invalid or too far from rover time*/
     return;
@@ -657,7 +663,7 @@ void add_gps_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
   gps_time_t obs_time;
   compute_gps_time(new_rtcm_obs->header.tow_ms,
                    &obs_time,
-                   &state->time_from_rover_obs,
+                   &state->time_from_input_data,
                    state);
   assert(gps_time_valid(&obs_time));
 
@@ -1244,7 +1250,7 @@ static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
 
 bool no_1230_received(struct rtcm3_sbp_state *state) {
   if (!gps_time_valid(&state->last_1230_received) ||
-      gpsdifftime(&state->time_from_rover_obs, &state->last_1230_received) >
+      gpsdifftime(&state->time_from_input_data, &state->last_1230_received) >
           MSG_1230_TIMEOUT_SEC) {
     return true;
   }
@@ -1382,10 +1388,10 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
   if (RTCM_CONSTELLATION_GLO == cons) {
     compute_glo_time(new_rtcm_obs->header.tow_ms,
                      &obs_time,
-                     &state->time_from_rover_obs,
+                     &state->time_from_input_data,
                      state);
     if (!gps_time_valid(&obs_time) ||
-        fabs(gpsdifftime(&obs_time, &state->time_from_rover_obs) -
+        fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
              state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
       /* time invalid because of missing leap second info or ongoing leap second
        * event, skip these measurements */
@@ -1399,7 +1405,7 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
       beidou_tow_to_gps_tow(&tow_ms);
     }
 
-    compute_gps_time(tow_ms, &obs_time, &state->time_from_rover_obs, state);
+    compute_gps_time(tow_ms, &obs_time, &state->time_from_input_data, state);
   }
 
   /* Find the buffer of obs to be sent */

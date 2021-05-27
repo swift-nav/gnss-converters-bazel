@@ -54,6 +54,7 @@ static void update_obs_time(const msg_obs_t *msg) {
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
     // TODO(SSTM-28) -  update time truth with observations
+    state.time_from_input_data = obs_time;
   }
 }
 
@@ -64,10 +65,12 @@ static void cb_rtcm_to_sbp(uint16_t msg_id,
                            uint8_t *buffer,
                            uint16_t sender_id,
                            void *context) {
-  time_truth_update_from_sbp(&time_truth, msg_id, length, buffer);
-
-  if (msg_id == SBP_MSG_OBS) {
-    update_obs_time((msg_obs_t *)buffer);
+  if (state.use_time_from_input_obs) {
+    if (msg_id == SBP_MSG_OBS) {
+      update_obs_time((msg_obs_t *)buffer);
+    }
+  } else {
+    time_truth_update_from_sbp(&time_truth, msg_id, length, buffer);
   }
 
   (void)(context); /* squash warning */
@@ -132,6 +135,7 @@ static void help(char *arg, const char *additional_opts_help) {
           "the converter, needs to be accurate to within a half week for GPS "
           "only and within a half day "
           "for glonass\n");
+  fprintf(stderr, "  -o Use observations instead of ephemerides time source");
   fprintf(stderr, "  -[GREICJS] disables a constellation\n");
   fprintf(stderr, "  -v for stderr verbosity\n");
 }
@@ -144,11 +148,13 @@ int rtcm3tosbp_main(int argc,
                     void *context) {
   /* initialize time from systime */
   time_t ct_utc_unix = 0;
+  /* use observations instead of ephemerides as time source */
+  bool use_obs_time = false;
 
   g_writefn = writefn;
 
   int opt;
-  while ((opt = getopt(argc, argv, "hb:c:l:w:d:GRECJS:v")) != -1) {
+  while ((opt = getopt(argc, argv, "hb:c:l:w:d:oGRECJS:v")) != -1) {
     if (optarg && *optarg == '=') {
       optarg++;
     }
@@ -194,6 +200,9 @@ int rtcm3tosbp_main(int argc,
 
         break;
       }
+      case 'o':
+        use_obs_time = true;
+        break;
       case 'G':
         constellation_mask[CONSTELLATION_GPS] = true;
         fprintf(stderr, "Disabling Navstar\n");
@@ -243,6 +252,11 @@ int rtcm3tosbp_main(int argc,
 
   rtcm2sbp_init(
       &state, &time_truth, cb_rtcm_to_sbp, cb_base_obs_invalid, context);
+
+  if (use_obs_time) {
+    state.use_time_from_input_obs = true;
+    time_truth_get(&time_truth, NULL, &state.time_from_input_data);
+  }
 
   /* todo: Do we want to return a non-zero value on an error? */
   ssize_t ret;

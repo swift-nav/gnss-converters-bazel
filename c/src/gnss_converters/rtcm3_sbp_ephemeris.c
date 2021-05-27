@@ -117,7 +117,7 @@ void rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
       gps_adjust_week_cycle(msg_eph->wn, GPS_WEEK_REFERENCE);
   sbp_gps_eph->common.toe.tow = msg_eph->toe * GPS_TOE_RESOLUTION;
   gps_time_sec_match_weeks(&sbp_gps_eph->common.toe,
-                           &state->time_from_rover_obs);
+                           &state->time_from_input_data);
   sbp_gps_eph->common.sid.sat = msg_eph->sat_id;
   sbp_gps_eph->common.sid.code = CODE_GPS_L1CA;
   sbp_gps_eph->common.ura = convert_ura_to_uri(msg_eph->ura);
@@ -155,7 +155,7 @@ void rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
 
   sbp_gps_eph->toc.wn = gps_adjust_week_cycle(msg_eph->wn, GPS_WEEK_REFERENCE);
   sbp_gps_eph->toc.tow = msg_eph->kepler.toc * GPS_TOC_RESOLUTION;
-  gps_time_sec_match_weeks(&sbp_gps_eph->toc, &state->time_from_rover_obs);
+  gps_time_sec_match_weeks(&sbp_gps_eph->toc, &state->time_from_input_data);
 }
 
 void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
@@ -216,7 +216,7 @@ bool rtcm3_glo_eph_to_sbp(rtcm_msg_eph *msg_eph,
   gps_time_t toe;
   compute_glo_time(msg_eph->glo.t_b * 15 * MINUTE_SECS * SECS_MS,
                    &toe,
-                   &state->time_from_rover_obs,
+                   &state->time_from_input_data,
                    state);
   if (toe.wn == (s16)INVALID_TIME) {
     return false;
@@ -268,7 +268,7 @@ void rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
   sbp_gal_eph->common.toe.wn = week;
   sbp_gal_eph->common.toe.tow = msg_eph->toe * GALILEO_TOE_RESOLUTION;
   gps_time_sec_match_weeks(&sbp_gal_eph->common.toe,
-                           &state->time_from_rover_obs);
+                           &state->time_from_input_data);
 
   sbp_gal_eph->common.sid.sat = msg_eph->sat_id;
   sbp_gal_eph->common.sid.code = CODE_GAL_E1B;
@@ -307,7 +307,7 @@ void rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
 
   sbp_gal_eph->toc.wn = week;
   sbp_gal_eph->toc.tow = msg_eph->kepler.toc * GALILEO_TOC_RESOLUTION;
-  gps_time_sec_match_weeks(&sbp_gal_eph->toc, &state->time_from_rover_obs);
+  gps_time_sec_match_weeks(&sbp_gal_eph->toc, &state->time_from_input_data);
 
   sbp_gal_eph->source = source;
 }
