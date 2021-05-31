@@ -113,10 +113,6 @@ void rtcm3_1033_to_sbp(const rtcm_msg_1033 *rtcm_1033,
 void rtcm3_1230_to_sbp(const rtcm_msg_1230 *rtcm_1230,
                        msg_glo_biases_t *sbp_glo_bias);
 
-void rtcm3_to_sbp(const rtcm_obs_message *rtcm_obs,
-                  msg_obs_t *new_sbp_obs,
-                  struct rtcm3_sbp_state *state);
-
 void add_gps_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state);
 

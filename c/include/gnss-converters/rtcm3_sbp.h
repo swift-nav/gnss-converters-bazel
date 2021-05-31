@@ -37,7 +37,7 @@ extern "C" {
 #define SBP_MAX_OBS_SEQ (15u)
 #define MAX_OBS_IN_SBP ((SBP_MAX_PAYLOAD_LEN - SBP_HDR_SIZE) / SBP_OBS_SIZE)
 #define MAX_OBS_PER_EPOCH (SBP_MAX_OBS_SEQ * MAX_OBS_IN_SBP)
-#define OBS_BUFFER_SIZE (SBP_HDR_SIZE + MAX_OBS_PER_EPOCH * SBP_OBS_SIZE)
+#define OBS_BUFFER_SIZE (MAX_OBS_PER_EPOCH * SBP_OBS_SIZE)
 
 #define INVALID_TIME 0xFFFF
 #define MAX_WN (INT16_MAX)
@@ -85,7 +85,9 @@ struct rtcm3_sbp_state {
       u16 msg_id, u8 len, u8 *buff, u16 sender_id, void *context);
   void (*cb_base_obs_invalid)(double time_diff, void *context);
   void *context;
-  u8 obs_buffer[OBS_BUFFER_SIZE];
+  uint8_t obs_to_send;
+  packed_obs_content_t obs_buffer[MAX_OBS_PER_EPOCH];
+  sbp_gps_time_t obs_time;
   bool sent_msm_warning;
   bool sent_code_warning[UNSUPPORTED_CODE_MAX];
   /* GLO FCN map, indexed by 1-based PRN */

@@ -346,50 +346,51 @@ void check_overflow(s32 *value) {
   }
 }
 
-static int fill_msg_obs(const ubx_rxm_rawx *rxm_rawx, msg_obs_t *msg) {
+static int fill_msg_obs(const ubx_rxm_rawx *rxm_rawx,
+                        sbp_gps_time_t *obs_time,
+                        uint8_t *n_obs,
+                        packed_obs_content_t *obs) {
   /* convert from sec to ms */
   double ms = UBX_SBP_TOW_MS_SCALING * rxm_rawx->rcv_tow;
   double ns = UBX_SBP_TOW_NS_SCALING * modf(ms, &ms);
-  msg->header.t.tow = (u32)ms;
-  msg->header.t.ns_residual = (s32)ns;
-  if (msg->header.t.ns_residual > 500000) {
-    msg->header.t.ns_residual -= 1000000;
-    msg->header.t.tow += 1;
+  obs_time->tow = (u32)ms;
+  obs_time->ns_residual = (s32)ns;
+  if (obs_time->ns_residual > 500000) {
+    obs_time->ns_residual -= 1000000;
+    obs_time->tow += 1;
   }
 
   if (rxm_rawx->rcv_wn == 0) {
-    msg->header.t.wn = -1;
+    obs_time->wn = -1;
   } else {
-    msg->header.t.wn = rxm_rawx->rcv_wn;
+    obs_time->wn = rxm_rawx->rcv_wn;
   }
   /* Not proper SBP n_obs. Needed to pass total number of measurements
    * to handle_rxm_rawx
    */
-  msg->header.n_obs = rxm_rawx->num_meas;
+  *n_obs = rxm_rawx->num_meas;
 
-  for (int i = 0; i < msg->header.n_obs; i++) {
+  for (int i = 0; i < *n_obs; i++) {
     /* convert units: meter -> 2 cm */
-    msg->obs[i].P =
-        (u32)(UBX_SBP_PSEUDORANGE_SCALING * rxm_rawx->pseudorange_m[i]);
-    pack_carrier_phase(rxm_rawx->carrier_phase_cycles[i], &msg->obs[i].L);
-    pack_doppler(rxm_rawx->doppler_hz[i], &msg->obs[i].D);
+    obs[i].P = (u32)(UBX_SBP_PSEUDORANGE_SCALING * rxm_rawx->pseudorange_m[i]);
+    pack_carrier_phase(rxm_rawx->carrier_phase_cycles[i], &obs[i].L);
+    pack_doppler(rxm_rawx->doppler_hz[i], &obs[i].D);
     /* check for overflow */
     if (rxm_rawx->cno_dbhz[i] > 0x3F) {
-      msg->obs[i].cn0 = 0xFF;
+      obs[i].cn0 = 0xFF;
     } else {
-      msg->obs[i].cn0 = 4 * rxm_rawx->cno_dbhz[i];
+      obs[i].cn0 = 4 * rxm_rawx->cno_dbhz[i];
     }
     /* TODO(STAR-919) converts from u32 ms, to double s; encode_lock_time
      * internally converts back to u32 ms.
      */
-    msg->obs[i].lock =
-        encode_lock_time((double)rxm_rawx->lock_time[i] / SECS_MS);
-    msg->obs[i].flags = 0;
+    obs[i].lock = encode_lock_time((double)rxm_rawx->lock_time[i] / SECS_MS);
+    obs[i].flags = 0;
     /* currently assumes all doppler are valid */
-    msg->obs[i].flags |= SBP_OBS_DOPPLER_MASK;
-    msg->obs[i].flags |= rxm_rawx->track_state[i] & SBP_OBS_TRACK_STATE_MASK;
-    msg->obs[i].sid.sat = rxm_rawx->sat_id[i];
-    msg->obs[i].sid.code =
+    obs[i].flags |= SBP_OBS_DOPPLER_MASK;
+    obs[i].flags |= rxm_rawx->track_state[i] & SBP_OBS_TRACK_STATE_MASK;
+    obs[i].sid.sat = rxm_rawx->sat_id[i];
+    obs[i].sid.code =
         convert_ubx_gnssid_sigid(rxm_rawx->gnss_id[i], rxm_rawx->sig_id[i]);
   }
 
@@ -1153,9 +1154,7 @@ static void update_utc_params(struct ubx_sbp_state *state,
   }
 }
 
-static void handle_rxm_rawx(struct ubx_sbp_state *state,
-                            u8 *inbuf,
-                            u8 *sbp_obs_buffer) {
+static void handle_rxm_rawx(struct ubx_sbp_state *state, u8 *inbuf) {
   ubx_rxm_rawx rxm_rawx;
   if (ubx_decode_rxm_rawx(inbuf, &rxm_rawx) != RC_OK) {
     return;
@@ -1168,31 +1167,29 @@ static void handle_rxm_rawx(struct ubx_sbp_state *state,
   }
   update_utc_params(state, &rxm_rawx);
 
-  msg_obs_t *sbp_obs = (msg_obs_t *)sbp_obs_buffer;
-  if (fill_msg_obs(&rxm_rawx, sbp_obs) == 0) {
+  sbp_gps_time_t obs_time;
+  uint8_t n_obs;
+  packed_obs_content_t sbp_obs[UBX_MAX_NUM_OBS];
+  if (fill_msg_obs(&rxm_rawx, &obs_time, &n_obs, sbp_obs) == 0) {
     u8 total_messages;
-    /* header.n_obs is assumed to hold the TOTAL number of observations
-     * from fill_msg_obs, NOT n_obs as described in the SBP spec.
-     */
-    if (sbp_obs->header.n_obs > 0) {
-      total_messages = 1 + ((sbp_obs->header.n_obs - 1) / SBP_MAX_NUM_OBS);
+    if (n_obs > 0) {
+      total_messages = 1 + ((n_obs - 1) / SBP_MAX_NUM_OBS);
     } else {
       total_messages = 1;
     }
 
-    u8 sbp_obs_to_send_buffer[256];
+    u8 sbp_obs_to_send_buffer[SBP_MAX_PAYLOAD_LEN];
     msg_obs_t *sbp_obs_to_send = (msg_obs_t *)sbp_obs_to_send_buffer;
-    sbp_obs_to_send->header.t = sbp_obs->header.t;
+    sbp_obs_to_send->header.t = obs_time;
 
     u8 obs_index;
     for (u8 msg_num = 0; msg_num < total_messages; msg_num++) {
       sbp_obs_to_send->header.n_obs = (total_messages << 4) + msg_num;
-      for (obs_index = 0;
-           obs_index < SBP_MAX_NUM_OBS &&
-           (obs_index + msg_num * SBP_MAX_NUM_OBS) < sbp_obs->header.n_obs;
+      for (obs_index = 0; obs_index < SBP_MAX_NUM_OBS &&
+                          (obs_index + msg_num * SBP_MAX_NUM_OBS) < n_obs;
            obs_index++) {
         sbp_obs_to_send->obs[obs_index] =
-            sbp_obs->obs[obs_index + msg_num * SBP_MAX_NUM_OBS];
+            sbp_obs[obs_index + msg_num * SBP_MAX_NUM_OBS];
       }
 
       u32 total_msg_size = sizeof(observation_header_t) +
@@ -1318,9 +1315,7 @@ void ubx_handle_frame(u8 *frame, u16 frame_len, struct ubx_sbp_state *state) {
 
     case UBX_CLASS_RXM:
       if (msg_id == UBX_MSG_RXM_RAWX) {
-        u8 sbp_obs_buffer[sizeof(msg_obs_t) +
-                          sizeof(packed_obs_content_t) * UBX_MAX_NUM_OBS];
-        handle_rxm_rawx(state, frame, sbp_obs_buffer);
+        handle_rxm_rawx(state, frame);
       } else if (msg_id == UBX_MSG_RXM_SFRBX) {
         handle_rxm_sfrbx(state, frame, UBX_FRAME_SIZE);
       }
