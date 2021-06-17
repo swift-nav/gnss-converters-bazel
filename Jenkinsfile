@@ -48,19 +48,6 @@ pipeline {
     stages {
         stage('Build') {
             parallel {
-                stage('Haskell Stack') {
-                    agent {
-                        dockerfile {
-                            filename "Dockerfile_Haskell"
-                            args dockerMountArgs
-                        }
-                    }
-                    steps {
-                            sh("""#!/bin/bash -ex
-                                cd haskell && stack build --test && cd ../
-                                """)
-                    }
-                }
                 stage('Build c') {
                     agent {
                         dockerfile {
