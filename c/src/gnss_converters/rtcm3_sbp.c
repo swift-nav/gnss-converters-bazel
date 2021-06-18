@@ -633,7 +633,7 @@ static bool is_msm_active(const gps_time_t *current_time,
 
 void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
-  gps_time_t obs_time;
+  gps_time_t obs_time = GPS_TIME_UNKNOWN;
   compute_glo_time(new_rtcm_obs->header.tow_ms,
                    &obs_time,
                    &state->time_from_input_data,
@@ -661,7 +661,7 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
 
 void add_gps_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
-  gps_time_t obs_time;
+  gps_time_t obs_time = GPS_TIME_UNKNOWN;
   compute_gps_time(new_rtcm_obs->header.tow_ms,
                    &obs_time,
                    &state->time_from_input_data,
@@ -739,16 +739,14 @@ code_t get_glo_sbp_code(u8 freq, u8 rtcm_code, struct rtcm3_sbp_state *state) {
   return code;
 }
 
+/* Transforms the newly received obs to sbp */
 void add_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                        gps_time_t *obs_time,
                        struct rtcm3_sbp_state *state) {
-  /* Transform the newly received obs to sbp */
-  sbp_gps_time_t new_obs_time;
-
   /* Build an SBP time stamp */
-  new_obs_time.wn = obs_time->wn;
-  new_obs_time.tow = (u32)rint(obs_time->tow * SECS_MS);
-  new_obs_time.ns_residual = 0;
+  sbp_gps_time_t new_obs_time = {.wn = obs_time->wn,
+                                 .tow = (u32)rint(obs_time->tow * SECS_MS),
+                                 .ns_residual = 0};
 
   /* Check if the buffer already has obs of the same time */
   if (state->obs_to_send != 0 &&
@@ -1407,7 +1405,7 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
   rtcm_constellation_t cons = to_constellation(new_rtcm_obs->header.msg_num);
 
-  gps_time_t obs_time;
+  gps_time_t obs_time = GPS_TIME_UNKNOWN;
   if (RTCM_CONSTELLATION_GLO == cons) {
     compute_glo_time(new_rtcm_obs->header.tow_ms,
                      &obs_time,
