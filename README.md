@@ -1,8 +1,7 @@
 gnss-converters
 ===========
 
-[![CI](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml/badge.svg)](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml)
-[![codecov.io status][3]][4]
+[![CI](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml/badge.svg)](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml) [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=swift-nav_gnss-converters-private&token=b5bc9e8c800e8c371ae68e0e8c2471eb73d389c2)](https://sonarcloud.io/dashboard?id=swift-nav_gnss-converters-private)
 
 ## Quick install
 
@@ -82,8 +81,5 @@ To install the Haskell tools:
 stack install --resolver lts-10.10 sbp rtcm
 ```
 
-
-[3]: https://img.shields.io/codecov/c/github/swift-nav/gnss-converters-private.svg?label=codecov.io&logo=codecov&style=flat-square
-[4]: https://codecov.io/gh/swift-nav/gnss-converters-private
 [5]: https://github.com/swift-nav/gnss-converters-private/releases
 [6]: https://www.rust-lang.org/tools/install
