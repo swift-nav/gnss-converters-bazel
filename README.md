@@ -1,8 +1,7 @@
 gnss-converters
 ===========
 
-[![CI](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml/badge.svg)](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml)
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=swift-nav_gnss-converters-private&token=b5bc9e8c800e8c371ae68e0e8c2471eb73d389c2)](https://sonarcloud.io/dashboard?id=swift-nav_gnss-converters-private)
+[![CI](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml/badge.svg)](https://github.com/swift-nav/gnss-converters-private/actions/workflows/ci.yaml) [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=swift-nav_gnss-converters-private&metric=alert_status&token=b5bc9e8c800e8c371ae68e0e8c2471eb73d389c2)](https://sonarcloud.io/dashboard?id=swift-nav_gnss-converters-private)
 
 ## Quick install
 
