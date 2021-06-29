@@ -669,6 +669,26 @@ void sbp_callback_msm_no_gaps(
   }
 }
 
+void sbp_callback_msm7_beidou_invalid_pr(
+    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
+  (void)sender_id;
+  (void)context;
+  if (msg_id == SBP_MSG_OBS) {
+    msg_obs_t *sbp_obs = (msg_obs_t *)buffer;
+    u8 num_obs = (length - 11) / 17;
+    for (u8 i = 0; i < num_obs; i++) {
+      packed_obs_content_t *converted_obs = &sbp_obs->obs[i];
+      // In the RTCM file used for this test, Beidou satellite 32 code B2a has
+      // the fine pseudorange valid flag set to false. The RTCM converter will
+      // filter out that observation as faulty. Hence, the below boolean checks
+      // that the satellite + signal is missing in the received buffer.
+      bool faulty_beidou_sat_exists =
+          (converted_obs->sid.sat == 32 && converted_obs->sid.code == 48);
+      ck_assert_uint_eq(faulty_beidou_sat_exists, false);
+    }
+  }
+}
+
 /* sanity check the length and CRC of the message */
 bool verify_crc(uint8_t *buffer, uint32_t buffer_length) {
   if (buffer_length < 6) {
@@ -1422,6 +1442,12 @@ END_TEST
 START_TEST(test_msm7_parse) {
   test_RTCM3(RELATIVE_PATH_PREFIX "/data/msm7.rtcm",
              sbp_callback_msm_no_gaps,
+             current_time);
+
+  current_time.wn = 2051;
+  current_time.tow = 412185;
+  test_RTCM3(RELATIVE_PATH_PREFIX "/data/beidou_invalid_fine_pseudorange.rtcm",
+             sbp_callback_msm7_beidou_invalid_pr,
              current_time);
 }
 END_TEST
