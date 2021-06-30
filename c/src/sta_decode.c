@@ -17,8 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "decode_helpers.h"
 #include "rtcm3/bits.h"
-#include "rtcm3/decode_macros.h"
 
 #define RCC_FW_CONFIG_START_BIT 58
 rtcm3_rc sta_decode_rcc_config(const uint8_t buff[],
