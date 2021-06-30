@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <gnss-converters/eph_sat_data.h>
+#include <swiftnav/bytestream.h>
 #include "swiftnav/gnss_time.h"
 #include "swiftnav/signal.h"
 
@@ -90,7 +91,8 @@ void ubx_sbp_init(struct ubx_sbp_state *state,
                                         u16 sender_id,
                                         void *context),
                   void *context);
-void ubx_handle_frame(u8 *frame, u16 frame_len, struct ubx_sbp_state *state);
+void ubx_handle_frame(swiftnav_bytestream_t *frame,
+                      struct ubx_sbp_state *state);
 void ubx_set_sender_id(struct ubx_sbp_state *state, u16 sender_id);
 void ubx_set_hnr_flag(struct ubx_sbp_state *state, bool use_hnr);
 int ubx_sbp_process(struct ubx_sbp_state *state,

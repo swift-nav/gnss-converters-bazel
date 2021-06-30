@@ -88,10 +88,10 @@ void gal_decode_page(struct ubx_sbp_state *data,
                      const u32 words[],
                      int sz) {
   assert(data);
-  assert(prn >= GAL_FIRST_PRN);
-  assert(prn < (GAL_FIRST_PRN + NUM_SATS_GAL));
   assert(words);
-  assert(sz >= 8);
+  if (prn < GAL_FIRST_PRN || prn >= (GAL_FIRST_PRN + NUM_SATS_GAL) || 8 >= sz) {
+    return;
+  }
 
   int ptype = (words[0] >> 30) & 1U;
   if (1 == ptype) {
@@ -166,7 +166,9 @@ void gal_decode_page(struct ubx_sbp_state *data,
 
   ephemeris_t e;
   memset(&e, 0, sizeof(e));
-  decode_gal_ephemeris(page, &e);
+  if (!decode_gal_ephemeris_safe(page, &e)) {
+    return;
+  }
 
   e.sid.code = CODE_GAL_E1B;
 

@@ -26,3 +26,8 @@ swift_add_test(test-gnss-converters
 
 swift_set_language_standards(test-gnss-converters)
 swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal)
+if(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
+  target_compile_definitions(test-gnss-converters PRIVATE GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
+endif()
+
+add_subdirectory(afl)

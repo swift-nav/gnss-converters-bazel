@@ -1096,7 +1096,9 @@ void send_gsv(sbp2nmea_t *state) {
 
   /* Group by constellation */
   nmea_gsv_element_t sv_grouped[TALKER_ID_COUNT][n_used];
+  memset(&sv_grouped, 0, sizeof(sv_grouped));
   u8 num_sv[TALKER_ID_COUNT] = {0};
+  memset(&sv_grouped, 0, sizeof(sv_grouped));
 
   for (u8 i = 0; i < n_used; ++i) {
     sbp_gnss_signal_t sid = sbp_azel->azel[i].sid;

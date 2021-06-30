@@ -77,11 +77,12 @@ void sbas_decode_subframe(
     u16 sender_id,
     void *context,
     void (*sbp_cb)(u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx)) {
-  assert(data);
-  assert(prn >= SBAS_FIRST_PRN);
-  assert(prn < (SBAS_FIRST_PRN + NUM_SATS_SBAS));
-  assert(8 == sz || 9 == sz);  // sz == 9 is a workaround for an apparent bug on
-                               // u-blox F9 series
+  (void)data;
+  assert(words);
+  if (prn < SBAS_FIRST_PRN || prn >= (SBAS_FIRST_PRN + NUM_SATS_SBAS) ||
+      (8 != sz && 9 != sz)) {
+    return;
+  }
 
   const int kNumberOfWords = 8;
   u8 buffer[32];

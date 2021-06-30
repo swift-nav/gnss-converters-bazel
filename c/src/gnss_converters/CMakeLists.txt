@@ -19,6 +19,10 @@ add_library(gnss_converters
   ubx_sbp.c
 )
 
+
+if(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
+  target_compile_definitions(gnss_converters PRIVATE GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
+endif()
 # this is done to avoid issues with opaque time_truth_t type
 set_source_files_properties(time_truth.c PROPERTIES COMPILE_FLAGS -fno-strict-aliasing)
 

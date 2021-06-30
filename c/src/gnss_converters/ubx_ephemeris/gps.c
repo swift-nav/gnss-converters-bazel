@@ -64,9 +64,11 @@ void gps_decode_subframe(struct ubx_sbp_state *data,
                          const u32 words[],
                          int sz) {
   assert(data);
-  assert(prn >= GPS_FIRST_PRN);
-  assert(prn < (GPS_FIRST_PRN + NUM_SATS_GPS));
-  assert(10 == sz);
+  assert(words);
+  if (prn < GPS_FIRST_PRN || prn >= (GPS_FIRST_PRN + NUM_SATS_GPS) ||
+      10 != sz) {
+    return;
+  }
 
   /* we have to figure out if the provided subframe is
      from GPS L1CA or L2C by looking at the preamble

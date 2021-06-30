@@ -15,6 +15,7 @@
 
 #include <rtcm3/messages.h>
 #include <rtcm3/msm_utils.h>
+#include <swiftnav/bitstream.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
@@ -132,7 +133,7 @@ void compute_gps_time(u32 tow_ms,
                       const gps_time_t *rover_time,
                       struct rtcm3_sbp_state *state);
 
-void compute_glo_time(u32 tod_ms,
+bool compute_glo_time(u32 tod_ms,
                       gps_time_t *obs_time,
                       const gps_time_t *rover_time,
                       struct rtcm3_sbp_state *state);
@@ -151,7 +152,8 @@ void send_sbp_log_message(uint8_t level,
                           uint16_t stn_id,
                           const struct rtcm3_sbp_state *state);
 
-void send_MSM_warning(const uint8_t *frame, struct rtcm3_sbp_state *state);
+void send_MSM_warning(const swiftnav_bitstream_t *bitstream,
+                      struct rtcm3_sbp_state *state);
 
 void send_buffer_full_error(const struct rtcm3_sbp_state *state);
 
@@ -174,7 +176,7 @@ static inline bool gps_time_sec_valid(const gps_time_sec_t *t) {
   return (t->wn != INVALID_TIME) && (t->wn < MAX_WN) && (t->tow < WEEK_SECS);
 };
 
-void rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
+bool rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
                           msg_ephemeris_gps_t *sbp_gps_eph,
                           struct rtcm3_sbp_state *state);
 void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
@@ -183,7 +185,7 @@ void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
 bool rtcm3_glo_eph_to_sbp(rtcm_msg_eph *msg_eph,
                           msg_ephemeris_glo_t *sbp_glo_eph,
                           struct rtcm3_sbp_state *state);
-void rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
+bool rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           u8 source,
                           msg_ephemeris_gal_t *sbp_gal_eph,
                           struct rtcm3_sbp_state *state);

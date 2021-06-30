@@ -19,3 +19,7 @@
 [submodule "c/third_party/libixcom"]
 	path = c/third_party/libixcom
 	url = git@github.com:swift-nav/libixcom-private.git
+[submodule "c/tests/afl/findings"]
+	path = c/tests/afl/findings
+	url = git@github.com:swift-nav/gnss-converters-fuzz-testcases.git
+        update = none

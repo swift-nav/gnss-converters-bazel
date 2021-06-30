@@ -128,6 +128,12 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                              uint32_t payload_length,
                              struct rtcm3_sbp_state *state) {
   (void)payload_length;
+  swiftnav_bitstream_t bitstream;
+  swiftnav_bitstream_init(&bitstream, payload, payload_length * 8);
+
+  if (payload_length < 2) {
+    return;
+  }
 
   uint16_t byte = 0;
   uint16_t message_type =
@@ -203,7 +209,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       break;
     case 1002: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1002(&payload[byte], &new_rtcm_obs)) {
+      if (RC_OK == rtcm3_decode_1002_bitstream(&bitstream, &new_rtcm_obs)) {
         /* Need to check if we've got obs in the buffer from the previous epoch
          and send before accepting the new message */
         add_gps_obs_to_buffer(&new_rtcm_obs, state);
@@ -212,7 +218,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1004: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1004(&payload[byte], &new_rtcm_obs)) {
+      if (RC_OK == rtcm3_decode_1004_bitstream(&bitstream, &new_rtcm_obs)) {
         /* Need to check if we've got obs in the buffer from the previous epoch
          and send before accepting the new message */
         add_gps_obs_to_buffer(&new_rtcm_obs, state);
@@ -221,7 +227,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1005: {
       rtcm_msg_1005 msg_1005;
-      if (RC_OK == rtcm3_decode_1005(&payload[byte], &msg_1005)) {
+      if (RC_OK == rtcm3_decode_1005_bitstream(&bitstream, &msg_1005)) {
         msg_base_pos_ecef_t sbp_base_pos;
         rtcm3_1005_to_sbp(&msg_1005, &sbp_base_pos);
         state->cb_rtcm_to_sbp(SBP_MSG_BASE_POS_ECEF,
@@ -234,7 +240,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1006: {
       rtcm_msg_1006 msg_1006;
-      if (RC_OK == rtcm3_decode_1006(&payload[byte], &msg_1006)) {
+      if (RC_OK == rtcm3_decode_1006_bitstream(&bitstream, &msg_1006)) {
         msg_base_pos_ecef_t sbp_base_pos;
         rtcm3_1006_to_sbp(&msg_1006, &sbp_base_pos);
         state->cb_rtcm_to_sbp(
@@ -251,7 +257,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       break;
     case 1010: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1010(&payload[byte], &new_rtcm_obs) &&
+      if (RC_OK == rtcm3_decode_1010_bitstream(&bitstream, &new_rtcm_obs) &&
           state->leap_second_known) {
         add_glo_obs_to_buffer(&new_rtcm_obs, state);
       }
@@ -259,7 +265,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1012: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1012(&payload[byte], &new_rtcm_obs) &&
+      if (RC_OK == rtcm3_decode_1012_bitstream(&bitstream, &new_rtcm_obs) &&
           state->leap_second_known) {
         add_glo_obs_to_buffer(&new_rtcm_obs, state);
       }
@@ -267,20 +273,21 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1019: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_gps_eph(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_gps_eph_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_gps_t sbp_gps_eph;
-        rtcm3_gps_eph_to_sbp(&msg_eph, &sbp_gps_eph, state);
-        state->cb_rtcm_to_sbp(SBP_MSG_EPHEMERIS_GPS,
-                              (u8)sizeof(sbp_gps_eph),
-                              (u8 *)&sbp_gps_eph,
-                              rtcm_stn_to_sbp_sender_id(0),
-                              state->context);
+        if (rtcm3_gps_eph_to_sbp(&msg_eph, &sbp_gps_eph, state)) {
+          state->cb_rtcm_to_sbp(SBP_MSG_EPHEMERIS_GPS,
+                                (u8)sizeof(sbp_gps_eph),
+                                (u8 *)&sbp_gps_eph,
+                                rtcm_stn_to_sbp_sender_id(0),
+                                state->context);
+        }
       }
       break;
     }
     case 1020: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_glo_eph(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_glo_eph_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_glo_t sbp_glo_eph;
         if (rtcm3_glo_eph_to_sbp(&msg_eph, &sbp_glo_eph, state)) {
           rtcm2sbp_set_glo_fcn(sbp_glo_eph.common.sid, sbp_glo_eph.fcn, state);
@@ -295,7 +302,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1042: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_bds_eph(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_bds_eph_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_bds_t sbp_bds_eph;
         rtcm3_bds_eph_to_sbp(&msg_eph, &sbp_bds_eph, state);
         state->cb_rtcm_to_sbp(SBP_MSG_EPHEMERIS_BDS,
@@ -308,7 +315,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1044: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_qzss_eph(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_qzss_eph_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_qzss_t sbp_qzss_eph;
         rtcm3_qzss_eph_to_sbp(&msg_eph, &sbp_qzss_eph, state);
         state->cb_rtcm_to_sbp(SBP_MSG_EPHEMERIS_QZSS,
@@ -321,7 +328,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1045: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_gal_eph_fnav(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_gal_eph_fnav_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_gal_t sbp_gal_eph;
         rtcm3_gal_eph_to_sbp(
             &msg_eph, EPH_SOURCE_GAL_FNAV, &sbp_gal_eph, state);
@@ -336,7 +343,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
 
     case 1046: {
       rtcm_msg_eph msg_eph;
-      if (RC_OK == rtcm3_decode_gal_eph_inav(&payload[byte], &msg_eph)) {
+      if (RC_OK == rtcm3_decode_gal_eph_inav_bitstream(&bitstream, &msg_eph)) {
         msg_ephemeris_gal_t sbp_gal_eph;
         rtcm3_gal_eph_to_sbp(
             &msg_eph, EPH_SOURCE_GAL_INAV, &sbp_gal_eph, state);
@@ -350,14 +357,14 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1029: {
       rtcm_msg_1029 msg_1029;
-      if (RC_OK == rtcm3_decode_1029(&payload[byte], &msg_1029)) {
+      if (RC_OK == rtcm3_decode_1029_bitstream(&bitstream, &msg_1029)) {
         send_1029(&msg_1029, state);
       }
       break;
     }
     case 1033: {
       rtcm_msg_1033 msg_1033;
-      if (RC_OK == rtcm3_decode_1033(&payload[byte], &msg_1033) &&
+      if (RC_OK == rtcm3_decode_1033_bitstream(&bitstream, &msg_1033) &&
           no_1230_received(state)) {
         msg_glo_biases_t sbp_glo_cpb = {
             0,
@@ -373,7 +380,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 1230: {
       rtcm_msg_1230 msg_1230;
-      if (RC_OK == rtcm3_decode_1230(&payload[byte], &msg_1230)) {
+      if (RC_OK == rtcm3_decode_1230_bitstream(&bitstream, &msg_1230)) {
         msg_glo_biases_t sbp_glo_cpb = {
             0,
         };
@@ -408,7 +415,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1246:
     case 1258: {
       rtcm_msg_orbit msg_orbit;
-      if (RC_OK == rtcm3_decode_orbit(&payload[byte], &msg_orbit)) {
+      if (RC_OK == rtcm3_decode_orbit_bitstream(&bitstream, &msg_orbit)) {
         uint8_t constellation = msg_orbit.header.constellation;
         /* If we already have a matching clock message perform the conversion */
         if (state->orbit_clock_cache[constellation].contains_clock &&
@@ -439,7 +446,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1247:
     case 1259: {
       rtcm_msg_clock msg_clock;
-      if (RC_OK == rtcm3_decode_clock(&payload[byte], &msg_clock)) {
+      if (RC_OK == rtcm3_decode_clock_bitstream(&bitstream, &msg_clock)) {
         uint8_t constellation = msg_clock.header.constellation;
         /* If we already have a matching orbit message perform the conversion */
         if (!state->orbit_clock_cache[constellation].contains_clock &&
@@ -470,7 +477,8 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1248:
     case 1260: {
       rtcm_msg_code_bias msg_code_bias;
-      if (RC_OK == rtcm3_decode_code_bias(&payload[byte], &msg_code_bias)) {
+      if (RC_OK ==
+          rtcm3_decode_code_bias_bitstream(&bitstream, &msg_code_bias)) {
         rtcm3_ssr_code_bias_to_sbp(&msg_code_bias, state);
       }
       break;
@@ -481,7 +489,8 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1249:
     case 1261: {
       rtcm_msg_orbit_clock msg_orbit_clock;
-      if (RC_OK == rtcm3_decode_orbit_clock(&payload[byte], &msg_orbit_clock)) {
+      if (RC_OK ==
+          rtcm3_decode_orbit_clock_bitstream(&bitstream, &msg_orbit_clock)) {
         rtcm3_ssr_orbit_clock_to_sbp(&msg_orbit_clock, state);
       }
       break;
@@ -493,7 +502,8 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1269:
     case 1270: {
       rtcm_msg_phase_bias msg_phase_bias;
-      if (RC_OK == rtcm3_decode_phase_bias(&payload[byte], &msg_phase_bias)) {
+      if (RC_OK ==
+          rtcm3_decode_phase_bias_bitstream(&bitstream, &msg_phase_bias)) {
         rtcm3_ssr_phase_bias_to_sbp(&msg_phase_bias, state);
       }
       break;
@@ -503,7 +513,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1094:
     case 1124: {
       rtcm_msm_message new_rtcm_msm;
-      if (RC_OK == rtcm3_decode_msm4(&payload[byte], &new_rtcm_msm)) {
+      if (RC_OK == rtcm3_decode_msm4_bitstream(&bitstream, &new_rtcm_msm)) {
         add_msm_obs_to_buffer(&new_rtcm_msm, state);
       }
       break;
@@ -513,7 +523,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1095:
     case 1125: {
       rtcm_msm_message new_rtcm_msm;
-      if (RC_OK == rtcm3_decode_msm5(&payload[byte], &new_rtcm_msm)) {
+      if (RC_OK == rtcm3_decode_msm5_bitstream(&bitstream, &new_rtcm_msm)) {
         add_msm_obs_to_buffer(&new_rtcm_msm, state);
       }
       break;
@@ -523,7 +533,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1096:
     case 1126: {
       rtcm_msm_message new_rtcm_msm;
-      if (RC_OK == rtcm3_decode_msm6(&payload[byte], &new_rtcm_msm)) {
+      if (RC_OK == rtcm3_decode_msm6_bitstream(&bitstream, &new_rtcm_msm)) {
         add_msm_obs_to_buffer(&new_rtcm_msm, state);
       }
       break;
@@ -533,7 +543,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     case 1097:
     case 1127: {
       rtcm_msm_message new_rtcm_msm;
-      if (RC_OK == rtcm3_decode_msm7(&payload[byte], &new_rtcm_msm)) {
+      if (RC_OK == rtcm3_decode_msm7_bitstream(&bitstream, &new_rtcm_msm)) {
         add_msm_obs_to_buffer(&new_rtcm_msm, state);
       }
       break;
@@ -571,12 +581,12 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       /* MSM1-3 messages (1xx3) are currently not supported, warn the user once
        * if these messages are seen - only warn once as these messages can be
        * present in streams that contain MSM4-7 or 1004 and 1012 so are valid */
-      send_MSM_warning(&payload[byte], state);
+      send_MSM_warning(&bitstream, state);
       break;
     }
     case 4062: {
       rtcm_msg_swift_proprietary swift_msg;
-      if (RC_OK == rtcm3_decode_4062(payload, &swift_msg)) {
+      if (RC_OK == rtcm3_decode_4062_bitstream(&bitstream, &swift_msg)) {
         state->cb_rtcm_to_sbp(swift_msg.msg_type,
                               swift_msg.len,
                               swift_msg.data,
@@ -600,7 +610,10 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
    * out the SBP buffer */
   if (message_type >= MSM_MSG_TYPE_MIN && message_type <= MSM_MSG_TYPE_MAX) {
     /* The Multiple message bit DF393 is the same regardless of MSM msg type */
-    if (rtcm_getbitu(&payload[byte], MSM_MULTIPLE_BIT_OFFSET, 1) == 0) {
+    if (bitstream.len < MSM_MULTIPLE_BIT_OFFSET) {
+      return;
+    }
+    if (rtcm_getbitu(bitstream.data, MSM_MULTIPLE_BIT_OFFSET, 1) == 0) {
       send_observations(state);
     }
   }
@@ -634,10 +647,12 @@ static bool is_msm_active(const gps_time_t *current_time,
 void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
   gps_time_t obs_time = GPS_TIME_UNKNOWN;
-  compute_glo_time(new_rtcm_obs->header.tow_ms,
-                   &obs_time,
-                   &state->time_from_input_data,
-                   state);
+  if (!compute_glo_time(new_rtcm_obs->header.tow_ms,
+                        &obs_time,
+                        &state->time_from_input_data,
+                        state)) {
+    return;
+  }
 
   if (!gps_time_valid(&obs_time)) {
     return;
@@ -663,7 +678,10 @@ void add_gps_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                    &obs_time,
                    &state->time_from_input_data,
                    state);
-  assert(gps_time_valid(&obs_time));
+
+  if (!gps_time_valid(&obs_time)) {
+    return;
+  }
 
   if (is_msm_active(&obs_time, state)) {
     /* Stream potentially contains also MSM observations, so discard the legacy
@@ -1137,13 +1155,19 @@ void rtcm2sbp_set_glo_fcn(sbp_gnss_signal_t sid,
 void compute_gps_message_time(u32 tow_ms,
                               gps_time_t *obs_time,
                               const gps_time_t *rover_time) {
+  if (tow_ms >= WEEK_SECS * SECS_MS) {
+    log_error("Invalid GPS time received.");
+    obs_time->wn = WN_UNKNOWN;
+    return;
+  }
   assert(gps_time_valid(rover_time));
+
   obs_time->tow = (double)tow_ms / SECS_MS;
   obs_time->wn = rover_time->wn;
   double timediff = gpsdifftime(obs_time, rover_time);
-  if (timediff < -WEEK_SECS / 2.0) {
+  if (timediff < -WEEK_SECS / 2.0 && rover_time->wn != INT16_MAX) {
     obs_time->wn = rover_time->wn + 1;
-  } else if (timediff > WEEK_SECS / 2.0) {
+  } else if (timediff > WEEK_SECS / 2.0 && rover_time->wn != 0) {
     obs_time->wn = rover_time->wn - 1;
   }
   assert(gps_time_valid(obs_time));
@@ -1169,20 +1193,22 @@ void compute_gps_time(u32 tow_ms,
  * is close to the supplied reference gps time
  * TODO: correct functionality during/around leap second event to be
  *       tested and implemented */
-void compute_glo_time(u32 tod_ms,
+bool compute_glo_time(u32 tod_ms,
                       gps_time_t *obs_time,
                       const gps_time_t *rover_time,
                       struct rtcm3_sbp_state *state) {
   if (!state->leap_second_known) {
     obs_time->wn = WN_UNKNOWN;
-    return;
+    return false;
   }
   if (tod_ms >= (DAY_SECS + 1) * SECS_MS) {
     log_error("Invalid GLO time received.");
     obs_time->wn = WN_UNKNOWN;
-    return;
+    return false;
   }
-  assert(gps_time_valid(rover_time));
+  if (!gps_time_valid(rover_time)) {
+    return false;
+  }
 
   /* Approximate DOW from the reference GPS time */
   u8 glo_dow = (u8)(rover_time->tow / DAY_SECS);
@@ -1197,21 +1223,27 @@ void compute_glo_time(u32 tod_ms,
   }
   obs_time->tow = tow_ms / (double)SECS_MS;
 
-  normalize_gps_time(obs_time);
+  if (!normalize_gps_time_safe(obs_time)) {
+    return false;
+  }
 
   /* check for day rollover against reference time */
   double timediff = gpsdifftime(obs_time, rover_time);
   if (fabs(timediff) > DAY_SECS / 2.0) {
     obs_time->tow += (timediff < 0 ? 1 : -1) * DAY_SECS;
-    normalize_gps_time(obs_time);
+    return normalize_gps_time_safe(obs_time);
   }
+
+  return true;
 }
 
 static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
                                      const gps_time_t *obs_time,
                                      const gps_time_t *rover_time) {
-  assert(gps_time_valid(obs_time));
-  assert(gps_time_valid(rover_time));
+  if (!gps_time_valid(obs_time) || !gps_time_valid(rover_time)) {
+    return;
+  }
+
   double timediff = gpsdifftime(rover_time, obs_time);
 
   /* exclude base measurements with time stamp too far in the future */
@@ -1231,27 +1263,24 @@ bool no_1230_received(struct rtcm3_sbp_state *state) {
 }
 
 void send_1029(rtcm_msg_1029 *msg_1029, struct rtcm3_sbp_state *state) {
-  uint8_t message[SBP_MAX_PAYLOAD_LEN] = RTCM_LOG_PREAMBLE;
+  uint8_t message[SBP_MAX_PAYLOAD_LEN] = {0};
   uint8_t preamble_size = sizeof(RTCM_LOG_PREAMBLE) - 1;
-  uint8_t max_message_size =
-      SBP_MAX_PAYLOAD_LEN - sizeof(msg_log_t) - preamble_size;
+  uint8_t max_message_size = SBP_MAX_PAYLOAD_LEN - sizeof(msg_log_t);
   uint8_t message_size =
-      sizeof(msg_log_t) + msg_1029->utf8_code_units_n + preamble_size >
-              SBP_MAX_PAYLOAD_LEN
-          ? max_message_size
-          : msg_1029->utf8_code_units_n + preamble_size;
+      MIN(max_message_size, preamble_size + msg_1029->utf8_code_units_n);
 
-  MEMCPY_S(&message[preamble_size],
-           max_message_size,
-           msg_1029->utf8_code_units,
-           message_size);
+  memcpy(message, RTCM_LOG_PREAMBLE, preamble_size);
+  memcpy(message + preamble_size,
+         msg_1029->utf8_code_units,
+         message_size - preamble_size);
+
   /* Check if we've had to truncate the string - we can check for the bit
    * pattern that denotes a 4 byte code unit as it is the super set of all bit
    * patterns (2,3 and 4 byte code units) */
   if (message_size == max_message_size) {
-    if ((message[message_size] & 0xF8) == 0xF0 ||
-        (message[message_size] & 0xE0) == 0xE0 ||
-        (message[message_size] & 0xE0) == 0xC0) {
+    if ((message[message_size - 1] & 0xF8) == 0xF0 ||
+        (message[message_size - 1] & 0xE0) == 0xE0 ||
+        (message[message_size - 1] & 0xE0) == 0xC0) {
       /* We've truncated a 2, 3 or 4 byte code unit */
       message_size--;
     } else if ((message[message_size - 1] & 0xF8) == 0xF0 ||
@@ -1291,18 +1320,18 @@ void send_sbp_log_message(const uint8_t level,
                         state->context);
 }
 
-void send_MSM_warning(const uint8_t *frame, struct rtcm3_sbp_state *state) {
+void send_MSM_warning(const swiftnav_bitstream_t *bitstream,
+                      struct rtcm3_sbp_state *state) {
   if (!state->sent_msm_warning) {
     /* Only send 1 warning */
     state->sent_msm_warning = true;
     /* Get the stn ID as well */
     uint32_t stn_id = 0;
-    for (uint32_t i = 12; i < 24; i++) {
-      stn_id = (stn_id << 1) + ((frame[i / 8] >> (7 - i % 8)) & 1u);
+    if (swiftnav_bitstream_getbitu(bitstream, &stn_id, 12, 24)) {
+      uint8_t msg[39] = "MSM1-3 Messages currently not supported";
+      send_sbp_log_message(
+          RTCM_MSM_LOGGING_LEVEL, msg, sizeof(msg), stn_id, state);
     }
-    uint8_t msg[39] = "MSM1-3 Messages currently not supported";
-    send_sbp_log_message(
-        RTCM_MSM_LOGGING_LEVEL, msg, sizeof(msg), stn_id, state);
   }
 }
 
@@ -1420,6 +1449,10 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
     }
 
     compute_gps_time(tow_ms, &obs_time, &state->time_from_input_data, state);
+
+    if (!gps_time_valid(&obs_time)) {
+      return;
+    }
   }
 
   /* We see some receivers output observations with TOW = 0 on startup, but this
@@ -1668,6 +1701,9 @@ static uint16_t extract_msg_len(const uint8_t *buf) {
 /* buf_len is the total allocated space - can be much bigger than
    the actual message */
 static bool verify_crc(uint8_t *buf, uint16_t buf_len) {
+#ifdef GNSS_CONVERTERS_DISABLE_CRC_VALIDATION
+  return true;
+#endif
   uint16_t msg_len = extract_msg_len(buf);
   if (buf_len < msg_len + RTCM3_MSG_OVERHEAD) {
     log_info("CRC failure! Buffer %u too short for message length %u",
