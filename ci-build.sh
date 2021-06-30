@@ -16,7 +16,7 @@ check_format_errors() {
     echo ""
     echo "This should be formatted locally and pushed again..."
     git --no-pager diff
-    travis_terminate 1
+    exit 1
   fi
 }
 
@@ -27,7 +27,7 @@ check_tidy_errors() {
     echo "####################################################"
     echo ""
     echo " ^^ Please see and correct the clang-tidy warnings found above ^^"
-    travis_terminate 1
+    exit 1
   fi
 }
 
