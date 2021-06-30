@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Run Travis setup
-
 set -e
 set -x
 set -o errexit
@@ -37,7 +35,7 @@ function build() {
   # Create and enter build directory.
   cd c
   mkdir -p build && cd build
-  $CMAKE ../
+  cmake ../
   make -j4 VERBOSE=1
   if [ "$TEST_SUITE" == "lint" ]; then
     make clang-format-all && check_format_errors
@@ -46,10 +44,4 @@ function build() {
   cd ../
 }
 
-function git_update_submodules() {
-  git submodule update --init --recursive
-}
-
-git_update_submodules
 build
-
