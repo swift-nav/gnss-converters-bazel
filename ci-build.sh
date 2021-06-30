@@ -74,6 +74,8 @@ function build_codecov() {
 	-Dsonar.projectVersion=1.0 \
 	-Dsonar.sources=. \
 	-Dsonar.cfamily.build-wrapper-output=./bw-output \
+	-Dsonar.cfamily.threads=1 \
+	-Dsonar.cfamily.cache.enabled=false \
 	-Dsonar.sourceEncoding=UTF-8"
 
     # shellcheck disable=SC2086
