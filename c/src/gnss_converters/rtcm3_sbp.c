@@ -654,7 +654,10 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
     return;
   }
 
-  if (!gps_time_valid(&obs_time)) {
+  if (!gps_time_valid(&obs_time) ||
+      fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
+           state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
+    /* GLO time invalid or too far from rover time*/
     return;
   }
 
@@ -1437,7 +1440,11 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
                      &obs_time,
                      &state->time_from_input_data,
                      state);
-    if (!gps_time_valid(&obs_time)) {
+    if (!gps_time_valid(&obs_time) ||
+        fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
+             state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
+      /* time invalid because of missing leap second info or ongoing leap second
+       * event, skip these measurements */
       return;
     }
 
