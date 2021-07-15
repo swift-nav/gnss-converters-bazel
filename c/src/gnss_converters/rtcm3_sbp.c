@@ -654,10 +654,20 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
     return;
   }
 
-  if (!gps_time_valid(&obs_time) ||
+  if (!gps_time_valid(&obs_time)) {
+    return;
+  }
+
+  const bool within_input_data_time =
       fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
-           state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
-    /* GLO time invalid or too far from rover time*/
+           state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+
+  const bool within_last_gps_time =
+      gps_time_valid(&state->last_gps_time) &&
+      fabs(gpsdifftime(&obs_time, &state->last_gps_time) -
+           state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+
+  if (!within_input_data_time && !within_last_gps_time) {
     return;
   }
 
@@ -1440,11 +1450,20 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
                      &obs_time,
                      &state->time_from_input_data,
                      state);
-    if (!gps_time_valid(&obs_time) ||
+    if (!gps_time_valid(&obs_time)) {
+      return;
+    }
+
+    const bool within_input_data_time =
         fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
-             state->leap_seconds) > GLO_SANITY_THRESHOLD_S) {
-      /* time invalid because of missing leap second info or ongoing leap second
-       * event, skip these measurements */
+             state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+
+    const bool within_last_gps_time =
+        gps_time_valid(&state->last_gps_time) &&
+        fabs(gpsdifftime(&obs_time, &state->last_gps_time) -
+             state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+
+    if (!within_input_data_time && !within_last_gps_time) {
       return;
     }
 

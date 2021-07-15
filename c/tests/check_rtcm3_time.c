@@ -462,6 +462,65 @@ static void setup_example_gal_eph(uint16_t wn, uint32_t tow) {
   iobuf_len = iobuf_write_idx;
 }
 
+static void setup_example_gps_obs(struct rtcm3_out_state *state,
+                                  uint16_t wn,
+                                  uint32_t tow) {
+  const size_t observations = 1;
+  const size_t message_length =
+      sizeof(msg_obs_t) + observations * sizeof(packed_obs_content_t);
+
+  uint8_t sbp_buffer[SBP_MAX_PAYLOAD_LEN];
+  msg_obs_t *obs = (msg_obs_t *)sbp_buffer;
+  obs->header.t.wn = wn;
+  obs->header.t.tow = tow * SECS_MS;
+  obs->header.n_obs = 0x10;
+  obs->obs[0].P = 1017977291;
+  obs->obs[0].L.i = 106990181;
+  obs->obs[0].L.f = 170;
+  obs->obs[0].D.i = -890;
+  obs->obs[0].D.f = 145;
+  obs->obs[0].cn0 = 146;
+  obs->obs[0].lock = 11;
+  obs->obs[0].flags = 15;
+  obs->obs[0].sid.sat = 3;
+  obs->obs[0].sid.code = 0;
+
+  iobuf_write_idx = 0;
+  sbp2rtcm_sbp_obs_cb(0x1000, message_length, (const uint8_t *)obs, state);
+  iobuf_read_idx = 0;
+  iobuf_len = iobuf_write_idx;
+}
+
+static void setup_example_glo_obs(struct rtcm3_out_state *state,
+                                  uint16_t wn,
+                                  uint32_t tow) {
+  const size_t observations = 1;
+  const size_t message_length =
+      sizeof(msg_obs_t) + observations * sizeof(packed_obs_content_t);
+
+  uint8_t sbp_buffer[SBP_MAX_PAYLOAD_LEN];
+  msg_obs_t *obs = (msg_obs_t *)sbp_buffer;
+  obs->header.t.wn = wn;
+  obs->header.t.tow = tow * SECS_MS;
+  obs->header.n_obs = 0x10;
+  obs->obs[0].P = 1005685484;
+  obs->obs[0].L.i = 107330634;
+  obs->obs[0].L.f = 61;
+  obs->obs[0].D.i = 2181;
+  obs->obs[0].D.f = 172;
+  obs->obs[0].cn0 = 169;
+  obs->obs[0].lock = 11;
+  obs->obs[0].flags = 15;
+  obs->obs[0].sid.sat = 2;
+  obs->obs[0].sid.code = 3;
+
+  iobuf_write_idx = 0;
+  sbp2rtcm_set_glo_fcn(obs->obs[0].sid, 4, state);
+  sbp2rtcm_sbp_obs_cb(0x1000, message_length, (const uint8_t *)obs, state);
+  iobuf_read_idx = 0;
+  iobuf_len = iobuf_write_idx;
+}
+
 struct eph_example_pair {
   void (*function)(uint16_t, uint32_t);
   uint16_t msg_id;
@@ -1390,6 +1449,234 @@ START_TEST(test_strs_20) {
 }
 END_TEST
 
+/*
+ * Test case: Truth time state machine is setup with a known absolute GPS time
+ * of WN: 2165 and TOW: 237600 (6th of July 2021).
+ *
+ * GLO observation message with TOD of 75612000 (WN: 2165 and TOW: 237630) of
+ * gets pushed into the converter. This test case is conducted for both legacy
+ * and none legacy conversion.
+ *
+ * Expected result: RTCM to SBP converter determines leap second to be equal
+ * to 18 and the GLO observation message is correctly processed with a WN: 2165
+ * and TOW: 237630. It is expected to be processed because the difference
+ * between time truth and observation time is less than or equal to the
+ * GLO_SANITY_THRESHOLD_S (value of 30 seconds).
+ */
+START_TEST(test_strs_21) {
+  const uint16_t init_wn = 2165;
+  const uint32_t init_tow = 237600;
+  const uint16_t wn_in = 2165;
+  const uint32_t tow_in = 237630;
+  const s8 leap_seconds = 18;
+
+  const bool legacy_options[] = {true, false};
+
+  for (size_t i = 0; i < sizeof(legacy_options) / sizeof(legacy_options[0]);
+       ++i) {
+    struct rtcm3_out_state state;
+    sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
+    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
+
+    reset_test_fixture_solved(init_wn, init_tow);
+    setup_example_glo_obs(&state, wn_in, tow_in);
+
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    ck_assert_uint_eq(n_sbp_out, 1);
+    ck_assert(iobuf_read_idx == iobuf_len);
+    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
+    msg_obs_t *sbp_msg = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert_uint_eq(sbp_msg->header.t.wn, wn_in);
+    ck_assert_uint_eq(sbp_msg->header.t.tow, tow_in * SECS_MS);
+    ck_assert(rtcm2sbp_state.leap_second_known);
+    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
+  }
+}
+END_TEST
+
+/*
+ * Test case: Truth time state machine is setup with a known absolute GPS time
+ * of WN: 2165 and TOW: 237600 (6th of July 2021).
+ *
+ * GLO observation message with TOD of 75712000 (WN: 2165 and TOW: 237730) of
+ * gets pushed into the converter. This test case is conducted for both legacy
+ * and none legacy conversion.
+ *
+ * Expected result: RTCM to SBP converter determines leap second to be equal
+ * to 18 and the GLO observation message is NOT processed. It is expected not to
+ * be processed because the difference between time truth and observation time
+ * is greater than GLO_SANITY_THRESHOLD_S (value of 30 seconds).
+ */
+START_TEST(test_strs_22) {
+  const uint16_t init_wn = 2165;
+  const uint32_t init_tow = 237600;
+  const uint16_t wn_in = 2165;
+  const uint32_t tow_in = 237730;
+  const s8 leap_seconds = 18;
+
+  const bool legacy_options[] = {true, false};
+
+  for (size_t i = 0; i < sizeof(legacy_options) / sizeof(legacy_options[0]);
+       ++i) {
+    struct rtcm3_out_state state;
+    sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
+    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
+
+    reset_test_fixture_solved(init_wn, init_tow);
+    setup_example_glo_obs(&state, wn_in, tow_in);
+
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    if (legacy_options[i]) {
+      ck_assert_uint_eq(n_sbp_out, 0);
+    } else {
+      ck_assert_uint_eq(n_sbp_out, 1);
+      size_t observations = (sbp_out_msgs[0].len - sizeof(msg_obs_t)) /
+                            sizeof(packed_obs_content_t);
+      ck_assert_uint_eq(observations, 0);
+    }
+    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
+  }
+}
+END_TEST
+
+/*
+ * Test case: Truth time state machine is setup with a known absolute GPS time
+ * of WN: 2165 and TOW: 237600 (6th of July 2021).
+ *
+ * GPS observation message with TOW of 247600 gets pushed into the converter.
+ * Following that a GLO observation message with TOW of 247630 gets pushed into
+ * the converter.This test case is conducted for both legacy and none legacy
+ * conversion.
+ *
+ * Expected result: RTCM to SBP converter determines leap second to be equal
+ * to 18 and the GLO observation message is correctly processed with a WN: 2165
+ * and TOW: 247630. It is expected to be processed because the difference
+ * between time truth and first GPS observation time is less than or equal to
+ * the GLO_SANITY_THRESHOLD_S (value of 30 seconds).
+ */
+START_TEST(test_strs_23) {
+  const uint16_t init_wn = 2165;
+  const uint32_t init_tow = 237600;
+  const uint16_t gps_wn_in = 2165;
+  const uint32_t gps_tow_in = 247600;
+  const uint16_t glo_wn_in = 2165;
+  const uint32_t glo_tow_in = 247630;
+  const s8 leap_seconds = 18;
+
+  const bool legacy_options[] = {true, false};
+
+  for (size_t i = 0; i < sizeof(legacy_options) / sizeof(legacy_options[0]);
+       ++i) {
+    struct rtcm3_out_state state;
+    sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
+    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
+
+    reset_test_fixture_solved(init_wn, init_tow);
+
+    setup_example_gps_obs(&state, gps_wn_in, gps_tow_in);
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    setup_example_glo_obs(&state, glo_wn_in, glo_tow_in);
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    ck_assert_uint_eq(n_sbp_out, 2);
+    ck_assert(rtcm2sbp_state.leap_second_known);
+    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
+
+    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
+    ck_assert(sbp_out_msgs[1].msg_id == SBP_MSG_OBS);
+
+    msg_obs_t *first_obs_message = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    uint8_t first_message_length = sbp_out_msgs[0].len;
+    ck_assert_uint_eq((first_message_length - sizeof(msg_obs_t)) /
+                          sizeof(packed_obs_content_t),
+                      1);
+    ck_assert_uint_eq(first_obs_message->header.t.wn, gps_wn_in);
+    ck_assert_uint_eq(first_obs_message->header.t.tow, gps_tow_in * SECS_MS);
+
+    msg_obs_t *second_obs_message = (msg_obs_t *)(sbp_out_msgs[1].payload);
+    uint8_t second_obs_message_length = sbp_out_msgs[1].len;
+    ck_assert_uint_eq((second_obs_message_length - sizeof(msg_obs_t)) /
+                          sizeof(packed_obs_content_t),
+                      1);
+    ck_assert_uint_eq(second_obs_message->header.t.wn, glo_wn_in);
+    ck_assert_uint_eq(second_obs_message->header.t.tow, glo_tow_in * SECS_MS);
+  }
+}
+END_TEST
+
+/*
+ * Test case: Truth time state machine is setup with a known absolute GPS time
+ * of WN: 2165 and TOW: 237600 (6th of July 2021).
+ *
+ * GPS observation message with TOW of 247600 gets pushed into the converter.
+ * Following that a GLO observation message with TOW of 257630 gets pushed into
+ * the converter. This test case is conducted for both legacy and none legacy
+ * conversion.
+ *
+ * Expected result: RTCM to SBP converter determines leap second to be equal to
+ * 18 and the GLO observation is NOT processed. It is not expected to be
+ * processed because the difference between time truth and first GPS observation
+ * time is greater than the GLO_SANITY_THRESHOLD_S (value of 30 seconds).
+ */
+START_TEST(test_strs_24) {
+  const uint16_t init_wn = 2165;
+  const uint32_t init_tow = 237600;
+  const uint16_t gps_wn_in = 2165;
+  const uint32_t gps_tow_in = 247600;
+  const uint16_t glo_wn_in = 2165;
+  const uint32_t glo_tow_in = 257630;
+  const s8 leap_seconds = 18;
+
+  const bool legacy_options[] = {true, false};
+
+  for (size_t i = 0; i < sizeof(legacy_options) / sizeof(legacy_options[0]);
+       ++i) {
+    struct rtcm3_out_state state;
+    sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
+    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
+
+    reset_test_fixture_solved(init_wn, init_tow);
+
+    setup_example_gps_obs(&state, gps_wn_in, gps_tow_in);
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    setup_example_glo_obs(&state, glo_wn_in, glo_tow_in);
+    ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
+
+    if (legacy_options[i]) {
+      ck_assert_uint_eq(n_sbp_out, 1);
+    } else {
+      ck_assert_uint_eq(n_sbp_out, 2);
+      ck_assert_uint_eq((sbp_out_msgs[0].len - sizeof(msg_obs_t)) /
+                            sizeof(packed_obs_content_t),
+                        1);
+      ck_assert_uint_eq((sbp_out_msgs[1].len - sizeof(msg_obs_t)) /
+                            sizeof(packed_obs_content_t),
+                        0);
+    }
+
+    ck_assert(rtcm2sbp_state.leap_second_known);
+    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
+
+    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
+
+    msg_obs_t *obs_message = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    uint8_t message_length = sbp_out_msgs[0].len;
+    ck_assert_uint_eq(
+        (message_length - sizeof(msg_obs_t)) / sizeof(packed_obs_content_t), 1);
+    ck_assert_uint_eq(obs_message->header.t.wn, gps_wn_in);
+    ck_assert_uint_eq(obs_message->header.t.tow, gps_tow_in * SECS_MS);
+  }
+}
+END_TEST
+
 Suite *rtcm3_time_suite(void) {
   Suite *s = suite_create("RTCMv3 time");
 
@@ -1412,6 +1699,10 @@ Suite *rtcm3_time_suite(void) {
   tcase_add_test(tc_rtcm3_time, test_strs_17);
   tcase_add_test(tc_rtcm3_time, test_strs_19);
   tcase_add_test(tc_rtcm3_time, test_strs_20);
+  tcase_add_test(tc_rtcm3_time, test_strs_21);
+  tcase_add_test(tc_rtcm3_time, test_strs_22);
+  tcase_add_test(tc_rtcm3_time, test_strs_23);
+  tcase_add_test(tc_rtcm3_time, test_strs_24);
   suite_add_tcase(s, tc_rtcm3_time);
 
   return s;
