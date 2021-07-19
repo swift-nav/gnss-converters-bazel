@@ -9,6 +9,8 @@ include(SwiftCmakeOptions)
 include(TestTargets)
 include(LanguageStandards)
 include(CompileOptions)
+include(CheckAttributes)
+create_check_attributes_target()
 
 set(disable_tests FALSE)
 if(MSVC)
