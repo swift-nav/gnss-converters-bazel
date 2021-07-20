@@ -12,6 +12,7 @@
 
 #include <check.h>
 #include <gnss-converters/time_truth.h>
+#include <libsbp/observation.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <swiftnav/gnss_time.h>
@@ -405,6 +406,115 @@ START_TEST(test_solved_state_minus_one_second) {
 }
 END_TEST
 
+/**
+ * STTT-13
+ */
+START_TEST(test_truth_update_from_sbp_gps) {
+  time_truth_t time_truth;
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_gps_t healthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 0,
+  };
+
+  ck_assert(time_truth_update_from_sbp(&time_truth,
+                                       SBP_MSG_EPHEMERIS_GPS,
+                                       sizeof(msg_ephemeris_gps_t),
+                                       (const u8 *)&healthy_msg));
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_gps_t unhealthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 1,
+  };
+
+  ck_assert(!time_truth_update_from_sbp(&time_truth,
+                                        SBP_MSG_EPHEMERIS_GPS,
+                                        sizeof(msg_ephemeris_gps_t),
+                                        (const u8 *)&unhealthy_msg));
+}
+END_TEST
+
+/**
+ * STTT-14
+ */
+START_TEST(test_truth_update_from_sbp_gal) {
+  time_truth_t time_truth;
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_gal_t healthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 0,
+  };
+
+  ck_assert(!time_truth_update_from_sbp(&time_truth,
+                                        SBP_MSG_EPHEMERIS_GAL,
+                                        sizeof(msg_ephemeris_gal_t),
+                                        (const u8 *)&healthy_msg));
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_gal_t unhealthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 1,
+  };
+
+  ck_assert(!time_truth_update_from_sbp(&time_truth,
+                                        SBP_MSG_EPHEMERIS_GAL,
+                                        sizeof(msg_ephemeris_gal_t),
+                                        (const u8 *)&unhealthy_msg));
+}
+END_TEST
+
+/**
+ * STTT-15
+ */
+START_TEST(test_truth_update_from_sbp_bds) {
+  time_truth_t time_truth;
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_bds_t healthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 0,
+  };
+
+  ck_assert(!time_truth_update_from_sbp(&time_truth,
+                                        SBP_MSG_EPHEMERIS_BDS,
+                                        sizeof(msg_ephemeris_bds_t),
+                                        (const u8 *)&healthy_msg));
+
+  time_truth_init(&time_truth);
+  msg_ephemeris_bds_t unhealthy_msg = {
+      .common.toe.wn = 2166,
+      .common.toe.tow = 12345,
+      .common.health_bits = 1,
+  };
+
+  ck_assert(!time_truth_update_from_sbp(&time_truth,
+                                        SBP_MSG_EPHEMERIS_BDS,
+                                        sizeof(msg_ephemeris_bds_t),
+                                        (const u8 *)&unhealthy_msg));
+}
+END_TEST
+
+/**
+ * STTT-16
+ */
+START_TEST(test_truth_update_from_sbp_skipped_msg) {
+  time_truth_t time_truth;
+  time_truth_init(&time_truth);
+
+  msg_obs_t msg = {};
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SBP_MSG_OBS, sizeof(msg), (const u8 *)&msg));
+}
+END_TEST
+
 static void suite_fixture_setup(void) {
   reset_log_flags();
   logging_set_implementation(swiftnav_log, swiftnav_detailed_log);
@@ -439,6 +549,18 @@ Suite *time_truth_suite(void) {
   tcase_add_test(test_case_solved, test_solved_state_plus_one_second);
   tcase_add_test(test_case_solved, test_solved_state_minus_one_second);
   suite_add_tcase(suite, test_case_solved);
+
+  TCase *test_case_time_truth_update_from_sbp =
+      tcase_create("Time Truth Update from SBP");
+  tcase_add_test(test_case_time_truth_update_from_sbp,
+                 test_truth_update_from_sbp_gps);
+  tcase_add_test(test_case_time_truth_update_from_sbp,
+                 test_truth_update_from_sbp_gal);
+  tcase_add_test(test_case_time_truth_update_from_sbp,
+                 test_truth_update_from_sbp_bds);
+  tcase_add_test(test_case_time_truth_update_from_sbp,
+                 test_truth_update_from_sbp_skipped_msg);
+  suite_add_tcase(suite, test_case_time_truth_update_from_sbp);
 
   return suite;
 }

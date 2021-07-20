@@ -152,21 +152,18 @@ bool time_truth_update_from_sbp(time_truth_t *instance,
                                 const uint8_t *payload) {
   (void)length;
 
+  bool healthy;
   enum time_truth_source time_source;
   gps_time_sec_t time;
 
   switch (message_type) {
     case SBP_MSG_EPHEMERIS_GPS:
+      healthy = ((const msg_ephemeris_gps_t *)payload)->common.health_bits == 0;
+      if (!healthy) {
+        return false;
+      }
       time_source = TIME_TRUTH_EPH_GPS;
       time = ((const msg_ephemeris_gps_t *)payload)->common.toe;
-      break;
-    case SBP_MSG_EPHEMERIS_GAL:
-      time_source = TIME_TRUTH_EPH_GAL;
-      time = ((const msg_ephemeris_gal_t *)payload)->common.toe;
-      break;
-    case SBP_MSG_EPHEMERIS_BDS:
-      time_source = TIME_TRUTH_EPH_BDS;
-      time = ((const msg_ephemeris_bds_t *)payload)->common.toe;
       break;
     default:
       return false;
