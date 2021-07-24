@@ -112,6 +112,32 @@ pipeline {
             }
         }
     }
+    post {
+        success {
+            script {
+                def automatedPr = new AutomatedPR(context: context)
+                automatedPr.merge()
+            }
+        }
+
+        failure {
+            script {
+                def automatedPr = new AutomatedPR(context: context)
+                automatedPr.alertSlack()
+            }
+        }
+
+        always {
+            script {
+                context.slackNotify(channel: '#positioning-dev')
+                context.slackNotify(channel: '#release', branches: ['.*v.*-release'])
+            }
+        }
+
+        cleanup {
+            cleanWs()
+        }
+    }
 }
 
 /**
