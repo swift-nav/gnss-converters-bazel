@@ -1846,10 +1846,20 @@ static s32 rtcm_roundtrip_cb(u8 *buffer, u16 length, void *context) {
   return message_size;
 }
 
+/* structure to hold info on which GLO sats we have provided
+ * channel number information to the decoder. If we have not
+ * provided the channel number information, we can not
+ * expect the decoder to provide valid carrier and doppler.
+ */
+struct glo_known_fcn_info {
+  size_t num_known_fcn;
+  u8 known_fcn_sat_id[NUM_SATS_GLO];
+};
+
 static void sbp_roundtrip_cb(
     u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
   (void)sender_id;
-  (void)context;
+  struct glo_known_fcn_info *known_fcn = context;
 
   ck_assert_uint_eq(msg_id, SBP_MSG_OBS);
   u8 num_obs = (length - 11) / 17;
@@ -1867,16 +1877,45 @@ static void sbp_roundtrip_cb(
       }
     }
     ck_assert_ptr_ne(orig_obs, NULL);
+
+    /* If this is a GLO satellite, check if we have provided channel
+     * number information to the decoder. Then we know if to expect
+     * valid carrier and doppler for this satellite or not */
+    bool is_glonass =
+        (code_to_constellation(converted_obs->sid.code) == CONSTELLATION_GLO);
+    bool glo_fcn_is_known = false;
+    if (is_glonass) {
+      for (size_t k = 0; k < known_fcn->num_known_fcn; k++) {
+        if (known_fcn->known_fcn_sat_id[k] == converted_obs->sid.sat) {
+          glo_fcn_is_known = true;
+          break;
+        }
+      }
+    }
+    bool act_on_unknown_glo_channel_number = is_glonass && !glo_fcn_is_known;
+
     /* check that the sbp->msm->sbp converted observation is identical to the
      * original */
     ck_assert_uint_eq(orig_obs->P, converted_obs->P);
-    ck_assert_uint_eq(orig_obs->L.i, converted_obs->L.i);
-    ck_assert_uint_eq(orig_obs->L.f, converted_obs->L.f);
-    ck_assert_uint_eq(orig_obs->D.i, converted_obs->D.i);
-    ck_assert_uint_eq(orig_obs->D.f, converted_obs->D.f);
+    if (!act_on_unknown_glo_channel_number) {
+      ck_assert_uint_eq(orig_obs->L.i, converted_obs->L.i);
+      ck_assert_uint_eq(orig_obs->L.f, converted_obs->L.f);
+      ck_assert_uint_eq(orig_obs->D.i, converted_obs->D.i);
+      ck_assert_uint_eq(orig_obs->D.f, converted_obs->D.f);
+    }
     ck_assert_uint_eq(orig_obs->cn0, converted_obs->cn0);
     ck_assert_uint_eq(orig_obs->lock, converted_obs->lock);
-    ck_assert_uint_eq(orig_obs->flags, converted_obs->flags);
+
+    u8 expected_flags = orig_obs->flags;
+    if (act_on_unknown_glo_channel_number) {
+      /* unset carrier and doppler valid flags, as channel number was unknown
+       * to the decoder */
+      expected_flags &= ~MSG_OBS_FLAGS_PHASE_VALID;
+      expected_flags &= ~MSG_OBS_FLAGS_HALF_CYCLE_KNOWN;
+      expected_flags &= ~MSG_OBS_FLAGS_DOPPLER_VALID;
+    }
+
+    ck_assert_uint_eq(expected_flags, converted_obs->flags);
   }
 }
 
@@ -1884,8 +1923,10 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   current_time.wn = 2022;
   current_time.tow = 210853;
 
+  struct glo_known_fcn_info known_fcn = {0};
+
   sbp2rtcm_init(&out_state, rtcm_roundtrip_cb, NULL);
-  rtcm2sbp_init(&state, &time_truth, sbp_roundtrip_cb, NULL, NULL);
+  rtcm2sbp_init(&state, &time_truth, sbp_roundtrip_cb, NULL, &known_fcn);
   sbp2rtcm_set_leap_second(18, &out_state);
   state.leap_seconds = 18;
   state.leap_second_known = true;
@@ -1895,12 +1936,18 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   sbp_gnss_signal_t sid = {2, CODE_GLO_L1OF};
   sbp2rtcm_set_glo_fcn(sid, 4, &out_state);
   rtcm2sbp_set_glo_fcn(sid, 4, &state);
+  known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
+  known_fcn.num_known_fcn++;
   sid.sat = 3;
   sbp2rtcm_set_glo_fcn(sid, 13, &out_state);
   rtcm2sbp_set_glo_fcn(sid, 13, &state);
+  known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
+  known_fcn.num_known_fcn++;
   sid.sat = 11;
   sbp2rtcm_set_glo_fcn(sid, 8, &out_state);
   rtcm2sbp_set_glo_fcn(sid, 8, &state);
+  known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
+  known_fcn.num_known_fcn++;
 
   state.time_from_input_data = current_time;
 

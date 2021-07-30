@@ -1538,8 +1538,7 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
         bool constel_valid =
             sid_valid && !constellation_mask[code_to_constellation(sid.code)];
         bool supported = sid_valid && !unsupported_signal(&sid);
-        if (sid_valid && constel_valid && supported && data->flags.valid_pr &&
-            data->flags.valid_cp) {
+        if (sid_valid && constel_valid && supported && data->flags.valid_pr) {
           if (state->obs_to_send >= MAX_OBS_PER_EPOCH) {
             send_buffer_full_error(state);
             return;
