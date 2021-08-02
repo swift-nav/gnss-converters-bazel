@@ -18,7 +18,9 @@ swift_add_test(test_libixcom
 swift_set_language_standards(test_libixcom)
 swift_set_compile_options(test_libixcom)
 
-add_executable(test_libixcom_pedantic check_pedantic.cc)
-target_link_libraries(test_libixcom_pedantic ixcom)
-swift_set_language_standards(test_libixcom_pedantic)
+swift_add_test(test_libixcom_pedantic
+  UNIT_TEST
+  SRCS check_pedantic.cc
+  LINK ixcom
+)
 swift_set_compile_options(test_libixcom_pedantic ADD -pedantic)
