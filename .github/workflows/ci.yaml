@@ -195,11 +195,6 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Install Chocolatey packages
-        run: |
-          choco install -y --noprogress cmake
-          choco install -y --noprogress sqlite
-
       - name: Run build
         shell: msys2 {0}
         env:
