@@ -12,8 +12,6 @@ swift_add_library(ixcom
     decode.c
     encode.c
     messages.c
-  ADD_COMPILE_OPTIONS
-    -pedantic
 )
 add_library(swiftnav::ixcom ALIAS ixcom)
 
