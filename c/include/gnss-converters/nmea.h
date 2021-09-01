@@ -63,6 +63,7 @@ void send_gphdt(sbp2nmea_t *state);
 void send_gsa(sbp2nmea_t *state);
 void send_gsv(sbp2nmea_t *state);
 void send_pubx(sbp2nmea_t *state);
+void send_gpths(sbp2nmea_t *state);
 char get_nmea_status(u8 flags);
 char get_nmea_mode_indicator(u8 flags);
 u8 get_nmea_quality_indicator(u8 flags);

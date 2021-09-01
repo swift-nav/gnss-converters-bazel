@@ -35,7 +35,8 @@ typedef enum sbp2nmea_nmea_id {
   SBP2NMEA_NMEA_GST = 7,
   SBP2NMEA_NMEA_GSV = 8,
   SBP2NMEA_NMEA_PUBX = 9,
-  SBP2NMEA_NMEA_CNT = 10,
+  SBP2NMEA_NMEA_THS = 10,
+  SBP2NMEA_NMEA_CNT = 11,
 } sbp2nmea_nmea_id_t;
 
 typedef enum sbp2nmea_sbp_id {
@@ -54,7 +55,8 @@ typedef enum sbp2nmea_sbp_id {
   SBP2NMEA_SBP_UTC_TIME_GNSS = 12,
   SBP2NMEA_SBP_POS_LLH_COV_GNSS = 13,
   SBP2NMEA_SBP_VEL_NED_GNSS = 14,
-  SBP2NMEA_SBP_CNT = 15,
+  SBP2NMEA_SBP_ORIENT_EULER = 15,
+  SBP2NMEA_SBP_CNT = 16,
 } sbp2nmea_sbp_id_t;
 
 typedef struct nmea_state_entry {

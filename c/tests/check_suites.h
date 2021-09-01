@@ -5,6 +5,7 @@ Suite* utils_suite(void);
 Suite* rtcm3_suite(void);
 Suite* rtcm3_ssr_suite(void);
 Suite* nmea_suite(void);
+Suite* nmea_gpths_suite(void);
 Suite* ubx_suite(void);
 Suite* ixcom_suite(void);
 Suite* options_suite(void);

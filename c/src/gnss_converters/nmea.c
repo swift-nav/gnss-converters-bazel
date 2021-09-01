@@ -841,6 +841,57 @@ void send_gphdt(sbp2nmea_t *state) {
   NMEA_SENTENCE_DONE(state);
 }
 
+/** Assemble an NMEA GPTHS message and send it out NMEA USARTs.
+ * NMEA THS contains True Heading and Status.
+ *
+ */
+void send_gpths(sbp2nmea_t *state) {
+  assert(state);
+  const msg_orient_euler_t *sbp_orient_euler =
+      sbp2nmea_msg_get(state, SBP2NMEA_SBP_ORIENT_EULER, false);
+  const msg_pos_llh_cov_t *sbp_pos_llh =
+      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
+  NMEA_SENTENCE_START(40);
+  NMEA_SENTENCE_PRINTF("$GPTHS,"); /* Command */
+  uint8_t pos_mode = sbp_pos_llh->flags & POSITION_MODE_MASK;
+  uint8_t orient_flags =
+      SBP_ORIENT_EULER_INS_NAVIGATION_MODE_GET(sbp_orient_euler->flags);
+
+  if (pos_mode == POSITION_MODE_NONE ||
+      orient_flags == SBP_ORIENT_EULER_INS_NAVIGATION_MODE_INVALID) {
+    NMEA_SENTENCE_PRINTF(",V");  // No data
+  } else {
+    // Normally yaw is not the same as heading but in our implementation it can
+    // be taken as such
+    s32 yaw_s32 = sbp_orient_euler->yaw;
+
+    // Yaw should be in the range -180,000,000 to +180,000,000 but due to
+    // numeric effects might lie slightly outside this range. NMEA wants heading
+    // to be represented in the range 0-360 so normalise and clamp the input
+    // before proceeding
+    while (yaw_s32 < 0) {
+      yaw_s32 += 360000000;
+    }
+    while (yaw_s32 > 360000000) {
+      yaw_s32 -= 360000000;
+    }
+
+    // Convert microdegrees -> degrees
+    double yaw = (double)yaw_s32;
+    yaw /= 1e6f;
+
+    // 360.00 is an invalid value in our output, it should wrap around to 0 but
+    // printf isn't going to do that for us
+    if (yaw >= 359.995) {
+      yaw = 0;
+    }
+
+    NMEA_SENTENCE_PRINTF(
+        "%.2f,%c", yaw, pos_mode == POSITION_MODE_DEAD_RECKONING ? 'E' : 'A');
+  }
+  NMEA_SENTENCE_DONE(state);
+}
+
 /** Assemble an NMEA GPGLL message and send it out NMEA USARTs.
  * NMEA GLL contains Geographic Position Latitude/Longitude.
  *

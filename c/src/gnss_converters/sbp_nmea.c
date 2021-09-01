@@ -99,6 +99,11 @@ struct nmea_meta_entry {
                                 (1 << SBP2NMEA_SBP_AGE_CORR),
                             .available_in_fused = true,
                             .send = send_pubx},
+    [SBP2NMEA_NMEA_THS] = {.gnss_tow_mask =
+                               (1 << SBP2NMEA_SBP_ORIENT_EULER) |
+                               (1 << SBP2NMEA_SBP_POS_LLH_COV_GNSS),
+                           .available_in_fused = true,
+                           .send = send_gpths},
 };
 
 struct sbp_meta_entry {
@@ -124,6 +129,8 @@ struct sbp_meta_entry {
     [SBP2NMEA_SBP_POS_LLH_COV_GNSS] = {.offset_tow =
                                            offsetof(msg_pos_llh_cov_t, tow)},
     [SBP2NMEA_SBP_VEL_NED_GNSS] = {.offset_tow = offsetof(msg_vel_ned_t, tow)},
+    [SBP2NMEA_SBP_ORIENT_EULER] = {.offset_tow =
+                                       offsetof(msg_orient_euler_t, tow)},
 };
 
 static uint32_t get_tow(const sbp2nmea_t *state,
