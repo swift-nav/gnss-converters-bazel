@@ -21,6 +21,7 @@
 #include <gnss-converters/options.h>
 #include <gnss-converters/rtcm3_sbp.h>
 #include <libsbp/edc.h>
+#include <libsbp/sbp.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -37,19 +38,18 @@
 static time_truth_t time_truth;
 
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(const uint8_t *, size_t, void *);
 
-writefn_ptr g_writefn;
+sbp_write_fn_t g_writefn;
 
 static struct rtcm3_sbp_state state;
 static void parse_biases(char *arg);
 static void parse_glonass_code_biases(char *arg);
 static void parse_glonass_phase_biases(char *arg);
 
-static void update_obs_time(const msg_obs_t *msg) {
+static void update_obs_time(const sbp_msg_obs_t *msg) {
   gps_time_t obs_time;
-  obs_time.tow = msg[0].header.t.tow / 1000.0; /* ms to sec */
-  obs_time.wn = (s16)msg[0].header.t.wn;
+  obs_time.tow = msg->header.t.tow / 1000.0; /* ms to sec */
+  obs_time.wn = (s16)msg->header.t.wn;
   /* Some receivers output a TOW 0 whenever it's in a denied environment
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
@@ -58,50 +58,24 @@ static void update_obs_time(const msg_obs_t *msg) {
   }
 }
 
-/* Write the SBP packet to STDOUT. In theory, I could use
-   sbp_send_message(). */
-static void cb_rtcm_to_sbp(uint16_t msg_id,
-                           uint8_t length,
-                           uint8_t *buffer,
-                           uint16_t sender_id,
+/* Write the SBP packet to STDOUT. */
+static void cb_rtcm_to_sbp(uint16_t sender_id,
+                           sbp_msg_type_t msg_type,
+                           const sbp_msg_t *msg,
                            void *context) {
   if (state.use_time_from_input_obs) {
-    if (msg_id == SBP_MSG_OBS) {
-      update_obs_time((msg_obs_t *)buffer);
+    if (msg_type == SbpMsgObs) {
+      update_obs_time((const sbp_msg_obs_t *)msg);
     }
   } else {
-    time_truth_update_from_sbp(&time_truth, msg_id, length, buffer);
+    time_truth_update_from_sbp(&time_truth, msg_type, msg);
   }
 
   (void)(context); /* squash warning */
-  /* SBP specifies little endian; this code should work on all hosts */
-  uint8_t tmpbuf[6];
-  tmpbuf[0] = SBP_PREAMBLE;
-  tmpbuf[1] = (uint8_t)msg_id;
-  tmpbuf[2] = (uint8_t)(msg_id >> 8);
-  tmpbuf[3] = (uint8_t)sender_id;
-  tmpbuf[4] = (uint8_t)(sender_id >> 8);
-  tmpbuf[5] = length;
-  ssize_t numwritten = g_writefn(tmpbuf, sizeof(tmpbuf), context);
-  if (numwritten < (ssize_t)sizeof(tmpbuf)) {
-    fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
-    exit(EXIT_FAILURE);
-  }
+  s8 ret =
+      sbp_message_send(&state.sbp_state, msg_type, sender_id, msg, g_writefn);
 
-  numwritten = g_writefn(buffer, length, context);
-  if (numwritten < length) {
-    fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
-    exit(EXIT_FAILURE);
-  }
-
-  /* CRC does not cover preamble */
-  u16 crc = crc16_ccitt(tmpbuf + 1, sizeof(tmpbuf) - 1, 0);
-  crc = crc16_ccitt(buffer, length, crc);
-  uint8_t crcbuf[2];
-  crcbuf[0] = (uint8_t)crc;
-  crcbuf[1] = (uint8_t)(crc >> 8);
-  numwritten = g_writefn(crcbuf, sizeof(crcbuf), context);
-  if (numwritten < (ssize_t)sizeof(crcbuf)) {
+  if (ret != SBP_OK) {
     fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
     exit(EXIT_FAILURE);
   }
@@ -144,7 +118,7 @@ int rtcm3tosbp_main(int argc,
                     char **argv,
                     const char *additional_opts_help,
                     readfn_ptr readfn,
-                    writefn_ptr writefn,
+                    sbp_write_fn_t writefn,
                     void *context) {
   /* initialize time from systime */
   time_t ct_utc_unix = 0;

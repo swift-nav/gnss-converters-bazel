@@ -13,7 +13,7 @@
 #ifndef CHECK_IXCOM_H
 #define CHECK_IXCOM_H
 
-#include <libsbp/logging.h>
+#include <libsbp/v4/logging.h>
 
 #include <ixcom/decode.h>
 #include <ixcom/messages.h>

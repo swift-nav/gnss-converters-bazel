@@ -91,11 +91,11 @@ typedef enum talker_id_e {
 
 /** NMEA_SENTENCE_PRINTF: use like printf, can use multiple times
     within a sentence. */
-#define NMEA_SENTENCE_PRINTF(fmt, ...)                                        \
-  do {                                                                        \
-    sentence_bufp += snprintf(                                                \
-        sentence_bufp, sentence_buf_end - sentence_bufp, fmt, ##__VA_ARGS__); \
-    if (sentence_bufp >= sentence_buf_end) sentence_bufp = sentence_buf_end;  \
+#define NMEA_SENTENCE_PRINTF(...)                                            \
+  do {                                                                       \
+    sentence_bufp += snprintf(                                               \
+        sentence_bufp, sentence_buf_end - sentence_bufp, __VA_ARGS__);       \
+    if (sentence_bufp >= sentence_buf_end) sentence_bufp = sentence_buf_end; \
   } while (0)
 
 /** NMEA_SENTENCE_DONE: append checksum and dispatch.
@@ -112,7 +112,7 @@ typedef enum talker_id_e {
 
 /* data element for GSV sentence */
 typedef struct {
-  sbp_gnss_signal_t sid;
+  sbp_v4_gnss_signal_t sid;
   bool has_azel;
   bool has_snr;
   s8 el;
@@ -165,8 +165,11 @@ static void nmea_append_checksum(char *s, size_t size) {
  *  buf_ptr accordingly if there's no encoding error. If buffer is full, sets
  *  buf_ptr to buf_end.
  */
-__attribute__((format(printf, 3, 4))) static void vsnprintf_wrap(
-    char **buf_ptr, char *buf_end, const char *format, ...) {
+SWIFT_ATTR_FORMAT(3, 4)
+static void vsnprintf_wrap(char **buf_ptr,
+                           char *buf_end,
+                           const char *format,
+                           ...) {
   va_list args;
   va_start(args, format);
 
@@ -189,7 +192,7 @@ __attribute__((format(printf, 3, 4))) static void vsnprintf_wrap(
 
 /* Round the nanosecond part to NMEA_UTC_S_DECIMALS and roll the other fields
  * over if necessary. */
-static void round_utc_time(msg_utc_time_t *utc_time) {
+static void round_utc_time(sbp_msg_utc_time_t *utc_time) {
   utc_time->ns = (u16)round(NMEA_UTC_S_FRAC_DIVISOR * utc_time->ns * 1e-9);
 
   if (utc_time->ns >= NMEA_UTC_S_FRAC_DIVISOR) {
@@ -239,7 +242,7 @@ static void round_utc_time(msg_utc_time_t *utc_time) {
 void get_utc_time_string(bool time,
                          bool date,
                          bool trunc_date,
-                         const msg_utc_time_t *sbp_utc_time,
+                         const sbp_msg_utc_time_t *sbp_utc_time,
                          char *utc_str,
                          u8 size) {
   char *buf_end = utc_str + size;
@@ -259,7 +262,7 @@ void get_utc_time_string(bool time,
     return;
   }
 
-  msg_utc_time_t rounded_utc_time = *sbp_utc_time;
+  sbp_msg_utc_time_t rounded_utc_time = *sbp_utc_time;
   round_utc_time(&rounded_utc_time);
 
   if (time) {
@@ -322,16 +325,16 @@ void send_gpgga(sbp2nmea_t *state) {
      and NOT
      $GPGGA,hhmmss.ss,1560.000000,...
    */
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
-  const msg_age_corrections_t *sbp_age =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_AGE_CORR, false);
-  const msg_dops_t *sbp_dops =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false);
-  const msg_soln_meta_t *sbp_soln_meta =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_SOLN_META, false);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
+  const sbp_msg_age_corrections_t *sbp_age =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_AGE_CORR, false)->age_corrections;
+  const sbp_msg_dops_t *sbp_dops =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false)->dops;
+  const sbp_msg_soln_meta_t *sbp_soln_meta =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_SOLN_META, false)->soln_meta;
 
   uint16_t hdop;
   uint16_t age;
@@ -413,7 +416,7 @@ void send_gpgga(sbp2nmea_t *state) {
   NMEA_SENTENCE_DONE(state);
 }
 
-gnss_signal_t sbp_to_gnss(sbp_gnss_signal_t sid) {
+gnss_signal_t sbp_to_gnss(sbp_v4_gnss_signal_t sid) {
   gnss_signal_t other;
   other.sat = sid.sat;
   other.code = sid.code;
@@ -424,7 +427,7 @@ int gsa_cmp(const void *a, const void *b) {
   return (*(const u16 *)a - *(const u16 *)b);
 }
 
-static u16 nmea_get_id(const sbp_gnss_signal_t sid) {
+static u16 nmea_get_id(const sbp_v4_gnss_signal_t sid) {
   u16 id = -1;
 
   switch (sid_to_constellation(sbp_to_gnss(sid))) {
@@ -474,7 +477,7 @@ static const char *talker_id_to_str(const talker_id_t id) {
   }
 }
 
-static talker_id_t sid_to_talker_id(const sbp_gnss_signal_t sid) {
+static talker_id_t sid_to_talker_id(const sbp_v4_gnss_signal_t sid) {
   switch (sid_to_constellation(sbp_to_gnss(sid))) {
     case CONSTELLATION_GAL:
       return TALKER_ID_GA;
@@ -504,7 +507,7 @@ static talker_id_t sid_to_talker_id(const sbp_gnss_signal_t sid) {
  */
 void send_gsa_print(u16 *prns,
                     const u8 num_prns,
-                    const msg_dops_t *sbp_dops,
+                    const sbp_msg_dops_t *sbp_dops,
                     const char *talker,
                     const sbp2nmea_t *state) {
   assert(prns);
@@ -560,17 +563,17 @@ void send_gsa_print(u16 *prns,
  */
 void send_gsa(sbp2nmea_t *state) {
   assert(state);
-  const msg_dops_t *sbp_dops =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false);
+  const sbp_msg_dops_t *sbp_dops =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false)->dops;
   const u8 n_obs = sbp2nmea_num_obs_get(state);
-  const sbp_gnss_signal_t *nav_sids = sbp2nmea_nav_sids_get(state);
+  const sbp_v4_gnss_signal_t *nav_sids = sbp2nmea_nav_sids_get(state);
 
   u16 prns[TALKER_ID_COUNT][GSA_MAX_SV] = {{0}};
   u8 num_prns[TALKER_ID_COUNT] = {0};
 
   /* Assemble list of currently active SVs */
   for (u8 i = 0; i < n_obs; i++) {
-    const sbp_gnss_signal_t sid = nav_sids[i];
+    const sbp_v4_gnss_signal_t sid = nav_sids[i];
     talker_id_t id = sid_to_talker_id(sid);
 
     if (TALKER_ID_INVALID == id) {
@@ -646,7 +649,7 @@ void send_gsa(sbp2nmea_t *state) {
  * \param[out] sog_knots                speed over ground [knots]
  * \param[out] sog_kph                  speed over ground [kph]
  */
-static void calc_cog_sog(const msg_vel_ned_t *sbp_vel_ned,
+static void calc_cog_sog(const sbp_msg_vel_ned_t *sbp_vel_ned,
                          double cog_update_threshold_mps,
                          double *last_non_stationary_cog,
                          double *cog,
@@ -688,12 +691,12 @@ static void calc_cog_sog(const msg_vel_ned_t *sbp_vel_ned,
  */
 void send_gprmc(sbp2nmea_t *state) {
   assert(state);
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_vel_ned_t *sbp_vel_ned =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_vel_ned_t *sbp_vel_ned =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true)->vel_ned;
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
   /* See the relevant comment for the similar code in nmea_gpgga() function
      for the reasoning behind (... * 1e8 / 1e8) trick */
   double lat = fabs(round(sbp_pos_llh_cov->lat * 1e8) / 1e8);
@@ -771,10 +774,10 @@ void send_gprmc(sbp2nmea_t *state) {
  */
 void send_gpvtg(sbp2nmea_t *state) {
   assert(state);
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_vel_ned_t *sbp_vel_ned =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_vel_ned_t *sbp_vel_ned =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true)->vel_ned;
 
   double cog, sog_knots, sog_kph;
   calc_cog_sog(sbp_vel_ned,
@@ -825,8 +828,8 @@ void send_gpvtg(sbp2nmea_t *state) {
  */
 void send_gphdt(sbp2nmea_t *state) {
   assert(state);
-  const msg_baseline_heading_t *sbp_baseline_heading =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_HDG, false);
+  const sbp_msg_baseline_heading_t *sbp_baseline_heading =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_HDG, false)->baseline_heading;
   NMEA_SENTENCE_START(40);
   NMEA_SENTENCE_PRINTF("$GPHDT,"); /* Command */
   if ((POSITION_MODE_MASK & sbp_baseline_heading->flags) ==
@@ -847,10 +850,10 @@ void send_gphdt(sbp2nmea_t *state) {
  */
 void send_gpths(sbp2nmea_t *state) {
   assert(state);
-  const msg_orient_euler_t *sbp_orient_euler =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_ORIENT_EULER, false);
-  const msg_pos_llh_cov_t *sbp_pos_llh =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
+  const sbp_msg_orient_euler_t *sbp_orient_euler =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_ORIENT_EULER, false)->orient_euler;
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
   NMEA_SENTENCE_START(40);
   NMEA_SENTENCE_PRINTF("$GPTHS,"); /* Command */
   uint8_t pos_mode = sbp_pos_llh->flags & POSITION_MODE_MASK;
@@ -899,10 +902,10 @@ void send_gpths(sbp2nmea_t *state) {
  */
 void send_gpgll(sbp2nmea_t *state) {
   assert(state);
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
   /* See the relevant comment for the similar code in nmea_gpgga() function
      for the reasoning behind (... * 1e8 / 1e8) trick */
   double lat = fabs(round(sbp_pos_llh_cov->lat * 1e8) / 1e8);
@@ -953,8 +956,8 @@ void send_gpgll(sbp2nmea_t *state) {
  */
 void send_gpzda(sbp2nmea_t *state) {
   assert(state);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
 
   NMEA_SENTENCE_START(40);
   NMEA_SENTENCE_PRINTF("$GPZDA,"); /* Command */
@@ -975,12 +978,12 @@ void send_gpzda(sbp2nmea_t *state) {
  */
 void send_gpgst(sbp2nmea_t *state) {
   assert(state);
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
   const u8 n_obs = sbp2nmea_num_obs_get(state);
-  const sbp_gnss_signal_t *nav_sids = sbp2nmea_nav_sids_get(state);
+  const sbp_v4_gnss_signal_t *nav_sids = sbp2nmea_nav_sids_get(state);
   NMEA_SENTENCE_START(120);
 
   u8 fix_type = NMEA_GGA_QI_INVALID;
@@ -995,7 +998,7 @@ void send_gpgst(sbp2nmea_t *state) {
 
   /* Assemble list of currently active SVs */
   for (u8 i = 0; i < n_obs; i++) {
-    const sbp_gnss_signal_t sid = nav_sids[i];
+    const sbp_v4_gnss_signal_t sid = nav_sids[i];
     talker_id_t id = sid_to_talker_id(sid);
 
     if (TALKER_ID_INVALID == id) {
@@ -1134,16 +1137,14 @@ static void nmea_gsv_print(const u8 n_used,
  * \param state Current SBP2NMEA states
  */
 void send_gsv(sbp2nmea_t *state) {
-  const msg_measurement_state_t *sbp_meas_state =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_MEASUREMENT_STATE, false);
-  const msg_sv_az_el_t *sbp_azel =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_SV_AZ_EL, false);
+  const sbp_msg_measurement_state_t *sbp_meas_state =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_MEASUREMENT_STATE, false)
+           ->measurement_state;
+  const sbp_msg_sv_az_el_t *sbp_azel =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_SV_AZ_EL, false)->sv_az_el;
 
-  const u8 n_used =
-      sbp2nmea_msg_length(state, SBP2NMEA_SBP_SV_AZ_EL) / sizeof(sv_az_el_t);
-  const u8 sbp_n_state =
-      sbp2nmea_msg_length(state, SBP2NMEA_SBP_MEASUREMENT_STATE) /
-      sizeof(measurement_state_t);
+  const u8 n_used = sbp_azel->n_azel;
+  const u8 sbp_n_state = sbp_meas_state->n_states;
 
   /* Group by constellation */
   nmea_gsv_element_t sv_grouped[TALKER_ID_COUNT][n_used];
@@ -1152,7 +1153,7 @@ void send_gsv(sbp2nmea_t *state) {
   memset(&sv_grouped, 0, sizeof(sv_grouped));
 
   for (u8 i = 0; i < n_used; ++i) {
-    sbp_gnss_signal_t sid = sbp_azel->azel[i].sid;
+    sbp_v4_gnss_signal_t sid = sbp_azel->azel[i].sid;
     talker_id_t id = sid_to_talker_id(sid);
 
     if (TALKER_ID_INVALID == id) {
@@ -1168,7 +1169,7 @@ void send_gsv(sbp2nmea_t *state) {
 
     /* pick CN0 from the measurement state */
     for (u8 j = 0; j < sbp_n_state; j++) {
-      sbp_gnss_signal_t meas_sid = sbp_meas_state->states[j].mesid;
+      sbp_v4_gnss_signal_t meas_sid = sbp_meas_state->states[j].mesid;
 
       /* take the CN0 from the first signal for this satellite */
       if (meas_sid.sat == sid.sat && code_to_constellation(meas_sid.code) ==
@@ -1221,18 +1222,18 @@ static inline const char *get_pubx_nav_stat(int flags) {
 }
 
 void send_pubx(sbp2nmea_t *state) {
-  const msg_pos_llh_cov_t *sbp_pos_llh_cov =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true);
-  const msg_vel_ned_t *sbp_vel_ned =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true);
-  const msg_utc_time_t *sbp_utc_time =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true);
-  const msg_age_corrections_t *sbp_age =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_AGE_CORR, false);
-  const msg_dops_t *sbp_dops =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false);
-  const msg_soln_meta_t *soln_meta =
-      sbp2nmea_msg_get(state, SBP2NMEA_SBP_SOLN_META, false);
+  const sbp_msg_pos_llh_cov_t *sbp_pos_llh_cov =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_POS_LLH_COV, true)->pos_llh_cov;
+  const sbp_msg_vel_ned_t *sbp_vel_ned =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_VEL_NED, true)->vel_ned;
+  const sbp_msg_utc_time_t *sbp_utc_time =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_UTC_TIME, true)->utc_time;
+  const sbp_msg_age_corrections_t *sbp_age =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_AGE_CORR, false)->age_corrections;
+  const sbp_msg_dops_t *sbp_dops =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_DOPS, false)->dops;
+  const sbp_msg_soln_meta_t *soln_meta =
+      &sbp2nmea_msg_get(state, SBP2NMEA_SBP_SOLN_META, false)->soln_meta;
 
   double lat = fabs(round(sbp_pos_llh_cov->lat * 1e8) / 1e8);
   double lon = fabs(round(sbp_pos_llh_cov->lon * 1e8) / 1e8);

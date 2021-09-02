@@ -13,11 +13,11 @@
 #ifndef GNSS_CONVERTERS_UBX_SBP_INTERFACE_H
 #define GNSS_CONVERTERS_UBX_SBP_INTERFACE_H
 
-#include <libsbp/gnss.h>
-#include <libsbp/navigation.h>
-#include <libsbp/observation.h>
-#include <libsbp/orientation.h>
 #include <libsbp/sbp.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/navigation.h>
+#include <libsbp/v4/observation.h>
+#include <libsbp/v4/orientation.h>
 #include <unistd.h>
 
 #include <gnss-converters/eph_sat_data.h>
@@ -68,15 +68,17 @@ struct ubx_sbp_state {
   size_t bytes_in_buffer;
   u16 sender_id;
   int (*read_stream_func)(u8 *buf, size_t len, void *ctx);
-  void (*cb_ubx_to_sbp)(
-      u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx);
+  void (*cb_ubx_to_sbp)(uint16_t sender_id,
+                        sbp_msg_type_t msg_type,
+                        const sbp_msg_t *msg,
+                        void *context);
   void *context;
   bool use_hnr;
   struct ubx_esf_state esf_state;
 
   struct eph_sat_data eph_data;
   u32 last_tow_ms;
-  msg_orient_euler_t last_orient_euler;
+  sbp_msg_orient_euler_t last_orient_euler;
 
   bool leap_second_known;
   utc_params_t utc_params;
@@ -85,10 +87,9 @@ struct ubx_sbp_state {
 int16_t ubx_convert_temperature_to_bmi160(double temperature_degrees);
 
 void ubx_sbp_init(struct ubx_sbp_state *state,
-                  void (*cb_ubx_to_sbp)(u16 msg_id,
-                                        u8 length,
-                                        u8 *buff,
-                                        u16 sender_id,
+                  void (*cb_ubx_to_sbp)(uint16_t sender_id,
+                                        sbp_msg_type_t msg_type,
+                                        const sbp_msg_t *msg,
                                         void *context),
                   void *context);
 void ubx_handle_frame(swiftnav_bytestream_t *frame,

@@ -22,12 +22,14 @@ sbp_state_t sbp_state;
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
 typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
 
-writefn_ptr g_writefn;
+sbp_write_fn_t g_writefn;
 
-static void sbp_write(
-    u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx) {
-  (void)ctx;
-  sbp_send_message(&sbp_state, msg_id, sender_id, length, buf, g_writefn);
+static void sbp_write(u16 sender_id,
+                      sbp_msg_type_t msg_type,
+                      const sbp_msg_t *msg,
+                      void *context) {
+  (void)context;
+  sbp_message_send(&sbp_state, msg_type, sender_id, msg, g_writefn);
 }
 
 static void help(char *arg, const char *additional_opts_help) {

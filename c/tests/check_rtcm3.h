@@ -15,7 +15,7 @@
 
 #include <libsbp/logging.h>
 #include "../src/gnss_converters/rtcm3_sbp_internal.h"
-#include "../src/gnss_converters/sbp_rtcm3_internal.h"
+#include "../src/gnss_converters_extra/sbp_rtcm3_internal.h"
 
 /* rtcm helper defines and functions */
 
@@ -29,12 +29,11 @@
 extern gps_time_t current_time;
 
 void rtcm3_setup_basic(void);
-void update_obs_time(const msg_obs_t *msg);
+void update_obs_time(const sbp_msg_obs_t *msg);
 void test_RTCM3(const char *filename,
-                void (*cb_rtcm_to_sbp)(u16 msg_id,
-                                       u8 length,
-                                       u8 *buffer,
-                                       u16 sender_id,
+                void (*cb_rtcm_to_sbp)(uint16_t sender_id,
+                                       sbp_msg_type_t msg_type,
+                                       const sbp_msg_t *msg,
                                        void *context),
                 gps_time_t current_time);
 

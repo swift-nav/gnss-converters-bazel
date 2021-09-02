@@ -11,8 +11,8 @@
  */
 
 #include <check.h>
-#include <libsbp/observation.h>
 #include <libsbp/sbp.h>
+#include <libsbp/v4/observation.h>
 #include <math.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>
@@ -37,11 +37,10 @@ static size_t iobuf_read_idx = 0;
 static size_t iobuf_write_idx = 0;
 static size_t iobuf_len = 0;
 static struct {
-  uint16_t msg_id;
+  sbp_msg_type_t msg_type;
   uint16_t sender_id;
-  uint8_t len;
-  uint8_t payload[SBP_MAX_PAYLOAD_LEN];
-} sbp_out_msgs[MAX_OBS_IN_SBP];
+  sbp_msg_t msg;
+} sbp_out_msgs[SBP_MSG_OBS_OBS_MAX];
 static size_t n_sbp_out = 0;
 time_truth_t time_truth;
 static struct rtcm3_sbp_state rtcm2sbp_state;
@@ -65,14 +64,15 @@ static s32 save_rtcm_to_iobuf(uint8_t *buf, uint16_t len, void *ctx) {
   return len;
 }
 
-static void save_sbp_out_cb(
-    uint16_t msg_id, uint8_t len, uint8_t *buf, uint16_t sender_id, void *ctx) {
-  (void)ctx;
+static void save_sbp_out_cb(uint16_t sender_id,
+                            sbp_msg_type_t msg_type,
+                            const sbp_msg_t *sbp_msg,
+                            void *context) {
+  (void)context;
   assert(n_sbp_out < sizeof(sbp_out_msgs) / sizeof(sbp_out_msgs[0]));
-  sbp_out_msgs[n_sbp_out].msg_id = msg_id;
+  sbp_out_msgs[n_sbp_out].msg_type = msg_type;
   sbp_out_msgs[n_sbp_out].sender_id = sender_id;
-  sbp_out_msgs[n_sbp_out].len = len;
-  memcpy(sbp_out_msgs[n_sbp_out].payload, buf, len);
+  sbp_out_msgs[n_sbp_out].msg = *sbp_msg;
   n_sbp_out++;
 }
 
@@ -139,8 +139,8 @@ static void setup_example_1002(uint32_t tow) {
   obs.sats[0].obs[L1_FREQ].carrier_phase = 1;
   obs.sats[0].obs[L1_FREQ].lock = 1;
   obs.sats[0].obs[L1_FREQ].cnr = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_cp = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_pr = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_cp = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_pr = 1;
   iobuf_len = (size_t)rtcm3_encode_1002(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -158,8 +158,8 @@ static void setup_example_1004(uint32_t tow) {
   obs.sats[0].obs[L1_FREQ].carrier_phase = 1;
   obs.sats[0].obs[L1_FREQ].lock = 1;
   obs.sats[0].obs[L1_FREQ].cnr = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_cp = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_pr = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_cp = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_pr = 1;
   iobuf_len = (size_t)rtcm3_encode_1004(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -177,8 +177,8 @@ static void setup_example_1010(uint32_t tow) {
   obs.sats[0].obs[L1_FREQ].carrier_phase = 1;
   obs.sats[0].obs[L1_FREQ].lock = 1;
   obs.sats[0].obs[L1_FREQ].cnr = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_cp = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_pr = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_cp = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_pr = 1;
   iobuf_len = (size_t)rtcm3_encode_1010(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -196,8 +196,8 @@ static void setup_example_1012(uint32_t tow) {
   obs.sats[0].obs[L1_FREQ].carrier_phase = 1;
   obs.sats[0].obs[L1_FREQ].lock = 1;
   obs.sats[0].obs[L1_FREQ].cnr = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_cp = 1;
-  obs.sats[0].obs[L1_FREQ].flags.valid_pr = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_cp = 1;
+  obs.sats[0].obs[L1_FREQ].flags.fields.valid_pr = 1;
   iobuf_len = (size_t)rtcm3_encode_1012(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -238,11 +238,11 @@ static void setup_example_msm4(uint16_t msg_num, uint32_t tow) {
   obs.signals[0].hca_indicator = false;
   obs.signals[0].lock_time_s = 770.048;
   obs.signals[0].cnr = 27.875;
-  obs.signals[0].flags.valid_cnr = 1;
-  obs.signals[0].flags.valid_pr = 1;
-  obs.signals[0].flags.valid_cp = 1;
-  obs.signals[0].flags.valid_dop = 1;
-  obs.signals[0].flags.valid_lock = 1;
+  obs.signals[0].flags.fields.valid_cnr = 1;
+  obs.signals[0].flags.fields.valid_pr = 1;
+  obs.signals[0].flags.fields.valid_cp = 1;
+  obs.signals[0].flags.fields.valid_dop = 1;
+  obs.signals[0].flags.fields.valid_lock = 1;
   iobuf_len = (size_t)rtcm3_encode_msm4(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -283,11 +283,11 @@ static void setup_example_msm5(uint16_t msg_num, uint32_t tow) {
   obs.signals[0].hca_indicator = false;
   obs.signals[0].lock_time_s = 770.048;
   obs.signals[0].cnr = 27.875;
-  obs.signals[0].flags.valid_cnr = 1;
-  obs.signals[0].flags.valid_pr = 1;
-  obs.signals[0].flags.valid_cp = 1;
-  obs.signals[0].flags.valid_dop = 1;
-  obs.signals[0].flags.valid_lock = 1;
+  obs.signals[0].flags.fields.valid_cnr = 1;
+  obs.signals[0].flags.fields.valid_pr = 1;
+  obs.signals[0].flags.fields.valid_cp = 1;
+  obs.signals[0].flags.fields.valid_dop = 1;
+  obs.signals[0].flags.fields.valid_lock = 1;
   iobuf_len = (size_t)rtcm3_encode_msm5(&obs, iobuf + 3);
   setup_example_frame();
 }
@@ -533,10 +533,10 @@ static void (*const GPS_OBS_EXAMPLES[])(uint32_t) = {setup_example_1002,
 static void (*const GLO_OBS_EXAMPLES[])(uint32_t) = {setup_example_1010,
                                                      setup_example_1012};
 static const struct eph_example_pair EPH_EXAMPLES[] = {
-    {setup_example_bds_eph, SBP_MSG_EPHEMERIS_BDS},
-    {setup_example_gal_eph, SBP_MSG_EPHEMERIS_GAL},
-    {setup_example_glo_eph, SBP_MSG_EPHEMERIS_GLO},
-    {setup_example_gps_eph, SBP_MSG_EPHEMERIS_GPS}};
+    {setup_example_bds_eph, SbpMsgEphemerisBds},
+    {setup_example_gal_eph, SbpMsgEphemerisGal},
+    {setup_example_glo_eph, SbpMsgEphemerisGlo},
+    {setup_example_gps_eph, SbpMsgEphemerisGps}};
 
 /*
  * Setup: The following tests cases apply to the RTCM to SBP converter which has
@@ -613,9 +613,8 @@ START_TEST(test_strs_2) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_BDS);
-  msg_ephemeris_bds_t *sbp_msg =
-      (msg_ephemeris_bds_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisBds);
+  const sbp_msg_ephemeris_bds_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_bds;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -645,9 +644,8 @@ START_TEST(test_strs_3) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GAL);
-  msg_ephemeris_gal_t *sbp_msg =
-      (msg_ephemeris_gal_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGal);
+  const sbp_msg_ephemeris_gal_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gal;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -699,9 +697,8 @@ START_TEST(test_strs_5) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GPS);
-  msg_ephemeris_gps_t *sbp_msg =
-      (msg_ephemeris_gps_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGps);
+  const sbp_msg_ephemeris_gps_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gps;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -723,7 +720,7 @@ END_TEST
  * match TOW: 501
  */
 START_TEST(test_strs_6) {
-  msg_obs_t *sbp_obs;
+  const sbp_msg_obs_t *sbp_obs;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 500;
@@ -740,10 +737,9 @@ START_TEST(test_strs_6) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -758,10 +754,9 @@ START_TEST(test_strs_6) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -776,10 +771,9 @@ START_TEST(test_strs_6) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -794,10 +788,9 @@ START_TEST(test_strs_6) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -821,7 +814,7 @@ END_TEST
  * match TOW: 499
  */
 START_TEST(test_strs_7) {
-  msg_obs_t *sbp_obs;
+  const sbp_msg_obs_t *sbp_obs;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 500;
@@ -838,10 +831,9 @@ START_TEST(test_strs_7) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -856,10 +848,9 @@ START_TEST(test_strs_7) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -874,10 +865,9 @@ START_TEST(test_strs_7) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -892,10 +882,9 @@ START_TEST(test_strs_7) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -920,7 +909,7 @@ END_TEST
  * match TOW: 302901
  */
 START_TEST(test_strs_8) {
-  msg_obs_t *sbp_obs;
+  const sbp_msg_obs_t *sbp_obs;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 500;
@@ -937,10 +926,9 @@ START_TEST(test_strs_8) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -959,10 +947,9 @@ START_TEST(test_strs_8) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -981,10 +968,9 @@ START_TEST(test_strs_8) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -1008,7 +994,7 @@ END_TEST
  * WN: 2001 and msg_obs_t::header:t:tow set to match TOW: 97599
  */
 START_TEST(test_strs_9) {
-  msg_obs_t *sbp_obs;
+  const sbp_msg_obs_t *sbp_obs;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 400000;
@@ -1025,10 +1011,9 @@ START_TEST(test_strs_9) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -1047,10 +1032,9 @@ START_TEST(test_strs_9) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -1069,10 +1053,9 @@ START_TEST(test_strs_9) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[0].len ==
-              sizeof(msg_obs_t) + sizeof(packed_obs_content_t));
-    sbp_obs = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_obs = &sbp_out_msgs[0].msg.obs;
+    ck_assert(sbp_obs->n_obs == 1);
     ck_assert(sbp_obs->header.n_obs == 0x10);
     ck_assert_uint_eq(sbp_obs->header.t.wn, wn_out);
     ck_assert_uint_eq(sbp_obs->header.t.tow, gps_tow_to_gps_tow_ms(tow_out));
@@ -1100,10 +1083,10 @@ END_TEST
  * GPS: WN: 2000 TOW: 496
  */
 START_TEST(test_strs_12) {
-  msg_ephemeris_gps_t *sbp_gps_eph;
-  msg_ephemeris_gal_t *sbp_gal_eph;
-  msg_ephemeris_bds_t *sbp_bds_eph;
-  msg_ephemeris_glo_t *sbp_glo_eph;
+  const sbp_msg_ephemeris_gps_t *sbp_gps_eph;
+  const sbp_msg_ephemeris_gal_t *sbp_gal_eph;
+  const sbp_msg_ephemeris_bds_t *sbp_bds_eph;
+  const sbp_msg_ephemeris_glo_t *sbp_glo_eph;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 500;
@@ -1118,26 +1101,26 @@ START_TEST(test_strs_12) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == EPH_EXAMPLES[i].msg_id);
+    ck_assert(sbp_out_msgs[0].msg_type == EPH_EXAMPLES[i].msg_id);
 
     switch (EPH_EXAMPLES[i].msg_id) {
-      case SBP_MSG_EPHEMERIS_BDS:
-        sbp_bds_eph = (msg_ephemeris_bds_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisBds:
+        sbp_bds_eph = &sbp_out_msgs[0].msg.ephemeris_bds;
         ck_assert_uint_eq(sbp_bds_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_bds_eph->common.toe.tow, 502);
         break;
-      case SBP_MSG_EPHEMERIS_GAL:
-        sbp_gal_eph = (msg_ephemeris_gal_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGal:
+        sbp_gal_eph = &sbp_out_msgs[0].msg.ephemeris_gal;
         ck_assert_uint_eq(sbp_gal_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_gal_eph->common.toe.tow, 480);
         break;
-      case SBP_MSG_EPHEMERIS_GLO:
-        sbp_glo_eph = (msg_ephemeris_glo_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGlo:
+        sbp_glo_eph = &sbp_out_msgs[0].msg.ephemeris_glo;
         ck_assert_uint_eq(sbp_glo_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_glo_eph->common.toe.tow, 18);
         break;
-      case SBP_MSG_EPHEMERIS_GPS:
-        sbp_gps_eph = (msg_ephemeris_gps_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGps:
+        sbp_gps_eph = &sbp_out_msgs[0].msg.ephemeris_gps;
         ck_assert_uint_eq(sbp_gps_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_gps_eph->common.toe.tow, 496);
         break;
@@ -1168,10 +1151,10 @@ END_TEST
  * GPS: WN: 2000 TOW: 496
  */
 START_TEST(test_strs_13) {
-  msg_ephemeris_gps_t *sbp_gps_eph;
-  msg_ephemeris_gal_t *sbp_gal_eph;
-  msg_ephemeris_bds_t *sbp_bds_eph;
-  msg_ephemeris_glo_t *sbp_glo_eph;
+  const sbp_msg_ephemeris_gps_t *sbp_gps_eph;
+  const sbp_msg_ephemeris_gal_t *sbp_gal_eph;
+  const sbp_msg_ephemeris_bds_t *sbp_bds_eph;
+  const sbp_msg_ephemeris_glo_t *sbp_glo_eph;
 
   const uint16_t init_wn = 2000;
   const uint32_t init_tow = 500;
@@ -1186,27 +1169,27 @@ START_TEST(test_strs_13) {
 
     ck_assert(n_sbp_out == 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == EPH_EXAMPLES[i].msg_id);
-    sbp_bds_eph = (msg_ephemeris_bds_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == EPH_EXAMPLES[i].msg_id);
+    sbp_bds_eph = &sbp_out_msgs[0].msg.ephemeris_bds;
 
     switch (EPH_EXAMPLES[i].msg_id) {
-      case SBP_MSG_EPHEMERIS_BDS:
-        sbp_bds_eph = (msg_ephemeris_bds_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisBds:
+        sbp_bds_eph = &sbp_out_msgs[0].msg.ephemeris_bds;
         ck_assert_uint_eq(sbp_bds_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_bds_eph->common.toe.tow, 502);
         break;
-      case SBP_MSG_EPHEMERIS_GAL:
-        sbp_gal_eph = (msg_ephemeris_gal_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGal:
+        sbp_gal_eph = &sbp_out_msgs[0].msg.ephemeris_gal;
         ck_assert_uint_eq(sbp_gal_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_gal_eph->common.toe.tow, 480);
         break;
-      case SBP_MSG_EPHEMERIS_GLO:
-        sbp_glo_eph = (msg_ephemeris_glo_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGlo:
+        sbp_glo_eph = &sbp_out_msgs[0].msg.ephemeris_glo;
         ck_assert_uint_eq(sbp_glo_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_glo_eph->common.toe.tow, 18);
         break;
-      case SBP_MSG_EPHEMERIS_GPS:
-        sbp_gps_eph = (msg_ephemeris_gps_t *)(sbp_out_msgs[0].payload);
+      case SbpMsgEphemerisGps:
+        sbp_gps_eph = &sbp_out_msgs[0].msg.ephemeris_gps;
         ck_assert_uint_eq(sbp_gps_eph->common.toe.wn, 2000);
         ck_assert_uint_eq(sbp_gps_eph->common.toe.tow, 496);
         break;
@@ -1247,9 +1230,8 @@ START_TEST(test_strs_14) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GPS);
-  msg_ephemeris_gps_t *sbp_msg =
-      (msg_ephemeris_gps_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGps);
+  const sbp_msg_ephemeris_gps_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gps;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -1286,9 +1268,8 @@ START_TEST(test_strs_15) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GPS);
-  msg_ephemeris_gps_t *sbp_msg =
-      (msg_ephemeris_gps_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGps);
+  const sbp_msg_ephemeris_gps_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gps;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -1324,9 +1305,8 @@ START_TEST(test_strs_16) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GAL);
-  msg_ephemeris_gal_t *sbp_msg =
-      (msg_ephemeris_gal_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGal);
+  const sbp_msg_ephemeris_gal_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gal;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -1363,9 +1343,8 @@ START_TEST(test_strs_17) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GAL);
-  msg_ephemeris_gal_t *sbp_msg =
-      (msg_ephemeris_gal_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGal);
+  const sbp_msg_ephemeris_gal_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_gal;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -1401,9 +1380,8 @@ START_TEST(test_strs_19) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_BDS);
-  msg_ephemeris_bds_t *sbp_msg =
-      (msg_ephemeris_bds_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisBds);
+  const sbp_msg_ephemeris_bds_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_bds;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
 }
@@ -1439,9 +1417,8 @@ START_TEST(test_strs_20) {
 
   ck_assert(n_sbp_out == 1);
   ck_assert(iobuf_read_idx == iobuf_len);
-  ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_EPHEMERIS_GLO);
-  msg_ephemeris_glo_t *sbp_msg =
-      (msg_ephemeris_glo_t *)(sbp_out_msgs[0].payload);
+  ck_assert(sbp_out_msgs[0].msg_type == SbpMsgEphemerisGlo);
+  const sbp_msg_ephemeris_glo_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_glo;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
   ck_assert(rtcm2sbp_state.leap_second_known);
@@ -1486,8 +1463,8 @@ START_TEST(test_strs_21) {
 
     ck_assert_uint_eq(n_sbp_out, 1);
     ck_assert(iobuf_read_idx == iobuf_len);
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    msg_obs_t *sbp_msg = (msg_obs_t *)(sbp_out_msgs[0].payload);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    sbp_msg_obs_t *sbp_msg = &sbp_out_msgs[0].msg.obs;
     ck_assert_uint_eq(sbp_msg->header.t.wn, wn_in);
     ck_assert_uint_eq(sbp_msg->header.t.tow, tow_in * SECS_MS);
     ck_assert(rtcm2sbp_state.leap_second_known);
@@ -1534,9 +1511,7 @@ START_TEST(test_strs_22) {
       ck_assert_uint_eq(n_sbp_out, 0);
     } else {
       ck_assert_uint_eq(n_sbp_out, 1);
-      size_t observations = (sbp_out_msgs[0].len - sizeof(msg_obs_t)) /
-                            sizeof(packed_obs_content_t);
-      ck_assert_uint_eq(observations, 0);
+      ck_assert_uint_eq(sbp_out_msgs[0].msg.obs.n_obs, 0);
     }
     ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
   }
@@ -1588,22 +1563,16 @@ START_TEST(test_strs_23) {
     ck_assert(rtcm2sbp_state.leap_second_known);
     ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
 
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
-    ck_assert(sbp_out_msgs[1].msg_id == SBP_MSG_OBS);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
+    ck_assert(sbp_out_msgs[1].msg_type == SbpMsgObs);
 
-    msg_obs_t *first_obs_message = (msg_obs_t *)(sbp_out_msgs[0].payload);
-    uint8_t first_message_length = sbp_out_msgs[0].len;
-    ck_assert_uint_eq((first_message_length - sizeof(msg_obs_t)) /
-                          sizeof(packed_obs_content_t),
-                      1);
+    sbp_msg_obs_t *first_obs_message = &sbp_out_msgs[0].msg.obs;
+    ck_assert_uint_eq(first_obs_message->n_obs, 1);
     ck_assert_uint_eq(first_obs_message->header.t.wn, gps_wn_in);
     ck_assert_uint_eq(first_obs_message->header.t.tow, gps_tow_in * SECS_MS);
 
-    msg_obs_t *second_obs_message = (msg_obs_t *)(sbp_out_msgs[1].payload);
-    uint8_t second_obs_message_length = sbp_out_msgs[1].len;
-    ck_assert_uint_eq((second_obs_message_length - sizeof(msg_obs_t)) /
-                          sizeof(packed_obs_content_t),
-                      1);
+    sbp_msg_obs_t *second_obs_message = &sbp_out_msgs[1].msg.obs;
+    ck_assert_uint_eq(second_obs_message->n_obs, 1);
     ck_assert_uint_eq(second_obs_message->header.t.wn, glo_wn_in);
     ck_assert_uint_eq(second_obs_message->header.t.tow, glo_tow_in * SECS_MS);
   }
@@ -1654,23 +1623,17 @@ START_TEST(test_strs_24) {
       ck_assert_uint_eq(n_sbp_out, 1);
     } else {
       ck_assert_uint_eq(n_sbp_out, 2);
-      ck_assert_uint_eq((sbp_out_msgs[0].len - sizeof(msg_obs_t)) /
-                            sizeof(packed_obs_content_t),
-                        1);
-      ck_assert_uint_eq((sbp_out_msgs[1].len - sizeof(msg_obs_t)) /
-                            sizeof(packed_obs_content_t),
-                        0);
+      ck_assert_uint_eq(sbp_out_msgs[0].msg.obs.n_obs, 1);
+      ck_assert_uint_eq(sbp_out_msgs[1].msg.obs.n_obs, 0);
     }
 
     ck_assert(rtcm2sbp_state.leap_second_known);
     ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
 
-    ck_assert(sbp_out_msgs[0].msg_id == SBP_MSG_OBS);
+    ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
 
-    msg_obs_t *obs_message = (msg_obs_t *)(sbp_out_msgs[0].payload);
-    uint8_t message_length = sbp_out_msgs[0].len;
-    ck_assert_uint_eq(
-        (message_length - sizeof(msg_obs_t)) / sizeof(packed_obs_content_t), 1);
+    sbp_msg_obs_t *obs_message = &sbp_out_msgs[0].msg.obs;
+    ck_assert_uint_eq(obs_message->n_obs, 1);
     ck_assert_uint_eq(obs_message->header.t.wn, gps_wn_in);
     ck_assert_uint_eq(obs_message->header.t.tow, gps_tow_in * SECS_MS);
   }

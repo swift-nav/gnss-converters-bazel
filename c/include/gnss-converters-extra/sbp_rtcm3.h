@@ -10,9 +10,10 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_SBP_RTCM3_INTERFACE_H
-#define GNSS_CONVERTERS_SBP_RTCM3_INTERFACE_H
+#ifndef GNSS_CONVERTERS_EXTRA_SBP_RTCM3_INTERFACE_H
+#define GNSS_CONVERTERS_EXTRA_SBP_RTCM3_INTERFACE_H
 
+#include <gnss-converters/rtcm3_sbp.h>
 #include <libsbp/observation.h>
 #include <libsbp/sbp.h>
 #include <libsbp/ssr.h>
@@ -23,18 +24,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* This is the maximum number of SBP observations possible per epoch:
-   - Max number of observation messages comes from the 4 bits assigned to the
-     sequence count in header.n_obs
-   - The number of observations per message comes from the max 255 byte
-     message length
-*/
-#define SBP_HDR_SIZE (sizeof(observation_header_t))
-#define SBP_OBS_SIZE (sizeof(packed_obs_content_t))
-#define SBP_MAX_OBS_SEQ (15u)
-#define MAX_OBS_IN_SBP ((SBP_MAX_PAYLOAD_LEN - SBP_HDR_SIZE) / SBP_OBS_SIZE)
-#define MAX_OBS_PER_EPOCH (SBP_MAX_OBS_SEQ * MAX_OBS_IN_SBP)
 
 struct rtcm3_out_state {
   s8 leap_seconds;
@@ -155,4 +144,4 @@ void sbp2rtcm_sbp_log_cb(u16 sender_id,
 }
 #endif
 
-#endif /* GNSS_CONVERTERS_SBP_RTCM3_INTERFACE_H */
+#endif /* GNSS_CONVERTERS_EXTRA_SBP_RTCM3_INTERFACE_H */

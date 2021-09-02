@@ -13,12 +13,12 @@
 #ifndef GNSS_CONVERTERS_SBP_NMEA_INTERFACE_H
 #define GNSS_CONVERTERS_SBP_NMEA_INTERFACE_H
 
-#include <libsbp/gnss.h>
-#include <libsbp/navigation.h>
-#include <libsbp/observation.h>
-#include <libsbp/orientation.h>
 #include <libsbp/sbp.h>
-#include <libsbp/tracking.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/navigation.h>
+#include <libsbp/v4/observation.h>
+#include <libsbp/v4/orientation.h>
+#include <libsbp/v4/tracking.h>
 
 /* Max number of sats visible in an epoch */
 #define MAX_SATS 256
@@ -64,15 +64,6 @@ typedef struct nmea_state_entry {
   int rate;
 } nmea_state_entry_t;
 
-typedef struct sbp2nmea_msg {
-  uint8_t data[SBP_MAX_PAYLOAD_LEN];
-  uint8_t length;
-} sbp2nmea_msg_t;
-
-typedef struct sbp_state_entry {
-  sbp2nmea_msg_t msg;
-} sbp_state_entry_t;
-
 typedef enum sbp2nmea_mode {
   SBP2NMEA_MODE_BEST,
   SBP2NMEA_MODE_GNSS,
@@ -83,8 +74,8 @@ typedef struct sbp2nmea_state {
   uint8_t num_obs;
   uint8_t obs_seq_count;
   uint8_t obs_seq_total;
-  sbp_gnss_signal_t nav_sids[MAX_SATS];
-  sbp_gps_time_t obs_time;
+  sbp_v4_gnss_signal_t nav_sids[MAX_SATS];
+  sbp_v4_gps_time_t obs_time;
 
   sbp2nmea_mode_t requested_mode;
   sbp2nmea_mode_t actual_mode;
@@ -94,7 +85,7 @@ typedef struct sbp2nmea_state {
   uint16_t base_sender_id;
 
   nmea_state_entry_t nmea_state[SBP2NMEA_NMEA_CNT];
-  sbp_state_entry_t sbp_state[SBP2NMEA_SBP_CNT];
+  sbp_msg_t sbp_state[SBP2NMEA_SBP_CNT];
 
   float soln_freq;
 
@@ -122,28 +113,24 @@ void sbp2nmea_init(sbp2nmea_t *state,
                    void *ctx);
 
 void sbp2nmea(sbp2nmea_t *state,
-              u8 len,
-              const void *sbp_msg,
+              const sbp_msg_t *sbp_msg,
               sbp2nmea_sbp_id_t sbp_id);
-void sbp2nmea_obs(sbp2nmea_t *state, const msg_obs_t *sbp_obs, uint8_t num_obs);
+void sbp2nmea_obs(sbp2nmea_t *state, const sbp_msg_obs_t *sbp_obs);
 
 void sbp2nmea_base_id_set(sbp2nmea_t *state, uint16_t base_sender_id);
 uint16_t sbp2nmea_base_id_get(const sbp2nmea_t *state);
 
 uint8_t sbp2nmea_num_obs_get(const sbp2nmea_t *state);
-const sbp_gnss_signal_t *sbp2nmea_nav_sids_get(const sbp2nmea_t *state);
+const sbp_v4_gnss_signal_t *sbp2nmea_nav_sids_get(const sbp2nmea_t *state);
 
 void sbp2nmea_to_str(const sbp2nmea_t *state, char *sentence);
 
-const void *sbp2nmea_msg_get(const sbp2nmea_t *state,
-                             sbp2nmea_sbp_id_t id,
-                             bool consider_mode);
-
-uint8_t sbp2nmea_msg_length(const sbp2nmea_t *state, sbp2nmea_sbp_id_t id);
+const sbp_msg_t *sbp2nmea_msg_get(const sbp2nmea_t *state,
+                                  sbp2nmea_sbp_id_t id,
+                                  bool consider_mode);
 
 void sbp2nmea_msg_set(sbp2nmea_t *state,
-                      u8 len,
-                      const void *sbp_msg,
+                      const sbp_msg_t *sbp_msg,
                       sbp2nmea_sbp_id_t id);
 
 void sbp2nmea_rate_set(sbp2nmea_t *state, int rate, sbp2nmea_nmea_id_t id);

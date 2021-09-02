@@ -134,8 +134,8 @@ static inline uint64_t _le64toh(uint64_t le) {
   return le;
 }
 
-};  // namespace Util
+}  // namespace Util
 
-};  // namespace Novatel
+}  // namespace Novatel
 
 #endif

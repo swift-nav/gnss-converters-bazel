@@ -16,6 +16,6 @@
 #include <libsbp/logging.h>
 #include "../src/gnss_converters/rtcm3_sbp_internal.h"
 #include "../src/gnss_converters/rtcm3_utils.h"
-#include "../src/gnss_converters/sbp_rtcm3_internal.h"
+#include "../src/gnss_converters_extra/sbp_rtcm3_internal.h"
 
 #endif /* GNSS_CONVERTERS_CHECK_UTILS_H */

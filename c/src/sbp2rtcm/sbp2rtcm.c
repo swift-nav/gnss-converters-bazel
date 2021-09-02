@@ -24,7 +24,7 @@
 #include <swiftnav/gnss_time.h>
 #include <unistd.h>
 
-#include "gnss-converters/sbp_rtcm3.h"
+#include "gnss-converters-extra/sbp_rtcm3.h"
 
 typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
 typedef int (*writefn_ptr)(uint8_t *, uint16_t, void *);

@@ -11,8 +11,8 @@
  */
 
 #include <gnss-converters/ubx_sbp.h>
-#include <libsbp/gnss.h>
-#include <libsbp/observation.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <string.h>
 #include <swiftnav/common.h>
 #include <swiftnav/ephemeris.h>
@@ -21,9 +21,9 @@
 
 #include "common.h"
 
-static void pack_ephemeris_bds(const ephemeris_t *e, msg_ephemeris_t *m) {
-  const ephemeris_kepler_t *k = &e->kepler;
-  msg_ephemeris_bds_t *msg = &m->bds;
+static void pack_ephemeris_bds(const ephemeris_t *e,
+                               sbp_msg_ephemeris_bds_t *msg) {
+  const ephemeris_kepler_t *k = &e->data.kepler;
   pack_ephemeris_common_content(e, &msg->common);
   msg->tgd1 = k->tgd.bds_s[0];
   msg->tgd2 = k->tgd.bds_s[1];
@@ -113,24 +113,22 @@ void bds_decode_subframe(struct ubx_sbp_state *data,
   ephemeris_t e;
   memset(&e, 0, sizeof(e));
   gnss_signal_t sid = {.sat = prn, .code = CODE_BDS2_B1};
-  decode_bds_d1_ephemeris(fraid_words, sid, &e);
+  decode_bds_d1_ephemeris((const u32(*)[10])fraid_words, sid, &e);
 
-  ephemeris_kepler_t *k = &e.kepler;
+  ephemeris_kepler_t *k = &e.data.kepler;
 
   add_secs(&e.toe, BDS_SECOND_TO_GPS_SECOND);
   add_secs(&k->toc, BDS_SECOND_TO_GPS_SECOND);
   e.fit_interval = BDS_FIT_INTERVAL_SECONDS;
   e.valid = 1;
 
-  msg_ephemeris_t msg;
-  memset(&msg, 0, sizeof(msg));
-  pack_ephemeris_bds(&e, &msg);
+  sbp_msg_t sbp_msg;
+  sbp_msg_ephemeris_bds_t *msg = &sbp_msg.ephemeris_bds;
+  memset(msg, 0, sizeof(*msg));
+  pack_ephemeris_bds(&e, msg);
 
   assert(data->cb_ubx_to_sbp);
-  data->cb_ubx_to_sbp(SBP_MSG_EPHEMERIS_BDS,
-                      (u8)sizeof(msg.bds),
-                      (u8 *)&msg.bds,
-                      data->sender_id,
-                      data->context);
+  data->cb_ubx_to_sbp(
+      data->sender_id, SbpMsgEphemerisBds, &sbp_msg, data->context);
   invalidate_subframes(sat, /*mask=*/7);
 }

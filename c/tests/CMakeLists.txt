@@ -22,11 +22,10 @@ swift_add_test(test-gnss-converters
   POST_BUILD
   SRCS ${TEST_SOURCE_FILES}
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK gnss_converters check Threads::Threads
+  LINK gnss_converters gnss_converters_extra check Threads::Threads
   )
 
-swift_set_language_standards(test-gnss-converters)
-swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal)
+swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)
 if(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
   target_compile_definitions(test-gnss-converters PRIVATE GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
 endif()

@@ -13,6 +13,7 @@
 #ifndef GNSS_CONVERTERS_TIME_TRUTH_H
 #define GNSS_CONVERTERS_TIME_TRUTH_H
 
+#include <libsbp/v4/sbp_msg.h>
 #include <stddef.h>
 #include <swiftnav/gnss_time.h>
 
@@ -22,7 +23,7 @@ extern "C" {
 
 /** Time truth opaque type */
 typedef union {
-  max_align_t align;
+  long double align;
   uint8_t size[sizeof(uint64_t)];
 } time_truth_t;
 
@@ -103,9 +104,8 @@ void time_truth_get(time_truth_t* instance,
  * false
  */
 bool time_truth_update_from_sbp(time_truth_t* instance,
-                                uint16_t message_type,
-                                uint8_t length,
-                                const uint8_t* payload);
+                                sbp_msg_type_t message_type,
+                                const sbp_msg_t* msg);
 
 #ifdef __cplusplus
 }

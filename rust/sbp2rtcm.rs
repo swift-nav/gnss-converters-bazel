@@ -22,6 +22,7 @@ use gnss_converters::*;
 
 #[link(name = "ubx2sbp_main", kind = "static")]
 #[link(name = "gnss_converters", kind = "static")]
+#[link(name = "gnss_converters_extra", kind = "static")]
 #[link(name = "swiftnav", kind = "static")]
 #[link(name = "sbp", kind = "static")]
 #[link(name = "rtcm", kind = "static")]

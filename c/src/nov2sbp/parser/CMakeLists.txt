@@ -18,36 +18,43 @@ set(TEST_SRCS
 ################################################################################
 # Enumerate targets.
 ################################################################################
-add_library(novatel-parser ${SRCS})
+swift_add_library(novatel-parser
+  SOURCES ${SRCS}
+  ADD_COMPILE_OPTIONS
+    ${STARLING_COMPILE_OPTIONS}
+    -Wno-strict-aliasing
+    -Wno-long-long
+    -Wno-effc++
+    -Wno-conversion
+  REMOVE_COMPILE_OPTIONS
+    -pedantic
+)
+add_library(swiftnav::novatel-parser ALIAS novatel-parser)
+
 target_include_directories(novatel-parser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(novatel-parser PUBLIC swiftnav)
 
 install(TARGETS novatel-parser DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
-
-target_compile_options(novatel-parser PRIVATE ${STARLING_COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-long-long -Wno-effc++ -Wno-conversion)
-set_target_properties(novatel-parser PROPERTIES
-        C_STANDARD 99
-        C_STANDARD_REQUIRED ON
-        C_EXTENSIONS ON
-        CXX_STANDARD 14
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF)
 
 ################################################################################
 # Tests. 
 ################################################################################
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions")
-add_executable(test-novatel-parser ${TEST_SRCS})
-target_link_libraries(test-novatel-parser novatel-parser)
+swift_add_test(test-novatel-parser
+  UNIT_TEST
+  SRCS ${TEST_SRCS}
+)
+swift_set_compile_options(test-novatel-parser
+  EXCEPTIONS
+  ADD
+    ${STARLING_COMPILE_OPTIONS}
+    -Wno-strict-aliasing
+    -Wno-long-long
+    -Wno-effc++
+    -Wno-conversion
+)
+target_link_libraries(test-novatel-parser PRIVATE novatel-parser)
 target_compile_definitions(test-novatel-parser PRIVATE
     UNIT_TEST_DATA_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../data")
-target_compile_options(test-novatel-parser PRIVATE ${STARLING_COMPILE_OPTIONS} -Wno-strict-aliasing -Wno-long-long -Wno-effc++ -Wno-conversion -fexceptions)
-set_target_properties(test-novatel-parser PROPERTIES
-        C_STANDARD 99
-        C_STANDARD_REQUIRED ON
-        C_EXTENSIONS ON
-        CXX_STANDARD 14
-        CXX_STANDARD_REQUIRED ON
-        CXX_EXTENSIONS OFF)
 
 add_custom_target(run_test_novatel_parser
     COMMAND test-novatel-parser

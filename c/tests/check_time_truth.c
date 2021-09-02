@@ -46,7 +46,7 @@ static void reset_log_flags() {
 }
 
 static void swiftnav_log(int level,
-                         LIBSWIFTNAV_FORMAT_STRING const char *msg,
+                         SWIFT_ATTR_FORMAT_STRING const char *msg,
                          ...) {
   (void)level;
   (void)msg;
@@ -66,7 +66,7 @@ static void swiftnav_log(int level,
 static void swiftnav_detailed_log(int level,
                                   const char *file_path,
                                   const int line_number,
-                                  LIBSWIFTNAV_FORMAT_STRING const char *msg,
+                                  SWIFT_ATTR_FORMAT_STRING const char *msg,
                                   ...) {
   (void)level;
   (void)file_path;
@@ -413,28 +413,24 @@ START_TEST(test_truth_update_from_sbp_gps) {
   time_truth_t time_truth;
 
   time_truth_init(&time_truth);
-  msg_ephemeris_gps_t healthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 0,
-  };
+  sbp_msg_t healthy_msg = {.ephemeris_gps = {
+                               .common.toe.wn = 2166,
+                               .common.toe.tow = 12345,
+                               .common.health_bits = 0,
+                           }};
 
-  ck_assert(time_truth_update_from_sbp(&time_truth,
-                                       SBP_MSG_EPHEMERIS_GPS,
-                                       sizeof(msg_ephemeris_gps_t),
-                                       (const u8 *)&healthy_msg));
+  ck_assert(time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisGps, &healthy_msg));
 
   time_truth_init(&time_truth);
-  msg_ephemeris_gps_t unhealthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 1,
-  };
+  sbp_msg_t unhealthy_msg = {.ephemeris_gps = {
+                                 .common.toe.wn = 2166,
+                                 .common.toe.tow = 12345,
+                                 .common.health_bits = 1,
+                             }};
 
-  ck_assert(!time_truth_update_from_sbp(&time_truth,
-                                        SBP_MSG_EPHEMERIS_GPS,
-                                        sizeof(msg_ephemeris_gps_t),
-                                        (const u8 *)&unhealthy_msg));
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisGps, &unhealthy_msg));
 }
 END_TEST
 
@@ -445,28 +441,24 @@ START_TEST(test_truth_update_from_sbp_gal) {
   time_truth_t time_truth;
 
   time_truth_init(&time_truth);
-  msg_ephemeris_gal_t healthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 0,
-  };
+  sbp_msg_t healthy_msg = {.ephemeris_gal = {
+                               .common.toe.wn = 2166,
+                               .common.toe.tow = 12345,
+                               .common.health_bits = 0,
+                           }};
 
-  ck_assert(!time_truth_update_from_sbp(&time_truth,
-                                        SBP_MSG_EPHEMERIS_GAL,
-                                        sizeof(msg_ephemeris_gal_t),
-                                        (const u8 *)&healthy_msg));
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisGal, &healthy_msg));
 
   time_truth_init(&time_truth);
-  msg_ephemeris_gal_t unhealthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 1,
-  };
+  sbp_msg_t unhealthy_msg = {.ephemeris_gal = {
+                                 .common.toe.wn = 2166,
+                                 .common.toe.tow = 12345,
+                                 .common.health_bits = 1,
+                             }};
 
-  ck_assert(!time_truth_update_from_sbp(&time_truth,
-                                        SBP_MSG_EPHEMERIS_GAL,
-                                        sizeof(msg_ephemeris_gal_t),
-                                        (const u8 *)&unhealthy_msg));
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisGal, &unhealthy_msg));
 }
 END_TEST
 
@@ -477,28 +469,24 @@ START_TEST(test_truth_update_from_sbp_bds) {
   time_truth_t time_truth;
 
   time_truth_init(&time_truth);
-  msg_ephemeris_bds_t healthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 0,
-  };
+  sbp_msg_t healthy_msg = {.ephemeris_bds = {
+                               .common.toe.wn = 2166,
+                               .common.toe.tow = 12345,
+                               .common.health_bits = 0,
+                           }};
 
-  ck_assert(!time_truth_update_from_sbp(&time_truth,
-                                        SBP_MSG_EPHEMERIS_BDS,
-                                        sizeof(msg_ephemeris_bds_t),
-                                        (const u8 *)&healthy_msg));
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisBds, &healthy_msg));
 
   time_truth_init(&time_truth);
-  msg_ephemeris_bds_t unhealthy_msg = {
-      .common.toe.wn = 2166,
-      .common.toe.tow = 12345,
-      .common.health_bits = 1,
-  };
+  sbp_msg_t unhealthy_msg = {.ephemeris_bds = {
+                                 .common.toe.wn = 2166,
+                                 .common.toe.tow = 12345,
+                                 .common.health_bits = 1,
+                             }};
 
-  ck_assert(!time_truth_update_from_sbp(&time_truth,
-                                        SBP_MSG_EPHEMERIS_BDS,
-                                        sizeof(msg_ephemeris_bds_t),
-                                        (const u8 *)&unhealthy_msg));
+  ck_assert(!time_truth_update_from_sbp(
+      &time_truth, SbpMsgEphemerisBds, &unhealthy_msg));
 }
 END_TEST
 
@@ -509,9 +497,8 @@ START_TEST(test_truth_update_from_sbp_skipped_msg) {
   time_truth_t time_truth;
   time_truth_init(&time_truth);
 
-  msg_obs_t msg = {};
-  ck_assert(!time_truth_update_from_sbp(
-      &time_truth, SBP_MSG_OBS, sizeof(msg), (const u8 *)&msg));
+  sbp_msg_t msg = {};
+  ck_assert(!time_truth_update_from_sbp(&time_truth, SbpMsgObs, &msg));
 }
 END_TEST
 

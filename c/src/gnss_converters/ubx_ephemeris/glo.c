@@ -11,8 +11,8 @@
  */
 
 #include <gnss-converters/ubx_sbp.h>
-#include <libsbp/gnss.h>
-#include <libsbp/observation.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <string.h>
 #include <swiftnav/bits.h>
 #include <swiftnav/common.h>
@@ -34,9 +34,9 @@ static void invalidate_strings(struct glo_sat_data *sat, unsigned mask) {
  * @param e the ephemeris to pack.
  * @param m the packed ephemeris.
  */
-static void pack_ephemeris_glo(const ephemeris_t *e, msg_ephemeris_t *m) {
-  const ephemeris_glo_t *k = &e->glo;
-  msg_ephemeris_glo_t *msg = &m->glo;
+static void pack_ephemeris_glo(const ephemeris_t *e,
+                               sbp_msg_ephemeris_glo_t *msg) {
+  const ephemeris_glo_t *k = &e->data.glo;
   pack_ephemeris_common_content(e, &msg->common);
   msg->pos[0] = k->pos[0];
   msg->pos[1] = k->pos[1];
@@ -158,16 +158,14 @@ void glo_decode_string(
   decode_glo_ephemeris(page, sid, &data->utc_params, &e);
 
   /* SBP codes FCN as [1..14] */
-  e.glo.fcn = fcn + 1;
+  e.data.glo.fcn = fcn + 1;
 
-  msg_ephemeris_t msg;
-  pack_ephemeris_glo(&e, &msg);
+  sbp_msg_t sbp_msg;
+  sbp_msg_ephemeris_glo_t *msg = &sbp_msg.ephemeris_glo;
+  pack_ephemeris_glo(&e, msg);
 
   assert(data->cb_ubx_to_sbp);
-  data->cb_ubx_to_sbp(SBP_MSG_EPHEMERIS_GLO,
-                      (u8)sizeof(msg.glo),
-                      (u8 *)&msg.glo,
-                      data->sender_id,
-                      data->context);
+  data->cb_ubx_to_sbp(
+      data->sender_id, SbpMsgEphemerisGlo, &sbp_msg, data->context);
   invalidate_strings(sat, /*mask=*/ALL_STRINGS_MASK);
 }

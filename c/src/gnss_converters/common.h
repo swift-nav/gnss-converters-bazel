@@ -13,8 +13,8 @@
 #ifndef GNSS_CONVERTERS_COMMON_H
 #define GNSS_CONVERTERS_COMMON_H
 
-#include "libsbp/gnss.h"
-#include "libsbp/observation.h"
+#include "libsbp/v4/gnss.h"
+#include "libsbp/v4/observation.h"
 #include "swiftnav/common.h"
 #include "swiftnav/ephemeris.h"
 #include "swiftnav/signal.h"
@@ -29,18 +29,7 @@
 #define MSG_OBS_FLAGS_DOPPLER_VALID ((u8)(1 << 3))
 #define MSG_OBS_FLAGS_RAIM_EXCLUSION ((u8)(1 << 7))
 
-typedef union {
-  msg_ephemeris_gps_t gps;
-  msg_ephemeris_bds_t bds;
-  msg_ephemeris_gal_t gal;
-  msg_ephemeris_sbas_t sbas;
-  msg_ephemeris_glo_t glo;
-  msg_ephemeris_qzss_t qzss;
-} msg_ephemeris_t;
-
 void pack_ephemeris_common_content(const ephemeris_t *e,
-                                   ephemeris_common_content_t *common);
-
-gps_time_t sbp_gps_time_2_gps_time(const gps_time_sec_t *s);
+                                   sbp_ephemeris_common_content_t *common);
 
 #endif /* #ifndef GNSS_CONVERTERS_COMMON_H */

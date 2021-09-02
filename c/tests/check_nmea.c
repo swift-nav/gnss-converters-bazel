@@ -218,113 +218,141 @@ void nmea_callback_gpgsv(char msg[], void *ctx) {
   }
 }
 
-void gps_time_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void gps_time_callback(uint16_t sender_id,
+                       sbp_msg_type_t msg_type,
+                       const sbp_msg_t *msg,
+                       void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_GPS_TIME);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_GPS_TIME);
 }
 
-void utc_time_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void utc_time_callback(uint16_t sender_id,
+                       sbp_msg_type_t msg_type,
+                       const sbp_msg_t *msg,
+                       void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_UTC_TIME);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_UTC_TIME);
 }
 
-void pos_llh_cov_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void pos_llh_cov_callback(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *msg,
+                          void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_POS_LLH_COV);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_POS_LLH_COV);
 }
 
-void vel_ned_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void vel_ned_callback(uint16_t sender_id,
+                      sbp_msg_type_t msg_type,
+                      const sbp_msg_t *msg,
+                      void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_VEL_NED);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_VEL_NED);
 }
 
-void dops_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void dops_callback(uint16_t sender_id,
+                   sbp_msg_type_t msg_type,
+                   const sbp_msg_t *msg,
+                   void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_DOPS);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_DOPS);
 }
 
-void age_correction_callback(u16 sender_id,
-                             u8 length,
-                             u8 msg[],
+void age_correction_callback(uint16_t sender_id,
+                             sbp_msg_type_t msg_type,
+                             const sbp_msg_t *msg,
                              void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_AGE_CORR);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_AGE_CORR);
 }
 
-void baseline_heading_callback(u16 sender_id,
-                               u8 length,
-                               u8 msg[],
+void baseline_heading_callback(uint16_t sender_id,
+                               sbp_msg_type_t msg_type,
+                               const sbp_msg_t *msg,
                                void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_HDG);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_HDG);
 }
 
-void sv_az_el_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void sv_az_el_callback(uint16_t sender_id,
+                       sbp_msg_type_t msg_type,
+                       const sbp_msg_t *msg,
+                       void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_SV_AZ_EL);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_SV_AZ_EL);
 }
 
-void measurement_state_callback(u16 sender_id,
-                                u8 length,
-                                u8 msg[],
+void measurement_state_callback(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *msg,
                                 void *context) {
   (void)sender_id;
-  sbp2nmea(context, length, msg, SBP2NMEA_SBP_MEASUREMENT_STATE);
+  (void)msg_type;
+  sbp2nmea(context, msg, SBP2NMEA_SBP_MEASUREMENT_STATE);
 }
 
-void observation_callback(u16 sender_id, u8 length, u8 msg[], void *context) {
+void observation_callback(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *msg,
+                          void *context) {
   (void)sender_id;
-  msg_obs_t *sbp_obs = (msg_obs_t *)msg;
-  uint8_t num_obs =
-      (length - sizeof(observation_header_t)) / sizeof(packed_obs_content_t);
-  sbp2nmea_obs(context, sbp_obs, num_obs);
+  (void)msg_type;
+  sbp2nmea_obs(context, &msg->obs);
 }
 
 void sbp_init(sbp_state_t *sbp_state, void *ctx) {
   sbp_state_init(sbp_state);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_GPS_TIME,
                         &gps_time_callback,
                         ctx,
                         &gps_time_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_UTC_TIME,
                         &utc_time_callback,
                         ctx,
                         &utc_time_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_POS_LLH_COV,
                         &pos_llh_cov_callback,
                         ctx,
                         &pos_llh_cov_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_VEL_NED,
                         &vel_ned_callback,
                         ctx,
                         &vel_ned_callback_node);
-  sbp_register_callback(
+  sbp_callback_register(
       sbp_state, SBP_MSG_DOPS, &dops_callback, ctx, &dops_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_AGE_CORRECTIONS,
                         &age_correction_callback,
                         ctx,
                         &age_correction_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_BASELINE_HEADING,
                         &baseline_heading_callback,
                         ctx,
                         &baseline_heading_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_SV_AZ_EL,
                         &sv_az_el_callback,
                         ctx,
                         &sv_az_el_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_MEASUREMENT_STATE,
                         &measurement_state_callback,
                         ctx,
                         &measurement_state_callback_node);
-  sbp_register_callback(sbp_state,
+  sbp_callback_register(sbp_state,
                         SBP_MSG_OBS,
                         &observation_callback,
                         ctx,
@@ -440,7 +468,7 @@ START_TEST(test_nmea_gpgsv) {
 }
 END_TEST
 
-static bool check_utc_time_string(const msg_utc_time_t *msg_time,
+static bool check_utc_time_string(const sbp_msg_utc_time_t *msg_time,
                                   const char utc_time[],
                                   const char utc_timedate_trunc[],
                                   const char utc_timedate[]) {
@@ -468,7 +496,7 @@ static bool check_utc_time_string(const msg_utc_time_t *msg_time,
 }
 
 START_TEST(test_nmea_time_string) {
-  msg_utc_time_t msg_time;
+  sbp_msg_utc_time_t msg_time;
   msg_time.flags = 1;
   msg_time.tow = 0;
   msg_time.year = 2018;

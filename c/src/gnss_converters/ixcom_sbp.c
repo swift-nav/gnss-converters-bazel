@@ -4,19 +4,20 @@
 #include <string.h>
 
 #include <ixcom/decode.h>
-#include <libsbp/imu.h>
-#include <libsbp/vehicle.h>
+#include <libsbp/v4/imu.h>
+#include <libsbp/v4/vehicle.h>
 
 #include <gnss-converters/ixcom_sbp.h>
+
+#include <swiftnav/constants.h>
 
 #define ODO_TIMESOURCE_GPS 0x1
 #define WHEELTICK_TIMESOURCE_GPS 0x1
 
 void ixcom_sbp_init(struct ixcom_sbp_state *state,
-                    void (*cb_ixcom_to_sbp)(u16 msg_id,
-                                            u8 length,
-                                            u8 *buf,
-                                            u16 sender_id,
+                    void (*cb_ixcom_to_sbp)(u16 sender_id,
+                                            sbp_msg_type_t msg_type,
+                                            const sbp_msg_t *msg,
                                             void *context),
                     void *context) {
   memset(state, 0, sizeof(*state));
@@ -104,22 +105,18 @@ void convert_ixcom_to_sbp_tow(u32 ixcom_int,
 }
 
 void send_imu_aux(struct ixcom_sbp_state *state) {
-  msg_imu_aux_t msg;
+  sbp_msg_t msg;
   /* placeholder for now */
   const u8 imu_type = 255;
-  msg.imu_type = imu_type;
+  msg.imu_aux.imu_type = imu_type;
 
   /* not used */
-  msg.temp = 0;
+  msg.imu_aux.temp = 0;
 
   const u8 gyro_range_125degs = 4;
   const u8 acc_range_4g = 1;
-  msg.imu_conf = (gyro_range_125degs << 4) | acc_range_4g;
-  state->cb_ixcom_to_sbp(SBP_MSG_IMU_AUX,
-                         sizeof(msg),
-                         (u8 *)&msg,
-                         state->sender_id,
-                         state->context);
+  msg.imu_aux.imu_conf = (gyro_range_125degs << 4) | acc_range_4g;
+  state->cb_ixcom_to_sbp(state->sender_id, SbpMsgImuAux, &msg, state->context);
 }
 
 int16_t float_to_s16_clamped(float val) {
@@ -139,32 +136,32 @@ void handle_imuraw(struct ixcom_sbp_state *state) {
 
   XCOMmsg_IMURAW imuraw;
   if (ixcom_decode_imuraw(state->read_buffer, &imuraw) == IXCOM_RC_OK) {
-    msg_imu_raw_t sbp_imuraw;
+    sbp_msg_t sbp_imuraw;
     /* need temp variable since sbp_imuraw is packed struct */
     u32 tow;
     u8 tow_f;
     convert_ixcom_to_sbp_tow(
         imuraw.header.gps_time_sec, imuraw.header.gps_time_usec, &tow, &tow_f);
-    sbp_imuraw.tow = tow;
-    sbp_imuraw.tow_f = tow_f;
+    sbp_imuraw.imu_raw.tow = tow;
+    sbp_imuraw.imu_raw.tow_f = tow_f;
     const float sbp_scale_acc_4g = (float)(4.0 * 9.80665 / 32768.0);
     const float radians_to_degrees = (float)(180.0 / M_PI);
     const float sbp_scale_125_degs = (float)(125.0 / 32768.0);
-    sbp_imuraw.acc_x = float_to_s16_clamped(imuraw.acc[0] / sbp_scale_acc_4g);
-    sbp_imuraw.acc_y = float_to_s16_clamped(imuraw.acc[1] / sbp_scale_acc_4g);
-    sbp_imuraw.acc_z = float_to_s16_clamped(imuraw.acc[2] / sbp_scale_acc_4g);
-    sbp_imuraw.gyr_x = float_to_s16_clamped(imuraw.omg[0] * radians_to_degrees /
-                                            sbp_scale_125_degs);
-    sbp_imuraw.gyr_y = float_to_s16_clamped(imuraw.omg[1] * radians_to_degrees /
-                                            sbp_scale_125_degs);
-    sbp_imuraw.gyr_z = float_to_s16_clamped(imuraw.omg[2] * radians_to_degrees /
-                                            sbp_scale_125_degs);
+    sbp_imuraw.imu_raw.acc_x =
+        float_to_s16_clamped(imuraw.acc[0] / sbp_scale_acc_4g);
+    sbp_imuraw.imu_raw.acc_y =
+        float_to_s16_clamped(imuraw.acc[1] / sbp_scale_acc_4g);
+    sbp_imuraw.imu_raw.acc_z =
+        float_to_s16_clamped(imuraw.acc[2] / sbp_scale_acc_4g);
+    sbp_imuraw.imu_raw.gyr_x = float_to_s16_clamped(
+        imuraw.omg[0] * radians_to_degrees / sbp_scale_125_degs);
+    sbp_imuraw.imu_raw.gyr_y = float_to_s16_clamped(
+        imuraw.omg[1] * radians_to_degrees / sbp_scale_125_degs);
+    sbp_imuraw.imu_raw.gyr_z = float_to_s16_clamped(
+        imuraw.omg[2] * radians_to_degrees / sbp_scale_125_degs);
 
-    state->cb_ixcom_to_sbp(SBP_MSG_IMU_RAW,
-                           sizeof(sbp_imuraw),
-                           (u8 *)&sbp_imuraw,
-                           state->sender_id,
-                           state->context);
+    state->cb_ixcom_to_sbp(
+        state->sender_id, SbpMsgImuRaw, &sbp_imuraw, state->context);
 
     if (state->imu_raw_msgs_sent % 100 == 0) {
       send_imu_aux(state);
@@ -182,41 +179,36 @@ void handle_wheeldata(struct ixcom_sbp_state *state) {
 
   XCOMmsg_WHEELDATA wheeldata;
   if (ixcom_decode_wheeldata(state->read_buffer, &wheeldata) == IXCOM_RC_OK) {
-    msg_odometry_t sbp_wheeldata;
+    sbp_msg_t sbp_wheeldata;
 
-    sbp_wheeldata.tow = wheeldata.header.gps_time_sec * 1000 +
-                        wheeldata.header.gps_time_usec / 1000;
-    sbp_wheeldata.velocity = (s32)(wheeldata.speed * 1000);
-    sbp_wheeldata.flags = ODO_TIMESOURCE_GPS;
+    sbp_wheeldata.odometry.tow = wheeldata.header.gps_time_sec * 1000 +
+                                 wheeldata.header.gps_time_usec / 1000;
+    sbp_wheeldata.odometry.velocity = (s32)(wheeldata.speed * 1000);
+    sbp_wheeldata.odometry.flags = ODO_TIMESOURCE_GPS;
 
-    state->cb_ixcom_to_sbp(SBP_MSG_ODOMETRY,
-                           sizeof(sbp_wheeldata),
-                           (u8 *)&sbp_wheeldata,
-                           state->sender_id,
-                           state->context);
+    state->cb_ixcom_to_sbp(
+        state->sender_id, SbpMsgOdometry, &sbp_wheeldata, state->context);
 
-    msg_wheeltick_t sbp_wheeltick;
+    sbp_msg_t sbp_wheeltick;
 
     /* wheeltick.time in microseconds, not milliseconds */
-    sbp_wheeltick.time = (uint64_t)(wheeldata.header.gps_time_sec) * 1000000 +
-                         wheeldata.header.gps_time_usec;
-    sbp_wheeltick.flags = WHEELTICK_TIMESOURCE_GPS;
-    sbp_wheeltick.source = 0;
-    sbp_wheeltick.ticks = wheeldata.ticks;
+    sbp_wheeltick.wheeltick.time =
+        (uint64_t)(wheeldata.header.gps_time_sec) * 1000000 +
+        wheeldata.header.gps_time_usec;
+    sbp_wheeltick.wheeltick.flags = WHEELTICK_TIMESOURCE_GPS;
+    sbp_wheeltick.wheeltick.source = 0;
+    sbp_wheeltick.wheeltick.ticks = wheeldata.ticks;
 
-    state->cb_ixcom_to_sbp(SBP_MSG_WHEELTICK,
-                           sizeof(sbp_wheeltick),
-                           (u8 *)&sbp_wheeltick,
-                           state->sender_id,
-                           state->context);
+    state->cb_ixcom_to_sbp(
+        state->sender_id, SbpMsgWheeltick, &sbp_wheeltick, state->context);
   }
 }
 
 void ixcom_handle_frame(struct ixcom_sbp_state *state) {
   assert(state);
-  u8 msg_id = state->read_buffer[1];
+  u8 msg_type = state->read_buffer[1];
 
-  switch (msg_id) {
+  switch (msg_type) {
     case XCOM_MSGID_IMURAW:
       handle_imuraw(state);
       break;
@@ -242,8 +234,8 @@ void ixcom_handle_frame(struct ixcom_sbp_state *state) {
  * @param state An already populated state object
  * @param read_stream_func The function to call to read from the stream. `buf`
  * is the buffer to write data into, `len` is the size of the buffer in bytes,
- * `ctx` is the context pointer from the `state` argument, the return value is
- * the number of bytes written into `buf` with negative values indicating an
+ * `context` is the context pointer from the `state` argument, the return value
+ * is the number of bytes written into `buf` with negative values indicating an
  * error.
  * @return the last value of read_stream_func, either 0 or a negative value
  * indicating an error.
@@ -251,7 +243,7 @@ void ixcom_handle_frame(struct ixcom_sbp_state *state) {
 int ixcom_sbp_process(struct ixcom_sbp_state *state,
                       int (*read_stream_func)(u8 *buff,
                                               size_t len,
-                                              void *ctx)) {
+                                              void *context)) {
   state->read_stream_func = read_stream_func;
 
   ssize_t ret = read_ixcom_frame(state);

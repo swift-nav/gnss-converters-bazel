@@ -14,10 +14,10 @@
 #define SWIFTNAV_NMEA_H
 
 #include <gnss-converters/sbp_nmea.h>
-#include <libsbp/navigation.h>
-#include <libsbp/orientation.h>
-#include <libsbp/solution_meta.h>
-#include <libsbp/system.h>
+#include <libsbp/v4/navigation.h>
+#include <libsbp/v4/orientation.h>
+#include <libsbp/v4/solution_meta.h>
+#include <libsbp/v4/system.h>
 #include <swiftnav/common.h>
 #include <swiftnav/gnss_time.h>
 

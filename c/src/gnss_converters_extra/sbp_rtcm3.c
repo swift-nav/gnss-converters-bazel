@@ -32,8 +32,9 @@
 #include <swiftnav/memcpy_s.h>
 #include <swiftnav/sid_set.h>
 #include <swiftnav/signal.h>
+#include <swiftnav/swift_strnlen.h>
 
-#include "gnss-converters/sbp_rtcm3.h"
+#include "gnss-converters-extra/sbp_rtcm3.h"
 #include "gnss-converters/utils.h"
 #include "rtcm3_utils.h"
 #include "sbp_rtcm3_internal.h"
@@ -42,7 +43,6 @@
 #define SBP_GLO_FCN_UNKNOWN 0
 
 #define RTCM3_PREAMBLE 0xD3
-#define RTCM3_MAX_MSG_LEN 0x3FF
 
 void sbp2rtcm_init(struct rtcm3_out_state *state,
                    s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context),
@@ -252,25 +252,25 @@ void generate_rtcm3_1033(rtcm_msg_1033 *rtcm_1033,
   rtcm_1033->rcv_serial_num_counter = 0; /* Receiver serial left blank */
 
   /* Antenna Descriptor Counter N DF029 uint8 */
-  if (strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN) > 0) {
+  if (swift_strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN) > 0) {
     rtcm_1033->ant_descriptor_counter =
-        strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN);
+        swift_strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN);
     /* Antenna Descriptor DF030 char(N) */
     MEMCPY_S(rtcm_1033->ant_descriptor,
              sizeof(rtcm_1033->ant_descriptor),
              state->ant_descriptor,
-             strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN));
+             swift_strnlen(state->ant_descriptor, RTCM3_MAX_MSG_LEN));
   }
 
-  if (strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN) > 0) {
+  if (swift_strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN) > 0) {
     /* Receiver Type Descriptor Counter I DF227 uint8 */
     rtcm_1033->rcv_descriptor_counter =
-        strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN);
+        swift_strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN);
     /* Receiver Type Descriptor DF228 char(I) */
     MEMCPY_S(rtcm_1033->rcv_descriptor,
              sizeof(rtcm_1033->rcv_descriptor),
              state->rcv_descriptor,
-             strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN));
+             swift_strnlen(state->rcv_descriptor, RTCM3_MAX_MSG_LEN));
   }
 }
 
@@ -454,10 +454,10 @@ static void sbp_obs_to_freq_data(const packed_obs_content_t *sbp_freq,
   rtcm_freq->code = code_indicator;
 
   rtcm_freq->pseudorange = sbp_freq->P / MSG_OBS_P_MULTIPLIER;
-  rtcm_freq->flags.valid_pr =
+  rtcm_freq->flags.fields.valid_pr =
       (0 != (sbp_freq->flags & MSG_OBS_FLAGS_CODE_VALID)) ? 1 : 0;
 
-  rtcm_freq->flags.valid_cp =
+  rtcm_freq->flags.fields.valid_cp =
       (0 != (sbp_freq->flags & MSG_OBS_FLAGS_PHASE_VALID) &&
        0 != (sbp_freq->flags & MSG_OBS_FLAGS_HALF_CYCLE_KNOWN))
           ? 1
@@ -465,15 +465,15 @@ static void sbp_obs_to_freq_data(const packed_obs_content_t *sbp_freq,
   rtcm_freq->carrier_phase =
       (double)sbp_freq->L.i + (double)sbp_freq->L.f / MSG_OBS_LF_MULTIPLIER;
 
-  rtcm_freq->flags.valid_cnr = (sbp_freq->cn0 > 0) ? 1 : 0;
+  rtcm_freq->flags.fields.valid_cnr = (sbp_freq->cn0 > 0) ? 1 : 0;
   rtcm_freq->cnr = sbp_freq->cn0 / MSG_OBS_CN0_MULTIPLIER;
 
   /* SBP lock indicator is in DF402 4-bit format */
   rtcm_freq->lock = rtcm3_decode_lock_time(sbp_freq->lock);
-  rtcm_freq->flags.valid_lock = 1;
+  rtcm_freq->flags.fields.valid_lock = 1;
 
   /* no Doppler obs */
-  rtcm_freq->flags.valid_dop = 0;
+  rtcm_freq->flags.fields.valid_dop = 0;
 }
 
 /* initialize the MSM structure */
@@ -551,9 +551,9 @@ static void sbp_obs_to_msm_signal_data(const packed_obs_content_t *sbp_obs,
     double pseudorange_m = sbp_obs->P / MSG_OBS_P_MULTIPLIER;
     signal_data->pseudorange_ms = pseudorange_m * 1000 / GPS_C;
     sat_data->rough_range_ms = rint(signal_data->pseudorange_ms * 1024) / 1024;
-    msm_flags->valid_pr = true;
+    msm_flags->fields.valid_pr = true;
   } else {
-    msm_flags->valid_pr = false;
+    msm_flags->fields.valid_pr = false;
   }
 
   if (RTCM_CONSTELLATION_GLO == cons) {
@@ -573,25 +573,25 @@ static void sbp_obs_to_msm_signal_data(const packed_obs_content_t *sbp_obs,
      * 0 = no ambiguity
      * 1 = ambiguity */
     signal_data->hca_indicator = (0 == (sbp_flags & MSG_OBS_FLAGS_CODE_VALID));
-    msm_flags->valid_cp = true;
+    msm_flags->fields.valid_cp = true;
   } else {
-    msm_flags->valid_cp = false;
+    msm_flags->fields.valid_cp = false;
   }
 
   if (freq_valid && (0 != (sbp_flags & MSG_OBS_FLAGS_DOPPLER_VALID))) {
     double doppler_Hz = sbp_obs->D.i + sbp_obs->D.f / MSG_OBS_DF_MULTIPLIER;
     signal_data->range_rate_m_s = -doppler_Hz * GPS_C / freq;
     sat_data->rough_range_rate_m_s = rint(signal_data->range_rate_m_s);
-    msm_flags->valid_dop = true;
+    msm_flags->fields.valid_dop = true;
   } else {
-    msm_flags->valid_dop = false;
+    msm_flags->fields.valid_dop = false;
   }
 
   signal_data->lock_time_s = rtcm3_decode_lock_time(sbp_obs->lock);
-  msm_flags->valid_lock = true;
+  msm_flags->fields.valid_lock = true;
 
   signal_data->cnr = sbp_obs->cn0 / MSG_OBS_CN0_MULTIPLIER;
-  msm_flags->valid_cnr = true;
+  msm_flags->fields.valid_cnr = true;
 }
 
 uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms,

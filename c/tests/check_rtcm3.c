@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libsbp/observation.h>
 #include <libsbp/sbp.h>
+#include <libsbp/v4/observation.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_decode.h>
@@ -39,7 +39,7 @@ static double expected_L1P_bias = 0.0;
 static double expected_L2CA_bias = 0.0;
 static double expected_L2P_bias = 0.0;
 
-static sbp_gps_time_t previous_obs_time = {.tow = 0, .wn = INVALID_TIME};
+static sbp_v4_gps_time_t previous_obs_time = {.tow = 0, .wn = INVALID_TIME};
 static u8 previous_n_meas = 0;
 static u8 previous_num_obs = 0;
 
@@ -86,7 +86,58 @@ static const uint32_t crc24qtab[256] = {
     0xF6D10C, 0xFA48FA, 0x7C0401, 0x42FA2F, 0xC4B6D4, 0xC82F22, 0x4E63D9,
     0xD11CCE, 0x575035, 0x5BC9C3, 0xDD8538};
 
-static packed_obs_content_t sbp_test_data[] = {
+static sbp_packed_obs_content_t sbp_test_data[] = {
+    {1076594107, {113150797, 178}, {2025, 90}, 200, 14, 15, {8, 0}},
+    {1052792371, {110649219, 83}, {1784, 3}, 204, 14, 15, {10, 0}},
+    {1211420676, {127321212, 230}, {-2004, 131}, 148, 14, 15, {13, 0}},
+    {1145898161, {120434726, 100}, {-691, 105}, 184, 14, 15, {15, 0}},
+    {1193292504, {125415891, 224}, {-3715, 140}, 176, 14, 15, {16, 0}},
+    {1212730365, {127458823, 44}, {3918, 243}, 164, 14, 15, {18, 0}},
+    {1028016946, {108045309, 73}, {-373, 29}, 196, 14, 15, {20, 0}},
+    {1146192135, {120465590, 214}, {-2489, 240}, 192, 14, 15, {21, 0}},
+    {1022557522, {107471517, 97}, {-276, 33}, 212, 14, 15, {27, 0}},
+    {1222990444, {128537159, 17}, {-902, 76}, 148, 14, 15, {30, 0}},
+    {1076594282, {88169456, 168}, {1578, 51}, 176, 14, 15, {8, 1}},
+    {1052792374, {86220160, 1}, {1390, 100}, 180, 14, 15, {10, 1}},
+    {1145898151, {93845224, 62}, {-539, 207}, 148, 14, 15, {15, 1}},
+    {1022557545, {83744032, 221}, {-215, 37}, 188, 14, 15, {27, 1}},
+    {1222990548, {100158785, 33}, {-704, 56}, 132, 13, 15, {30, 1}},
+    {1065177381, {113679866, 211}, {-1361, 186}, 184, 14, 15, {2, 3}},
+    {996013864, {106634862, 13}, {1314, 57}, 200, 14, 15, {3, 3}},
+    {1128091581, {120817628, 56}, {4471, 1}, 176, 14, 15, {4, 3}},
+    {1141411804, {121901553, 33}, {-3635, 8}, 184, 14, 15, {9, 3}},
+    {1079759346, {115114554, 22}, {-540, 62}, 188, 14, 15, {10, 3}},
+    {1170011510, {125043767, 130}, {3080, 218}, 160, 14, 15, {11, 3}},
+    {1011426617, {107981325, 222}, {-2569, 35}, 200, 14, 15, {18, 3}},
+    {970789084, {103861396, 130}, {1345, 241}, 180, 14, 15, {19, 3}},
+    {1065177465, {88417685, 1}, {-1059, 235}, 160, 14, 15, {2, 4}},
+    {996014042, {82938235, 192}, {1022, 59}, 180, 14, 15, {3, 4}},
+    {1128091758, {93969291, 225}, {3477, 209}, 160, 11, 15, {4, 4}},
+    {1141411880, {94812306, 17}, {-2827, 66}, 168, 14, 15, {9, 4}},
+    {1079759506, {89533572, 17}, {-420, 93}, 136, 14, 15, {10, 4}},
+    {1170011343, {97256230, 93}, {2396, 185}, 128, 8, 15, {11, 4}},
+    {1011426783, {83985473, 117}, {-1998, 17}, 180, 14, 15, {18, 4}},
+    {970789145, {80781068, 14}, {1046, 255}, 164, 14, 15, {19, 4}},
+    {1905584379, {198457625, 111}, {310, 79}, 164, 12, 15, {6, 12}},
+    {1904198770, {198313311, 251}, {1273, 149}, 168, 13, 15, {9, 12}},
+    {1124221717, {117082227, 36}, {-611, 155}, 180, 13, 15, {14, 12}},
+    {1905584415, {153459993, 183}, {239, 150}, 168, 12, 15, {6, 13}},
+    {1904198738, {153348404, 139}, {985, 53}, 176, 13, 15, {9, 13}},
+    {1124219524, {90535361, 31}, {-472, 18}, 180, 13, 15, {14, 13}},
+    {1308619286, {137536820, 202}, {166, 211}, 176, 13, 15, {2, 14}},
+    {1367072989, {143680335, 86}, {3236, 169}, 160, 13, 15, {4, 14}},
+    {1111185587, {116786402, 20}, {1435, 244}, 180, 13, 15, {11, 14}},
+    {1116077611, {117300562, 142}, {-1454, 238}, 180, 13, 15, {12, 14}},
+    {1243548316, {130697813, 141}, {1221, 137}, 172, 13, 15, {19, 14}},
+    {1297377968, {136355345, 162}, {-2489, 229}, 168, 13, 15, {25, 14}},
+    {1308619388, {105385329, 253}, {127, 202}, 160, 13, 15, {2, 20}},
+    {1367073089, {110092710, 5}, {2479, 154}, 168, 13, 15, {4, 20}},
+    {1111185468, {89485640, 18}, {1100, 108}, 172, 13, 15, {11, 20}},
+    {1116077555, {89879619, 94}, {-1114, 214}, 172, 13, 15, {12, 20}},
+    {1243548284, {100145050, 137}, {935, 195}, 164, 13, 15, {19, 20}},
+    {1297378054, {104480052, 213}, {-1907, 185}, 168, 13, 15, {25, 20}}};
+
+static packed_obs_content_t sbp_test_data_old[] = {
     {1076594107, {113150797, 178}, {2025, 90}, 200, 14, 15, {8, 0}},
     {1052792371, {110649219, 83}, {1784, 3}, 204, 14, 15, {10, 0}},
     {1211420676, {127321212, 230}, {-2004, 131}, 148, 14, 15, {13, 0}},
@@ -144,44 +195,56 @@ static uint32_t crc24q(const uint8_t *buf, uint32_t len, uint32_t crc) {
   return crc;
 }
 
-void update_obs_time(const msg_obs_t *msg) {
+/* Difference between two sbp time stamps in seconds */
+static double sbp_time_diff(const sbp_v4_gps_time_t *end,
+                            const sbp_v4_gps_time_t *beginning) {
+  s32 week_diff = end->wn - beginning->wn;
+  double dt = (double)end->tow / SECS_MS - (double)beginning->tow / SECS_MS;
+  dt += week_diff * WEEK_SECS;
+  return dt;
+}
+
+void update_obs_time(const sbp_msg_obs_t *msg) {
   gps_time_t obs_time = {.tow = (double)msg[0].header.t.tow / SECS_MS,
                          .wn = msg[0].header.t.wn};
   state.time_from_input_data = obs_time;
   time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, obs_time);
 }
 
-void sbp_callback_gps(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps(uint16_t sender_id,
+                      sbp_msg_type_t msg_type,
+                      const sbp_msg_t *msg,
+                      void *context) {
   (void)sender_id;
   (void)context;
   static uint32_t msg_count = 0;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_LOG) {
+  if (msg_type == SbpMsgLog) {
     return;
   }
   if (msg_count == 3 || msg_count == 20 || msg_count == 42) {
-    ck_assert_uint_eq(msg_id, SBP_MSG_BASE_POS_ECEF);
+    ck_assert_uint_eq(msg_type, SbpMsgBasePosEcef);
   } else if (msg_count == 4) {
-    ck_assert_uint_eq(msg_id, SBP_MSG_GLO_BIASES);
+    ck_assert_uint_eq(msg_type, SbpMsgGloBiases);
   } else {
-    ck_assert_uint_eq(msg_id, SBP_MSG_OBS);
-    update_obs_time((msg_obs_t *)buffer);
+    ck_assert_uint_eq(msg_type, SbpMsgObs);
+    update_obs_time((const sbp_msg_obs_t *)msg);
   }
   msg_count++;
 }
 
-void sbp_callback_gps_eph(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps_eph(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *sbp_msg,
+                          void *context) {
   (void)sender_id;
   (void)context;
   static bool checked_eph = false;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_EPHEMERIS_GPS && !checked_eph) {
+  if (msg_type == SbpMsgEphemerisGps && !checked_eph) {
     checked_eph = true;
-    msg_ephemeris_gps_t *msg = (msg_ephemeris_gps_t *)buffer;
+    const sbp_msg_ephemeris_gps_t *msg =
+        (const sbp_msg_ephemeris_gps_t *)sbp_msg;
     ck_assert(msg->common.sid.sat == 1);
     ck_assert(msg->common.sid.code == CODE_GPS_L1CA);
     ck_assert(msg->common.toe.wn == 2012);
@@ -220,14 +283,15 @@ void sbp_callback_gps_eph(
   }
 }
 
-void sbp_callback_glo_eph(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_glo_eph(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *sbp_msg,
+                          void *context) {
   (void)sender_id;
   (void)context;
   static bool checked_eph = false;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_EPHEMERIS_GLO && !checked_eph) {
+  if (msg_type == SbpMsgEphemerisGlo && !checked_eph) {
     // clang-format off
     /* Truth data from related RINEX file
      R03 2018 08 20 22 45 00  1.410758122802e-04  0.000000000000e+00  8.100000000000e+04
@@ -275,7 +339,8 @@ void sbp_callback_glo_eph(
     }*/
     // clang-format on
     checked_eph = true;
-    msg_ephemeris_glo_t *msg = (msg_ephemeris_glo_t *)buffer;
+    const sbp_msg_ephemeris_glo_t *msg =
+        (const sbp_msg_ephemeris_glo_t *)sbp_msg;
     ck_assert(msg->common.sid.sat == 3);
     ck_assert(msg->common.sid.code == CODE_GLO_L1OF);
     ck_assert(msg->common.toe.wn == 2015);
@@ -307,14 +372,15 @@ void sbp_callback_glo_eph(
   }
 }
 
-void sbp_callback_gal_eph(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gal_eph(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *sbp_msg,
+                          void *context) {
   (void)sender_id;
   (void)context;
   static bool checked_eph = false;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_EPHEMERIS_GAL && !checked_eph) {
+  if (msg_type == SbpMsgEphemerisGal && !checked_eph) {
     // clang-format off
 /*
  E01 2018 08 14 04 00 00  -4.123143153265e-04 -8.284928298963e-12 0.000000000000e+00
@@ -328,7 +394,8 @@ void sbp_callback_gal_eph(
      */
     // clang-format on
     checked_eph = true;
-    msg_ephemeris_gal_t *msg = (msg_ephemeris_gal_t *)buffer;
+    const sbp_msg_ephemeris_gal_t *msg =
+        (const sbp_msg_ephemeris_gal_t *)sbp_msg;
     ck_assert(msg->common.sid.sat == 1);
     ck_assert(msg->common.sid.code == CODE_GAL_E1B);
     ck_assert(msg->common.toe.wn == 2014);
@@ -368,14 +435,15 @@ void sbp_callback_gal_eph(
   }
 }
 
-void sbp_callback_bds_eph(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_bds_eph(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *sbp_msg,
+                          void *context) {
   (void)sender_id;
   (void)context;
   static bool checked_eph = false;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_EPHEMERIS_BDS && !checked_eph) {
+  if (msg_type == SbpMsgEphemerisBds && !checked_eph) {
     // clang-format off
 /*
 C06 2018 08 14 04 00 00 2.242858754471e-04 2.508659946443e-11 1.924458856162e-18
@@ -389,7 +457,8 @@ C06 2018 08 14 04 00 00 2.242858754471e-04 2.508659946443e-11 1.924458856162e-18
      */
     // clang-format on
     checked_eph = true;
-    msg_ephemeris_bds_t *msg = (msg_ephemeris_bds_t *)buffer;
+    const sbp_msg_ephemeris_bds_t *msg =
+        (const sbp_msg_ephemeris_bds_t *)sbp_msg;
     ck_assert(msg->common.sid.sat == 6);
     ck_assert(msg->common.sid.code == CODE_BDS2_B1);
 
@@ -430,53 +499,60 @@ C06 2018 08 14 04 00 00 2.242858754471e-04 2.508659946443e-11 1.924458856162e-18
   }
 }
 
-void sbp_callback_eph_wn_rollover(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_eph_wn_rollover(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
-  if (msg_id == SBP_MSG_EPHEMERIS_GPS) {
-    msg_ephemeris_gps_t *msg = (msg_ephemeris_gps_t *)buffer;
+  if (msg_type == SbpMsgEphemerisGps) {
+    const sbp_msg_ephemeris_gps_t *msg =
+        (const sbp_msg_ephemeris_gps_t *)sbp_msg;
     ck_assert(msg->common.toe.wn == 2026);
     ck_assert(msg->common.toe.tow == 0);
   }
 }
 
-void sbp_callback_eph_wn_rollover2(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_eph_wn_rollover2(uint16_t sender_id,
+                                   sbp_msg_type_t msg_type,
+                                   const sbp_msg_t *sbp_msg,
+                                   void *context) {
   (void)sender_id;
   (void)context;
   gps_time_t toe = GPS_TIME_UNKNOWN;
   gps_time_t toc = GPS_TIME_UNKNOWN;
 
-  switch (msg_id) {
-    case SBP_MSG_EPHEMERIS_GPS: {
-      msg_ephemeris_gps_t *msg = (msg_ephemeris_gps_t *)buffer;
+  switch (msg_type) {
+    case SbpMsgEphemerisGps: {
+      const sbp_msg_ephemeris_gps_t *msg =
+          (const sbp_msg_ephemeris_gps_t *)sbp_msg;
       toe.wn = msg->common.toe.wn;
       toe.tow = msg->common.toe.tow;
       toc.wn = msg->toc.wn;
       toc.tow = msg->toc.tow;
       break;
     }
-    case SBP_MSG_EPHEMERIS_GLO: {
-      msg_ephemeris_glo_t *msg = (msg_ephemeris_glo_t *)buffer;
+    case SbpMsgEphemerisGlo: {
+      const sbp_msg_ephemeris_glo_t *msg =
+          (const sbp_msg_ephemeris_glo_t *)sbp_msg;
       toe.wn = msg->common.toe.wn;
       toe.tow = msg->common.toe.tow;
       toc = toe;
       break;
     }
-    case SBP_MSG_EPHEMERIS_GAL: {
-      msg_ephemeris_gal_t *msg = (msg_ephemeris_gal_t *)buffer;
+    case SbpMsgEphemerisGal: {
+      const sbp_msg_ephemeris_gal_t *msg =
+          (const sbp_msg_ephemeris_gal_t *)sbp_msg;
       toe.wn = msg->common.toe.wn;
       toe.tow = msg->common.toe.tow;
       toc.wn = msg->toc.wn;
       toc.tow = msg->toc.tow;
       break;
     }
-    case SBP_MSG_EPHEMERIS_BDS: {
-      msg_ephemeris_bds_t *msg = (msg_ephemeris_bds_t *)buffer;
+    case SbpMsgEphemerisBds: {
+      const sbp_msg_ephemeris_bds_t *msg =
+          (const sbp_msg_ephemeris_bds_t *)sbp_msg;
       toe.wn = msg->common.toe.wn;
       toe.tow = msg->common.toe.tow;
       toc.wn = msg->toc.wn;
@@ -494,28 +570,28 @@ void sbp_callback_eph_wn_rollover2(
   ck_assert(fabs(gpsdifftime(&toe, &current_time)) < 4 * 3600);
 }
 
-void sbp_callback_1012_first(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
-  (void)buffer;
+void sbp_callback_1012_first(uint16_t sender_id,
+                             sbp_msg_type_t msg_type,
+                             const sbp_msg_t *sbp_msg,
+                             void *context) {
   (void)sender_id;
   (void)context;
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *msg = (msg_obs_t *)buffer;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *msg = (const sbp_msg_obs_t *)sbp_msg;
     u8 num_sbp_msgs = msg->header.n_obs >> 4;
     ck_assert_uint_gt(num_sbp_msgs, 2);
     update_obs_time(msg);
   }
 }
 
-void sbp_callback_glo_5hz(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
-  (void)buffer;
+void sbp_callback_glo_5hz(uint16_t sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *sbp_msg,
+                          void *context) {
   (void)sender_id;
   (void)context;
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *msg = (msg_obs_t *)buffer;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *msg = (const sbp_msg_obs_t *)sbp_msg;
     u8 num_sbp_msgs = msg->header.n_obs >> 4;
     /* every epoch should have 4 observation messages */
     ck_assert_uint_ge(num_sbp_msgs, 4);
@@ -523,21 +599,21 @@ void sbp_callback_glo_5hz(
   }
 }
 
-void sbp_callback_glo_day_rollover(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
-  (void)buffer;
+void sbp_callback_glo_day_rollover(uint16_t sender_id,
+                                   sbp_msg_type_t msg_type,
+                                   const sbp_msg_t *sbp_msg,
+                                   void *context) {
   (void)sender_id;
   (void)context;
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *msg = (msg_obs_t *)buffer;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *msg = (const sbp_msg_obs_t *)sbp_msg;
     u8 num_sbp_msgs = msg->header.n_obs >> 4;
     ck_assert_uint_gt(num_sbp_msgs, 2);
     update_obs_time(msg);
   }
 }
 
-void check_biases(msg_glo_biases_t *sbp_glo_msg) {
+void check_biases(const sbp_msg_glo_biases_t *sbp_glo_msg) {
   if (sbp_glo_msg->mask & 0x01) {
     ck_assert(fabs(sbp_glo_msg->l1ca_bias / GLO_BIAS_RESOLUTION -
                    expected_L1CA_bias) < 1e-8);
@@ -556,21 +632,24 @@ void check_biases(msg_glo_biases_t *sbp_glo_msg) {
   }
 }
 
-void sbp_callback_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_bias(uint16_t sender_id,
+                       sbp_msg_type_t msg_type,
+                       const sbp_msg_t *sbp_msg,
+                       void *context) {
   (void)sender_id;
   (void)context;
-  if (msg_id == SBP_MSG_GLO_BIASES) {
-    msg_glo_biases_t *sbp_glo_msg = (msg_glo_biases_t *)buffer;
+  if (msg_type == SbpMsgGloBiases) {
+    const sbp_msg_glo_biases_t *sbp_glo_msg =
+        (const sbp_msg_glo_biases_t *)sbp_msg;
     check_biases(sbp_glo_msg);
-  } else if (msg_id == SBP_MSG_OBS) {
-    update_obs_time((msg_obs_t *)buffer);
+  } else if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *sbp_glo_msg = (const sbp_msg_obs_t *)sbp_msg;
+    update_obs_time(sbp_glo_msg);
   }
 }
 
-static bool no_duplicate_observations(msg_obs_t *sbp_obs, u8 length) {
-  static sbp_gps_time_t epoch_time;
+static bool no_duplicate_observations(const sbp_msg_obs_t *sbp_obs, u8 length) {
+  static sbp_v4_gps_time_t epoch_time;
   static gnss_sid_set_t sid_set;
 
   if (epoch_time.wn != sbp_obs->header.t.wn ||
@@ -591,46 +670,49 @@ static bool no_duplicate_observations(msg_obs_t *sbp_obs, u8 length) {
   return true;
 }
 
-void sbp_callback_msm_switching(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_msm_switching(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *sbp_msg,
+                                void *context) {
   (void)sender_id;
   (void)context;
   const u32 MAX_OBS_GAP_S = MSM_TIMEOUT_SEC + 10;
 
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *sbp_obs = (msg_obs_t *)buffer;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *sbp_obs = &sbp_msg->obs;
     if (previous_obs_time.wn != INVALID_TIME) {
-      double dt = sbp_diff_time(&sbp_obs->header.t, &previous_obs_time);
+      double dt = sbp_time_diff(&sbp_obs->header.t, &previous_obs_time);
       /* make sure time does not run backwards */
       ck_assert(dt >= 0);
       /* check there aren't too long gaps between observations */
       ck_assert(dt < MAX_OBS_GAP_S);
       /* check there are no duplicate sids */
-      ck_assert(no_duplicate_observations(sbp_obs, length));
+      ck_assert(no_duplicate_observations(sbp_obs, sbp_obs->n_obs));
     }
     previous_obs_time = sbp_obs->header.t;
     update_obs_time(sbp_obs);
   }
 }
 
-void sbp_callback_msm_no_gaps(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
+void sbp_callback_msm_no_gaps(uint16_t sender_id,
+                              sbp_msg_type_t msg_type,
+                              const sbp_msg_t *sbp_msg,
+                              void *context) {
   (void)sender_id;
   (void)context;
   const u32 MAX_OBS_GAP_S = 1;
 
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *sbp_obs = (msg_obs_t *)buffer;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *sbp_obs = (const sbp_msg_obs_t *)sbp_msg;
 
     if (previous_obs_time.wn != INVALID_TIME) {
-      double dt = sbp_diff_time(&sbp_obs->header.t, &previous_obs_time);
+      double dt = sbp_time_diff(&sbp_obs->header.t, &previous_obs_time);
       /* make sure time does not run backwards */
       ck_assert(dt >= 0);
       /* check there's an observation for every second */
       ck_assert(dt <= MAX_OBS_GAP_S);
       /* check there are no duplicate sids */
-      ck_assert(no_duplicate_observations(sbp_obs, length));
+      ck_assert(no_duplicate_observations(sbp_obs, sbp_obs->n_obs));
 
       u8 n_meas = sbp_obs->header.n_obs;
       u8 seq_counter = n_meas & 0x0F;
@@ -652,10 +734,10 @@ void sbp_callback_msm_no_gaps(
       }
       if (seq_counter < seq_size - 1) {
         /* verify that all but the last packet in the sequence are full */
-        ck_assert_uint_eq(length, 249);
+        ck_assert_uint_eq(sbp_obs->n_obs, 14);
       } else {
         /* last message in sequence, check the total number of observations */
-        u8 num_obs = (seq_size - 1) * 14 + (length - 11) / 17;
+        u8 num_obs = (seq_size - 1) * 14 + sbp_obs->n_obs;
         if (previous_num_obs > 0) {
           /* must not lose more than 6 observations between epochs */
           ck_assert_uint_ge(num_obs, previous_num_obs - 6);
@@ -669,15 +751,17 @@ void sbp_callback_msm_no_gaps(
   }
 }
 
-void sbp_callback_msm7_beidou_invalid_pr(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
+void sbp_callback_msm7_beidou_invalid_pr(uint16_t sender_id,
+                                         sbp_msg_type_t msg_type,
+                                         const sbp_msg_t *sbp_msg,
+                                         void *context) {
   (void)sender_id;
   (void)context;
-  if (msg_id == SBP_MSG_OBS) {
-    msg_obs_t *sbp_obs = (msg_obs_t *)buffer;
-    u8 num_obs = (length - 11) / 17;
+  if (msg_type == SbpMsgObs) {
+    const sbp_msg_obs_t *sbp_obs = &sbp_msg->obs;
+    u8 num_obs = sbp_obs->n_obs;
     for (u8 i = 0; i < num_obs; i++) {
-      packed_obs_content_t *converted_obs = &sbp_obs->obs[i];
+      const sbp_packed_obs_content_t *converted_obs = &sbp_obs->obs[i];
       // In the RTCM file used for this test, Beidou satellite 32 code B2a has
       // the fine pseudorange valid flag set to false. The RTCM converter will
       // filter out that observation as faulty. Hence, the below boolean checks
@@ -710,10 +794,9 @@ bool verify_crc(uint8_t *buffer, uint32_t buffer_length) {
 }
 
 void test_RTCM3(const char *filename,
-                void (*cb_rtcm_to_sbp)(u16 msg_id,
-                                       u8 length,
-                                       u8 *buffer,
-                                       u16 sender_id,
+                void (*cb_rtcm_to_sbp)(uint16_t sender_id,
+                                       sbp_msg_type_t msg_type,
+                                       const sbp_msg_t *msg,
                                        void *context),
                 gps_time_t current_time_) {
   time_truth_init(&time_truth);
@@ -914,32 +997,32 @@ static s32 rtcm_gps_eph_cb(u8 *buffer, u16 length, void *context) {
     ck_assert_uint_eq(msg_eph.sat_id, 1);
     ck_assert_uint_eq(msg_eph.wn, 16);
     ck_assert_uint_eq(msg_eph.ura, 0);
-    ck_assert_uint_eq(msg_eph.kepler.codeL2, 1);
-    ck_assert_int_eq(msg_eph.kepler.inc_dot, -1278);
-    ck_assert_uint_eq(msg_eph.kepler.iode, 82);
+    ck_assert_uint_eq(msg_eph.data.kepler.codeL2, 1);
+    ck_assert_int_eq(msg_eph.data.kepler.inc_dot, -1278);
+    ck_assert_uint_eq(msg_eph.data.kepler.iode, 82);
     ck_assert_uint_eq(msg_eph.toe, 19800);
-    ck_assert_int_eq(msg_eph.kepler.af2, 0);
-    ck_assert_int_eq(msg_eph.kepler.af1, -97);
-    ck_assert_int_eq(msg_eph.kepler.af0, -178235);
-    ck_assert_uint_eq(msg_eph.kepler.iodc, 82);
-    ck_assert_int_eq(msg_eph.kepler.crs, -4333);
-    ck_assert_int_eq(msg_eph.kepler.dn, 12543);
-    ck_assert_int_eq(msg_eph.kepler.m0, 951542738);
-    ck_assert_int_eq(msg_eph.kepler.cuc, -3726);
-    ck_assert_uint_eq(msg_eph.kepler.ecc, 78044687);
-    ck_assert_int_eq(msg_eph.kepler.cus, 2002);
-    ck_assert_uint_eq(msg_eph.kepler.sqrta, 2701998303);
-    ck_assert_uint_eq(msg_eph.kepler.toc, 19800);
-    ck_assert_int_eq(msg_eph.kepler.cic, -82);
-    ck_assert_int_eq(msg_eph.kepler.omega0, 1487724627);
-    ck_assert_int_eq(msg_eph.kepler.cis, 110);
-    ck_assert_int_eq(msg_eph.kepler.inc, 667415864);
-    ck_assert_int_eq(msg_eph.kepler.crc, 10189);
-    ck_assert_int_eq(msg_eph.kepler.w, 508965259);
-    ck_assert_int_eq(msg_eph.kepler.omegadot, -23477);
-    ck_assert_int_eq(msg_eph.kepler.tgd_gps_s, 12);
+    ck_assert_int_eq(msg_eph.data.kepler.af2, 0);
+    ck_assert_int_eq(msg_eph.data.kepler.af1, -97);
+    ck_assert_int_eq(msg_eph.data.kepler.af0, -178235);
+    ck_assert_uint_eq(msg_eph.data.kepler.iodc, 82);
+    ck_assert_int_eq(msg_eph.data.kepler.crs, -4333);
+    ck_assert_int_eq(msg_eph.data.kepler.dn, 12543);
+    ck_assert_int_eq(msg_eph.data.kepler.m0, 951542738);
+    ck_assert_int_eq(msg_eph.data.kepler.cuc, -3726);
+    ck_assert_uint_eq(msg_eph.data.kepler.ecc, 78044687);
+    ck_assert_int_eq(msg_eph.data.kepler.cus, 2002);
+    ck_assert_uint_eq(msg_eph.data.kepler.sqrta, 2701998303);
+    ck_assert_uint_eq(msg_eph.data.kepler.toc, 19800);
+    ck_assert_int_eq(msg_eph.data.kepler.cic, -82);
+    ck_assert_int_eq(msg_eph.data.kepler.omega0, 1487724627);
+    ck_assert_int_eq(msg_eph.data.kepler.cis, 110);
+    ck_assert_int_eq(msg_eph.data.kepler.inc, 667415864);
+    ck_assert_int_eq(msg_eph.data.kepler.crc, 10189);
+    ck_assert_int_eq(msg_eph.data.kepler.w, 508965259);
+    ck_assert_int_eq(msg_eph.data.kepler.omegadot, -23477);
+    ck_assert_int_eq(msg_eph.data.kepler.tgd.gps_s, 12);
     ck_assert_uint_eq(msg_eph.health_bits, 0);
-    ck_assert_uint_eq(msg_eph.kepler.L2_data_bit, 0);
+    ck_assert_uint_eq(msg_eph.data.kepler.L2_data_bit, 0);
     ck_assert_uint_eq(msg_eph.fit_interval, 0);
   }
   return message_size;
@@ -973,29 +1056,29 @@ static s32 rtcm_gal_fnav_eph_cb(u8 *buffer, u16 length, void *context) {
     ck_assert_uint_eq(msg_eph.sat_id, 1);
     ck_assert_uint_eq(msg_eph.wn, 1040);
     ck_assert_uint_eq(msg_eph.ura, 122);
-    ck_assert_int_eq(msg_eph.kepler.inc_dot, -1353);
-    ck_assert_uint_eq(msg_eph.kepler.iode, 14);
+    ck_assert_int_eq(msg_eph.data.kepler.inc_dot, -1353);
+    ck_assert_uint_eq(msg_eph.data.kepler.iode, 14);
     ck_assert_uint_eq(msg_eph.toe, 5260);
-    ck_assert_int_eq(msg_eph.kepler.af2, 0);
-    ck_assert_int_eq(msg_eph.kepler.af1, -569);
-    ck_assert_int_eq(msg_eph.kepler.af0, -11317458);
-    ck_assert_int_eq(msg_eph.kepler.crs, 2084);
-    ck_assert_int_eq(msg_eph.kepler.dn, 6367);
-    ck_assert_int_eq(msg_eph.kepler.m0, 1164441757);
-    ck_assert_int_eq(msg_eph.kepler.cuc, 1690);
-    ck_assert_uint_eq(msg_eph.kepler.ecc, 1899057);
-    ck_assert_int_eq(msg_eph.kepler.cus, 7169);
-    ck_assert_uint_eq(msg_eph.kepler.sqrta, 2852451186);
-    ck_assert_uint_eq(msg_eph.kepler.toc, 5260);
-    ck_assert_int_eq(msg_eph.kepler.cic, 26);
-    ck_assert_int_eq(msg_eph.kepler.omega0, -173178173);
-    ck_assert_int_eq(msg_eph.kepler.cis, 4);
-    ck_assert_int_eq(msg_eph.kepler.inc, 674889763);
-    ck_assert_int_eq(msg_eph.kepler.crc, 2011);
-    ck_assert_int_eq(msg_eph.kepler.w, -1872118354);
-    ck_assert_int_eq(msg_eph.kepler.omegadot, -14100);
-    ck_assert_int_eq(msg_eph.kepler.tgd_gal_s[0], -8);
-    ck_assert_int_eq(msg_eph.kepler.tgd_gal_s[1], 0);
+    ck_assert_int_eq(msg_eph.data.kepler.af2, 0);
+    ck_assert_int_eq(msg_eph.data.kepler.af1, -569);
+    ck_assert_int_eq(msg_eph.data.kepler.af0, -11317458);
+    ck_assert_int_eq(msg_eph.data.kepler.crs, 2084);
+    ck_assert_int_eq(msg_eph.data.kepler.dn, 6367);
+    ck_assert_int_eq(msg_eph.data.kepler.m0, 1164441757);
+    ck_assert_int_eq(msg_eph.data.kepler.cuc, 1690);
+    ck_assert_uint_eq(msg_eph.data.kepler.ecc, 1899057);
+    ck_assert_int_eq(msg_eph.data.kepler.cus, 7169);
+    ck_assert_uint_eq(msg_eph.data.kepler.sqrta, 2852451186);
+    ck_assert_uint_eq(msg_eph.data.kepler.toc, 5260);
+    ck_assert_int_eq(msg_eph.data.kepler.cic, 26);
+    ck_assert_int_eq(msg_eph.data.kepler.omega0, -173178173);
+    ck_assert_int_eq(msg_eph.data.kepler.cis, 4);
+    ck_assert_int_eq(msg_eph.data.kepler.inc, 674889763);
+    ck_assert_int_eq(msg_eph.data.kepler.crc, 2011);
+    ck_assert_int_eq(msg_eph.data.kepler.w, -1872118354);
+    ck_assert_int_eq(msg_eph.data.kepler.omegadot, -14100);
+    ck_assert_int_eq(msg_eph.data.kepler.tgd.gal_s[0], -8);
+    ck_assert_int_eq(msg_eph.data.kepler.tgd.gal_s[1], 0);
     ck_assert_uint_eq(msg_eph.health_bits, 0);
     ck_assert_uint_eq(msg_eph.fit_interval, 0);
   }
@@ -1030,29 +1113,29 @@ static s32 rtcm_gal_inav_eph_cb(u8 *buffer, u16 length, void *context) {
     ck_assert_uint_eq(msg_eph.sat_id, 1);
     ck_assert_uint_eq(msg_eph.wn, 1040);
     ck_assert_uint_eq(msg_eph.ura, 122);
-    ck_assert_int_eq(msg_eph.kepler.inc_dot, -1353);
-    ck_assert_uint_eq(msg_eph.kepler.iode, 14);
+    ck_assert_int_eq(msg_eph.data.kepler.inc_dot, -1353);
+    ck_assert_uint_eq(msg_eph.data.kepler.iode, 14);
     ck_assert_uint_eq(msg_eph.toe, 5260);
-    ck_assert_int_eq(msg_eph.kepler.af2, 0);
-    ck_assert_int_eq(msg_eph.kepler.af1, -568);
-    ck_assert_int_eq(msg_eph.kepler.af0, -11317428);
-    ck_assert_int_eq(msg_eph.kepler.crs, 2084);
-    ck_assert_int_eq(msg_eph.kepler.dn, 6367);
-    ck_assert_int_eq(msg_eph.kepler.m0, 1164441757);
-    ck_assert_int_eq(msg_eph.kepler.cuc, 1690);
-    ck_assert_uint_eq(msg_eph.kepler.ecc, 1899057);
-    ck_assert_int_eq(msg_eph.kepler.cus, 7169);
-    ck_assert_uint_eq(msg_eph.kepler.sqrta, 2852451186);
-    ck_assert_uint_eq(msg_eph.kepler.toc, 5260);
-    ck_assert_int_eq(msg_eph.kepler.cic, 26);
-    ck_assert_int_eq(msg_eph.kepler.omega0, -173178173);
-    ck_assert_int_eq(msg_eph.kepler.cis, 4);
-    ck_assert_int_eq(msg_eph.kepler.inc, 674889763);
-    ck_assert_int_eq(msg_eph.kepler.crc, 2011);
-    ck_assert_int_eq(msg_eph.kepler.w, -1872118354);
-    ck_assert_int_eq(msg_eph.kepler.omegadot, -14100);
-    ck_assert_int_eq(msg_eph.kepler.tgd_gal_s[0], -8);
-    ck_assert_int_eq(msg_eph.kepler.tgd_gal_s[1], -9);
+    ck_assert_int_eq(msg_eph.data.kepler.af2, 0);
+    ck_assert_int_eq(msg_eph.data.kepler.af1, -568);
+    ck_assert_int_eq(msg_eph.data.kepler.af0, -11317428);
+    ck_assert_int_eq(msg_eph.data.kepler.crs, 2084);
+    ck_assert_int_eq(msg_eph.data.kepler.dn, 6367);
+    ck_assert_int_eq(msg_eph.data.kepler.m0, 1164441757);
+    ck_assert_int_eq(msg_eph.data.kepler.cuc, 1690);
+    ck_assert_uint_eq(msg_eph.data.kepler.ecc, 1899057);
+    ck_assert_int_eq(msg_eph.data.kepler.cus, 7169);
+    ck_assert_uint_eq(msg_eph.data.kepler.sqrta, 2852451186);
+    ck_assert_uint_eq(msg_eph.data.kepler.toc, 5260);
+    ck_assert_int_eq(msg_eph.data.kepler.cic, 26);
+    ck_assert_int_eq(msg_eph.data.kepler.omega0, -173178173);
+    ck_assert_int_eq(msg_eph.data.kepler.cis, 4);
+    ck_assert_int_eq(msg_eph.data.kepler.inc, 674889763);
+    ck_assert_int_eq(msg_eph.data.kepler.crc, 2011);
+    ck_assert_int_eq(msg_eph.data.kepler.w, -1872118354);
+    ck_assert_int_eq(msg_eph.data.kepler.omegadot, -14100);
+    ck_assert_int_eq(msg_eph.data.kepler.tgd.gal_s[0], -8);
+    ck_assert_int_eq(msg_eph.data.kepler.tgd.gal_s[1], -9);
     ck_assert_uint_eq(msg_eph.health_bits, 0);
     ck_assert_uint_eq(msg_eph.fit_interval, 0);
   }
@@ -1856,19 +1939,21 @@ struct glo_known_fcn_info {
   u8 known_fcn_sat_id[NUM_SATS_GLO];
 };
 
-static void sbp_roundtrip_cb(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
+static void sbp_roundtrip_cb(uint16_t sender_id,
+                             sbp_msg_type_t msg_type,
+                             const sbp_msg_t *sbp_msg,
+                             void *context) {
   (void)sender_id;
   struct glo_known_fcn_info *known_fcn = context;
 
-  ck_assert_uint_eq(msg_id, SBP_MSG_OBS);
-  u8 num_obs = (length - 11) / 17;
-  msg_obs_t *sbp_obs = (msg_obs_t *)buffer;
+  ck_assert_uint_eq(msg_type, SbpMsgObs);
+  const sbp_msg_obs_t *sbp_obs = &sbp_msg->obs;
+  u8 num_obs = sbp_obs->n_obs;
 
   for (u8 i = 0; i < num_obs; i++) {
-    packed_obs_content_t *converted_obs = &sbp_obs->obs[i];
+    const sbp_packed_obs_content_t *converted_obs = &sbp_obs->obs[i];
     /* find the original SBP observation */
-    packed_obs_content_t *orig_obs = NULL;
+    sbp_packed_obs_content_t *orig_obs = NULL;
     for (u8 j = 0; j < ARRAY_SIZE(sbp_test_data); j++) {
       if (sbp_test_data[j].sid.code == converted_obs->sid.code &&
           sbp_test_data[j].sid.sat == converted_obs->sid.sat) {
@@ -1934,25 +2019,27 @@ START_TEST(test_sbp_to_msm_roundtrip) {
 
   /* set the FCNs for couple of GLO satellites */
   sbp_gnss_signal_t sid = {2, CODE_GLO_L1OF};
+  sbp_v4_gnss_signal_t sid2 = {2, CODE_GLO_L1OF};
   sbp2rtcm_set_glo_fcn(sid, 4, &out_state);
-  rtcm2sbp_set_glo_fcn(sid, 4, &state);
+  rtcm2sbp_set_glo_fcn(sid2, 4, &state);
   known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
   known_fcn.num_known_fcn++;
   sid.sat = 3;
   sbp2rtcm_set_glo_fcn(sid, 13, &out_state);
-  rtcm2sbp_set_glo_fcn(sid, 13, &state);
+  rtcm2sbp_set_glo_fcn(sid2, 13, &state);
   known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
   known_fcn.num_known_fcn++;
   sid.sat = 11;
   sbp2rtcm_set_glo_fcn(sid, 8, &out_state);
-  rtcm2sbp_set_glo_fcn(sid, 8, &state);
+  rtcm2sbp_set_glo_fcn(sid2, 8, &state);
   known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
   known_fcn.num_known_fcn++;
 
   state.time_from_input_data = current_time;
 
-  memcpy(out_state.sbp_obs_buffer, sbp_test_data, sizeof(sbp_test_data));
-  out_state.n_sbp_obs = ARRAY_SIZE(sbp_test_data);
+  memcpy(
+      out_state.sbp_obs_buffer, sbp_test_data_old, sizeof(sbp_test_data_old));
+  out_state.n_sbp_obs = ARRAY_SIZE(sbp_test_data_old);
 
   sbp_buffer_to_msm(&out_state);
 }
@@ -1997,7 +2084,7 @@ static msg_ephemeris_gps_t get_example_gps_eph() {
 
 // Compare two GPS orbits to make sure they are the same
 static void compare_gps_ephs(const msg_ephemeris_gps_t *first,
-                             const msg_ephemeris_gps_t *second) {
+                             const sbp_msg_ephemeris_gps_t *second) {
   (void)first;
   (void)second;
   assert(first->common.sid.sat == second->common.sid.sat);
@@ -2064,7 +2151,7 @@ static msg_ephemeris_glo_t get_example_glo_eph() {
 
 // Compare two GLO orbits to make sure they are the same
 static void compare_glo_ephs(const msg_ephemeris_glo_t *first,
-                             const msg_ephemeris_glo_t *second) {
+                             const sbp_msg_ephemeris_glo_t *second) {
   (void)first;
   (void)second;
   assert(first->common.sid.sat == second->common.sid.sat);
@@ -2135,7 +2222,7 @@ static msg_ephemeris_bds_t get_example_bds_eph() {
 
 // Compare two BDS orbits to make sure they are the same
 static void compare_bds_ephs(const msg_ephemeris_bds_t *first,
-                             const msg_ephemeris_bds_t *second) {
+                             const sbp_msg_ephemeris_bds_t *second) {
   (void)first;
   (void)second;
   assert(first->common.sid.sat == second->common.sid.sat);
@@ -2213,7 +2300,7 @@ static msg_ephemeris_gal_t get_example_gal_eph() {
 
 // Compare two GAL orbits to make sure they are the same
 static void compare_gal_ephs(const msg_ephemeris_gal_t *first,
-                             const msg_ephemeris_gal_t *second) {
+                             const sbp_msg_ephemeris_gal_t *second) {
   (void)first;
   (void)second;
   assert(first->common.sid.sat == second->common.sid.sat);
@@ -2258,41 +2345,41 @@ START_TEST(test_sbp_to_rtcm_1019_validity_decoding) {
   msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
   rtcm_msg_eph rtcm_msg_1019;
   sbp_to_rtcm3_gps_eph(&msg_1019_in, &rtcm_msg_1019, &out_state);
-  msg_ephemeris_gps_t msg_1019_out;
-  rtcm_msg_1019.kepler.iodc = 250;
-  rtcm_msg_1019.kepler.iode = 250;
+  sbp_msg_ephemeris_gps_t msg_1019_out;
+  rtcm_msg_1019.data.kepler.iodc = 250;
+  rtcm_msg_1019.data.kepler.iode = 250;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 1);
-  rtcm_msg_1019.kepler.iodc = 506;
-  rtcm_msg_1019.kepler.iode = 250;
+  rtcm_msg_1019.data.kepler.iodc = 506;
+  rtcm_msg_1019.data.kepler.iode = 250;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 1);
-  rtcm_msg_1019.kepler.iodc = 1018;
-  rtcm_msg_1019.kepler.iode = 250;
+  rtcm_msg_1019.data.kepler.iodc = 1018;
+  rtcm_msg_1019.data.kepler.iode = 250;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 1);
-  rtcm_msg_1019.kepler.iodc = 762;
-  rtcm_msg_1019.kepler.iode = 250;
+  rtcm_msg_1019.data.kepler.iodc = 762;
+  rtcm_msg_1019.data.kepler.iode = 250;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 1);
 
   // Test out the four cases which should return an invalid ephemeris - when the
   // 9th and 10th bits of the iodc are 00, 01, 10 and 11 but the other 8 bits
   // are different to the iode.
-  rtcm_msg_1019.kepler.iodc = 250;
-  rtcm_msg_1019.kepler.iode = 251;
+  rtcm_msg_1019.data.kepler.iodc = 250;
+  rtcm_msg_1019.data.kepler.iode = 251;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 0);
-  rtcm_msg_1019.kepler.iodc = 506;
-  rtcm_msg_1019.kepler.iode = 251;
+  rtcm_msg_1019.data.kepler.iodc = 506;
+  rtcm_msg_1019.data.kepler.iode = 251;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 0);
-  rtcm_msg_1019.kepler.iodc = 1018;
-  rtcm_msg_1019.kepler.iode = 251;
+  rtcm_msg_1019.data.kepler.iodc = 1018;
+  rtcm_msg_1019.data.kepler.iode = 251;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 0);
-  rtcm_msg_1019.kepler.iodc = 762;
-  rtcm_msg_1019.kepler.iode = 251;
+  rtcm_msg_1019.data.kepler.iodc = 762;
+  rtcm_msg_1019.data.kepler.iode = 251;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   assert(msg_1019_out.common.valid == 0);
 }
@@ -2306,7 +2393,7 @@ START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
   msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
   rtcm_msg_eph rtcm_msg_1019;
   sbp_to_rtcm3_gps_eph(&msg_1019_in, &rtcm_msg_1019, &out_state);
-  msg_ephemeris_gps_t msg_1019_out;
+  sbp_msg_ephemeris_gps_t msg_1019_out;
   rtcm3_gps_eph_to_sbp(&rtcm_msg_1019, &msg_1019_out, &state);
   compare_gps_ephs(&msg_1019_in, &msg_1019_out);
 }
@@ -2320,7 +2407,7 @@ START_TEST(test_sbp_to_rtcm_1020_roundtrip) {
   msg_ephemeris_glo_t msg_1020_in = get_example_glo_eph();
   rtcm_msg_eph rtcm_msg_1020;
   sbp_to_rtcm3_glo_eph(&msg_1020_in, &rtcm_msg_1020, &out_state);
-  msg_ephemeris_glo_t msg_1020_out;
+  sbp_msg_ephemeris_glo_t msg_1020_out;
   rtcm3_glo_eph_to_sbp(&rtcm_msg_1020, &msg_1020_out, &state);
   compare_glo_ephs(&msg_1020_in, &msg_1020_out);
 }
@@ -2330,7 +2417,7 @@ START_TEST(test_sbp_to_rtcm_1042_roundtrip) {
   msg_ephemeris_bds_t msg_1042_in = get_example_bds_eph();
   rtcm_msg_eph rtcm_msg_1042;
   sbp_to_rtcm3_bds_eph(&msg_1042_in, &rtcm_msg_1042, &out_state);
-  msg_ephemeris_bds_t msg_1042_out;
+  sbp_msg_ephemeris_bds_t msg_1042_out;
   rtcm3_bds_eph_to_sbp(&rtcm_msg_1042, &msg_1042_out, &state);
   compare_bds_ephs(&msg_1042_in, &msg_1042_out);
 }
@@ -2340,7 +2427,7 @@ START_TEST(test_sbp_to_rtcm_1045_roundtrip) {
   msg_ephemeris_gal_t msg_1045_in = get_example_gal_eph();
   rtcm_msg_eph rtcm_msg_1045;
   sbp_to_rtcm3_gal_eph(&msg_1045_in, &rtcm_msg_1045, &out_state);
-  msg_ephemeris_gal_t msg_1045_out;
+  sbp_msg_ephemeris_gal_t msg_1045_out;
   rtcm3_gal_eph_to_sbp(
       &rtcm_msg_1045, EPH_SOURCE_GAL_FNAV, &msg_1045_out, &state);
   compare_gal_ephs(&msg_1045_in, &msg_1045_out);
@@ -2351,7 +2438,7 @@ START_TEST(test_sbp_to_rtcm_1046_roundtrip) {
   msg_ephemeris_gal_t msg_1046_in = get_example_gal_eph();
   rtcm_msg_eph rtcm_msg_1046;
   sbp_to_rtcm3_gal_eph(&msg_1046_in, &rtcm_msg_1046, &out_state);
-  msg_ephemeris_gal_t msg_1046_out;
+  sbp_msg_ephemeris_gal_t msg_1046_out;
   rtcm3_gal_eph_to_sbp(
       &rtcm_msg_1046, EPH_SOURCE_GAL_INAV, &msg_1046_out, &state);
   compare_gal_ephs(&msg_1046_in, &msg_1046_out);

@@ -19,7 +19,7 @@
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
 #include "common.h"
-#include "gnss-converters/sbp_rtcm3.h"
+#include "gnss-converters-extra/sbp_rtcm3.h"
 
 /* Multiplier for glonass bias resolution scaling */
 #define GLO_BIAS_RESOLUTION 50.0

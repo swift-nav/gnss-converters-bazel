@@ -95,9 +95,9 @@ pipeline {
                         }
                     }
                     environment {
-                        AFL_USE_ASAN='1'
-                        CC='/usr/bin/afl-gcc'
-                        CXX='/usr/bin/afl-g++'
+                        CFLAGS='-fsanitize=address'
+                        CXXFLAGS='-fsanitize=address'
+                        LDFLAGS='-fsanitize=address'
                     }
                     steps {
                         gitPrep()

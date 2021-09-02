@@ -17,8 +17,8 @@
 #include <string.h>
 
 #include <libsbp/edc.h>
-#include <libsbp/imu.h>
-#include <libsbp/vehicle.h>
+#include <libsbp/v4/imu.h>
+#include <libsbp/v4/vehicle.h>
 
 #include <gnss-converters/ixcom_sbp.h>
 
@@ -47,60 +47,72 @@ void test_IXCOM(struct ixcom_sbp_state *state, const char *filename) {
 }
 
 static const uint16_t imuraw_crc[] = {183, 5104, 48724};
-static void ixcom_sbp_callback_imuraw(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ixcom_sbp_callback_imuraw(u16 sender_id,
+                                      sbp_msg_type_t msg_type,
+                                      const sbp_msg_t *msg,
+                                      void *context) {
   (void)context;
   static uint8_t msg_index = 0;
+  uint8_t payload[SBP_MAX_PAYLOAD_LEN];
+  uint8_t payload_len;
+
+  s8 ret =
+      sbp_message_encode(payload, sizeof(payload), &payload_len, msg_type, msg);
+  ck_assert(ret == SBP_OK);
 
   if (msg_index == 0 || msg_index == 2) {
-    ck_assert(msg_id == SBP_MSG_IMU_RAW);
-    ck_assert(length == sizeof(msg_imu_raw_t));
+    ck_assert(msg_type == SbpMsgImuRaw);
   } else if (msg_index == 1) {
-    ck_assert(msg_id == SBP_MSG_IMU_AUX);
-    ck_assert(length == sizeof(msg_imu_aux_t));
+    ck_assert(msg_type == SbpMsgImuAux);
   }
 
   ck_assert(msg_index < sizeof(imuraw_crc) / sizeof(uint16_t));
 
   uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
+  tmpbuf[0] = (uint8_t)msg_type;
+  tmpbuf[1] = (uint8_t)(msg_type >> 8);
   tmpbuf[2] = (uint8_t)sender_id;
   tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
+  tmpbuf[4] = (uint8_t)payload_len;
 
   u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
+  crc = crc16_ccitt(payload, payload_len, crc);
   ck_assert(crc == imuraw_crc[msg_index]);
 
   msg_index++;
 }
 
 static const uint16_t wheeldata_crc[] = {46759, 7510};
-static void ixcom_sbp_callback_wheeldata(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ixcom_sbp_callback_wheeldata(u16 sender_id,
+                                         sbp_msg_type_t msg_type,
+                                         const sbp_msg_t *msg,
+                                         void *context) {
   (void)context;
   static uint8_t msg_index = 0;
+  uint8_t payload[SBP_MAX_PAYLOAD_LEN];
+  uint8_t payload_len;
+
+  s8 ret =
+      sbp_message_encode(payload, sizeof(payload), &payload_len, msg_type, msg);
+  ck_assert(ret == SBP_OK);
 
   if (msg_index == 0) {
-    ck_assert(msg_id == SBP_MSG_ODOMETRY);
-    ck_assert(length == sizeof(msg_odometry_t));
+    ck_assert(msg_type == SbpMsgOdometry);
   } else if (msg_index == 1) {
-    ck_assert(msg_id == SBP_MSG_WHEELTICK);
-    ck_assert(length == sizeof(msg_wheeltick_t));
+    ck_assert(msg_type == SbpMsgWheeltick);
   }
 
   ck_assert(msg_index < sizeof(wheeldata_crc) / sizeof(uint16_t));
 
   uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
+  tmpbuf[0] = (uint8_t)msg_type;
+  tmpbuf[1] = (uint8_t)(msg_type >> 8);
   tmpbuf[2] = (uint8_t)sender_id;
   tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
+  tmpbuf[4] = (uint8_t)payload_len;
 
   u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
+  crc = crc16_ccitt(payload, payload_len, crc);
   ck_assert(crc == wheeldata_crc[msg_index]);
 
   msg_index++;

@@ -11,13 +11,11 @@
  */
 
 #include <gnss-converters/time_truth.h>
-
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <stdalign.h>
 #include <stdatomic.h>
 #include <string.h>
-
-#include <libsbp/gnss.h>
-#include <libsbp/observation.h>
 #include <swiftnav/ephemeris.h>
 
 /**
@@ -36,8 +34,8 @@ static_assert(sizeof(atomic_time_truth_t) <= sizeof(time_truth_t),
               "opaque type's size must be greater than or equal to the actual "
               "type's size");
 static_assert(
-    alignof(time_truth_t) == alignof(max_align_t),
-    "opaque type must be aligned to the highest alignment requirement");
+    alignof(time_truth_t) % alignof(atomic_time_truth_t) == 0,
+    "opaque type must be alignable to its actual type's alignment requirement");
 
 void time_truth_init(time_truth_t *instance) {
   struct time_truth value;
@@ -147,27 +145,22 @@ void time_truth_get(time_truth_t *instance,
 }
 
 bool time_truth_update_from_sbp(time_truth_t *instance,
-                                uint16_t message_type,
-                                uint8_t length,
-                                const uint8_t *payload) {
-  (void)length;
-
+                                sbp_msg_type_t message_type,
+                                const sbp_msg_t *msg) {
   bool healthy;
   enum time_truth_source time_source;
-  gps_time_sec_t time;
+  sbp_gps_time_sec_t time;
 
-  switch (message_type) {
-    case SBP_MSG_EPHEMERIS_GPS:
-      healthy = ((const msg_ephemeris_gps_t *)payload)->common.health_bits == 0;
-      if (!healthy) {
-        return false;
-      }
-      time_source = TIME_TRUTH_EPH_GPS;
-      time = ((const msg_ephemeris_gps_t *)payload)->common.toe;
-      break;
-    default:
+  if (message_type == SbpMsgEphemerisGps) {
+    healthy = msg->ephemeris_gps.common.health_bits == 0;
+    if (!healthy) {
       return false;
-  };
+    }
+    time_source = TIME_TRUTH_EPH_GPS;
+    time = msg->ephemeris_gps.common.toe;
+  } else {
+    return false;
+  }
 
   gps_time_t time_truth_time;
   time_truth_time.wn = (s16)time.wn;

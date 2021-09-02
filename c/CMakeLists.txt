@@ -6,9 +6,9 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake" "${CMAKE_CURRENT_LIST_DI
 include(GNUInstallDirs)
 include(CCache)
 include(SwiftCmakeOptions)
-include(ASAN-targets)
 include(LanguageStandards)
 include(CompileOptions)
+include(SwiftTargets)
 
 swift_create_project_options(
     HAS_TESTS
@@ -29,10 +29,11 @@ endif()
 
 swift_setup_clang_tidy(PATTERNS 'src/*.c' 'src/*.cc' ${clang_tidy_extra_args})
 
+include(CheckAttributes)
+create_check_attributes_target()
+
 include(CodeCoverage)
 add_code_coverage_all_targets()
-
-include(TestTargets)
 
 option(libsbp_ENABLE_TESTS "" OFF)
 option(libsbp_ENABLE_DOCS "" OFF)
@@ -53,7 +54,6 @@ find_package(Ixcom REQUIRED)
 option(nov2sbp_BUILD "" OFF)
 option(BUILD_TESTING "" OFF)
 option(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION "Disable all CRC validation" OFF)
-
 
 if (nov2sbp_BUILD)
   target_compile_options(swiftnav PRIVATE -DGEOID_MODEL_15_MINUTE_RESOLUTION)

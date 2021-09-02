@@ -11,7 +11,7 @@
  */
 
 #include <check.h>
-#include <libsbp/ssr.h>
+#include <libsbp/v4/ssr.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,15 +36,17 @@ static bool bds_orbit_clock_processed = false;
 static bool bds_code_bias_processed = false;
 static bool bds_phase_bias_processed = false;
 
-void sbp_callback_gps_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps_orbit_clock(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GPS_L1CA) {
       // This is not a GPS message, wait for first GPS message
       return;
@@ -71,15 +73,17 @@ void sbp_callback_gps_orbit_clock(
   }
 }
 
-void sbp_callback_gps_separate_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps_separate_orbit_clock(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GPS_L1CA) {
       // This is not a GPS message, wait for first GPS message
       return;
@@ -107,15 +111,16 @@ void sbp_callback_gps_separate_orbit_clock(
   }
 }
 
-void sbp_callback_gps_code_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps_code_bias(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *sbp_msg,
+                                void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_CODE_BIASES && !msg_checked) {
-    msg_ssr_code_biases_t *sbp_code_bias = (msg_ssr_code_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrCodeBiases && !msg_checked) {
+    const sbp_msg_ssr_code_biases_t *sbp_code_bias = &sbp_msg->ssr_code_biases;
     if (sbp_code_bias->sid.code != CODE_GPS_L1CA) {
       // This is not a GPS message, wait for first GPS message
       return;
@@ -153,15 +158,17 @@ void sbp_callback_gps_code_bias(
   }
 }
 
-void sbp_callback_gps_phase_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gps_phase_bias(uint16_t sender_id,
+                                 sbp_msg_type_t msg_type,
+                                 const sbp_msg_t *sbp_msg,
+                                 void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_PHASE_BIASES && !msg_checked) {
-    msg_ssr_phase_biases_t *sbp_phase_bias = (msg_ssr_phase_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrPhaseBiases && !msg_checked) {
+    const sbp_msg_ssr_phase_biases_t *sbp_phase_bias =
+        &sbp_msg->ssr_phase_biases;
     if (sbp_phase_bias->sid.code != CODE_GPS_L1CA) {
       // This is not a GPS message, wait for first GPS message
       return;
@@ -200,15 +207,17 @@ void sbp_callback_gps_phase_bias(
   }
 }
 
-void sbp_callback_glo_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_glo_orbit_clock(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GLO_L1OF) {
       // This is not a GLO message, wait for first GLO message
       return;
@@ -235,15 +244,17 @@ void sbp_callback_glo_orbit_clock(
   }
 }
 
-void sbp_callback_glo_separate_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_glo_separate_orbit_clock(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GLO_L1OF) {
       // This is not a GLO message, wait for first GLO message
       return;
@@ -270,15 +281,16 @@ void sbp_callback_glo_separate_orbit_clock(
   }
 }
 
-void sbp_callback_glo_code_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_glo_code_bias(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *sbp_msg,
+                                void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_CODE_BIASES && !msg_checked) {
-    msg_ssr_code_biases_t *sbp_code_bias = (msg_ssr_code_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrCodeBiases && !msg_checked) {
+    const sbp_msg_ssr_code_biases_t *sbp_code_bias = &sbp_msg->ssr_code_biases;
     if (sbp_code_bias->sid.code != CODE_GLO_L1OF) {
       // This is not a GLO message, wait for first GLO message
       return;
@@ -304,15 +316,17 @@ void sbp_callback_glo_code_bias(
   }
 }
 
-void sbp_callback_gal_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gal_orbit_clock(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GAL_E1B) {
       // This is not a GAL message, wait for first GAL message
       return;
@@ -339,15 +353,17 @@ void sbp_callback_gal_orbit_clock(
   }
 }
 
-void sbp_callback_gal_separate_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gal_separate_orbit_clock(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_GAL_E1B) {
       // This is not a GAL message, wait for first GAL message
       return;
@@ -374,15 +390,16 @@ void sbp_callback_gal_separate_orbit_clock(
   }
 }
 
-void sbp_callback_gal_code_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gal_code_bias(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *sbp_msg,
+                                void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_CODE_BIASES && !msg_checked) {
-    msg_ssr_code_biases_t *sbp_code_bias = (msg_ssr_code_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrCodeBiases && !msg_checked) {
+    const sbp_msg_ssr_code_biases_t *sbp_code_bias = &sbp_msg->ssr_code_biases;
     if (sbp_code_bias->sid.code != CODE_GAL_E1B) {
       // This is not a GAL message, wait for first GAL message
       return;
@@ -408,15 +425,17 @@ void sbp_callback_gal_code_bias(
   }
 }
 
-void sbp_callback_gal_phase_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_gal_phase_bias(uint16_t sender_id,
+                                 sbp_msg_type_t msg_type,
+                                 const sbp_msg_t *sbp_msg,
+                                 void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_PHASE_BIASES && !msg_checked) {
-    msg_ssr_phase_biases_t *sbp_phase_bias = (msg_ssr_phase_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrPhaseBiases && !msg_checked) {
+    const sbp_msg_ssr_phase_biases_t *sbp_phase_bias =
+        &sbp_msg->ssr_phase_biases;
     if (sbp_phase_bias->sid.code != CODE_GAL_E1B) {
       // This is not a GAL message, wait for first GAL message
       return;
@@ -455,15 +474,17 @@ void sbp_callback_gal_phase_bias(
   }
 }
 
-void sbp_callback_bds_orbit_clock(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_bds_orbit_clock(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_ORBIT_CLOCK && !msg_checked) {
-    msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  if (msg_type == SbpMsgSsrOrbitClock && !msg_checked) {
+    const sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock =
+        &sbp_msg->ssr_orbit_clock;
     if (sbp_orbit_clock->sid.code != CODE_BDS2_B1) {
       // This is not a BDS message, wait for first BDS message
       return;
@@ -490,15 +511,16 @@ void sbp_callback_bds_orbit_clock(
   }
 }
 
-void sbp_callback_bds_code_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_bds_code_bias(uint16_t sender_id,
+                                sbp_msg_type_t msg_type,
+                                const sbp_msg_t *sbp_msg,
+                                void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_CODE_BIASES && !msg_checked) {
-    msg_ssr_code_biases_t *sbp_code_bias = (msg_ssr_code_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrCodeBiases && !msg_checked) {
+    const sbp_msg_ssr_code_biases_t *sbp_code_bias = &sbp_msg->ssr_code_biases;
     if (sbp_code_bias->sid.code != CODE_BDS2_B1) {
       // This is not a BDS message, wait for first BDS message
       return;
@@ -522,15 +544,17 @@ void sbp_callback_bds_code_bias(
   }
 }
 
-void sbp_callback_bds_phase_bias(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)length;
+void sbp_callback_bds_phase_bias(uint16_t sender_id,
+                                 sbp_msg_type_t msg_type,
+                                 const sbp_msg_t *sbp_msg,
+                                 void *context) {
   (void)sender_id;
   (void)context;
   /* ignore log messages */
   static bool msg_checked = false;
-  if (msg_id == SBP_MSG_SSR_PHASE_BIASES && !msg_checked) {
-    msg_ssr_phase_biases_t *sbp_phase_bias = (msg_ssr_phase_biases_t *)buffer;
+  if (msg_type == SbpMsgSsrPhaseBiases && !msg_checked) {
+    const sbp_msg_ssr_phase_biases_t *sbp_phase_bias =
+        &sbp_msg->ssr_phase_biases;
     if (sbp_phase_bias->sid.code != CODE_BDS2_B1) {
       // This is not a BDS message, wait for first BDS message
       return;
@@ -703,11 +727,17 @@ typedef struct {
   size_t total_sbp_messages_sent;
 } test_ssr_phase_bias_context_t;
 
-void test_ssr_phase_bias_callback(
-    u16 msg_id, u8 length, u8 *buffer, u16 sender_id, void *context) {
-  (void)msg_id;
-  (void)buffer;
+void test_ssr_phase_bias_callback(uint16_t sender_id,
+                                  sbp_msg_type_t msg_type,
+                                  const sbp_msg_t *sbp_msg,
+                                  void *context) {
+  (void)msg_type;
+  (void)sbp_msg;
   (void)sender_id;
+
+  const sbp_msg_ssr_phase_biases_t *sbp_phase_bias = &sbp_msg->ssr_phase_biases;
+
+  u8 length = sbp_phase_bias->n_biases;
 
   test_ssr_phase_bias_context_t *ctx = (test_ssr_phase_bias_context_t *)context;
   ck_assert_int_eq(
@@ -719,8 +749,8 @@ START_TEST(test_ssr_phase_bias) {
   const gps_time_t local_current_time = {.wn = 2013, .tow = 211190.0};
 
   const size_t max_bias_count =
-      (SBP_MAX_PAYLOAD_LEN - sizeof(msg_ssr_phase_biases_t)) /
-      sizeof(phase_biases_content_t);
+      sizeof(((sbp_msg_ssr_phase_biases_t *)0)->biases) /
+      sizeof(sbp_phase_biases_content_t);
 
   struct rtcm3_sbp_state state;
   test_ssr_phase_bias_context_t context;
@@ -755,7 +785,7 @@ START_TEST(test_ssr_phase_bias) {
   rtcm_msg.sats[0].num_phase_biases = 0;
 
   context.total_sbp_messages_sent = 0;
-  context.expected_sbp_message_lengths[0] = sizeof(msg_ssr_phase_biases_t);
+  context.expected_sbp_message_lengths[0] = 0;
 
   rtcm3_ssr_phase_bias_to_sbp(&rtcm_msg, &state);
   ck_assert_int_eq(context.total_sbp_messages_sent, 1);
@@ -767,9 +797,7 @@ START_TEST(test_ssr_phase_bias) {
   rtcm_msg.sats[0].num_phase_biases = max_bias_count - 1;
 
   context.total_sbp_messages_sent = 0;
-  context.expected_sbp_message_lengths[0] =
-      sizeof(msg_ssr_phase_biases_t) +
-      (max_bias_count - 1) * sizeof(phase_biases_content_t);
+  context.expected_sbp_message_lengths[0] = (max_bias_count - 1);
 
   rtcm3_ssr_phase_bias_to_sbp(&rtcm_msg, &state);
   ck_assert_int_eq(context.total_sbp_messages_sent, 1);
@@ -781,9 +809,7 @@ START_TEST(test_ssr_phase_bias) {
   rtcm_msg.sats[0].num_phase_biases = max_bias_count;
 
   context.total_sbp_messages_sent = 0;
-  context.expected_sbp_message_lengths[0] =
-      sizeof(msg_ssr_phase_biases_t) +
-      (max_bias_count) * sizeof(phase_biases_content_t);
+  context.expected_sbp_message_lengths[0] = max_bias_count;
 
   rtcm3_ssr_phase_bias_to_sbp(&rtcm_msg, &state);
   ck_assert_int_eq(context.total_sbp_messages_sent, 1);
@@ -795,11 +821,8 @@ START_TEST(test_ssr_phase_bias) {
   rtcm_msg.sats[0].num_phase_biases = max_bias_count + 1;
 
   context.total_sbp_messages_sent = 0;
-  context.expected_sbp_message_lengths[0] =
-      sizeof(msg_ssr_phase_biases_t) +
-      (max_bias_count) * sizeof(phase_biases_content_t);
-  context.expected_sbp_message_lengths[1] =
-      sizeof(msg_ssr_phase_biases_t) + sizeof(phase_biases_content_t);
+  context.expected_sbp_message_lengths[0] = max_bias_count;
+  context.expected_sbp_message_lengths[1] = 1;
 
   rtcm3_ssr_phase_bias_to_sbp(&rtcm_msg, &state);
   ck_assert_int_eq(context.total_sbp_messages_sent, 2);

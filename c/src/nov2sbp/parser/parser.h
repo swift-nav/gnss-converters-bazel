@@ -13,6 +13,7 @@
 #ifndef NOVATEL_PARSER_PARSER_H_
 #define NOVATEL_PARSER_PARSER_H_
 
+#include <swiftnav/macros.h>
 #include <unistd.h>  // for size_t
 #include "binary_header.h"
 #include "message.h"
@@ -70,8 +71,7 @@ class Parser {
   uint32_t parse_short_message() const;
   void parse_body(const BinaryHeader &header, const uint8_t *data) const;
   void invoke_callback(const BinaryHeader &header, const void *data) const;
-  void warn(const char *format, ...) const
-      __attribute__((format(printf, 2, 3)));
+  void warn(const char *format, ...) const SWIFT_ATTR_FORMAT(2, 3);
 };
 
 };  // namespace Novatel

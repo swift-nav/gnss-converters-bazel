@@ -11,8 +11,8 @@
  */
 
 #include <gnss-converters/ubx_sbp.h>
-#include <libsbp/gnss.h>
-#include <libsbp/observation.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <string.h>
 #include <swiftnav/common.h>
 #include <swiftnav/ephemeris.h>
@@ -22,9 +22,9 @@
 
 #define GPS_L1CA_PREAMBLE 0x8b
 
-static void pack_ephemeris_gps(const ephemeris_t *e, msg_ephemeris_t *m) {
-  const ephemeris_kepler_t *k = &e->kepler;
-  msg_ephemeris_gps_t *msg = &m->gps;
+static void pack_ephemeris_gps(const ephemeris_t *e,
+                               sbp_msg_ephemeris_gps_t *msg) {
+  const ephemeris_kepler_t *k = &e->data.kepler;
   pack_ephemeris_common_content(e, &msg->common);
   msg->tgd = k->tgd.gps_s[0];
   msg->c_rs = (float)k->crs;
@@ -127,20 +127,18 @@ void gps_decode_subframe(struct ubx_sbp_state *data,
   memset(&e, 0, sizeof(e));
   e.sid.sat = prn;
   e.sid.code = CODE_GPS_L1CA;
-  decode_ephemeris(frame_words, &e, tot_tow_s);
+  decode_ephemeris((const u32(*)[8])frame_words, &e, tot_tow_s);
   if (!e.valid) {
     invalidate_subframes(sat, /*mask=*/0x7);
     return;
   }
-  msg_ephemeris_t msg;
-  memset(&msg, 0, sizeof(msg));
-  pack_ephemeris_gps(&e, &msg);
+  sbp_msg_t sbp_msg;
+  sbp_msg_ephemeris_gps_t *msg = &sbp_msg.ephemeris_gps;
+  memset(msg, 0, sizeof(*msg));
+  pack_ephemeris_gps(&e, msg);
 
   assert(data->cb_ubx_to_sbp);
-  data->cb_ubx_to_sbp(SBP_MSG_EPHEMERIS_GPS,
-                      (u8)sizeof(msg.gps),
-                      (u8 *)&msg.gps,
-                      data->sender_id,
-                      data->context);
+  data->cb_ubx_to_sbp(
+      data->sender_id, SbpMsgEphemerisGps, &sbp_msg, data->context);
   invalidate_subframes(sat, /*mask=*/0x7);
 }

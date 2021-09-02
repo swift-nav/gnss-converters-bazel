@@ -14,16 +14,19 @@
 #define GNSS_CONVERTERS_SBAS_H
 
 #include <gnss-converters/eph_sat_data.h>
-#include <libsbp/sbas.h>
+#include <libsbp/v4/sbas.h>
+#include <libsbp/v4/sbp_msg.h>
 
-void sbas_decode_subframe(
-    struct eph_sat_data *data,
-    uint32_t tow_ms,
-    int prn,
-    const u32 words[],
-    int sz,
-    u16 sender_id,
-    void *context,
-    void (*sbp_cb)(u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx));
+void sbas_decode_subframe(struct eph_sat_data *data,
+                          uint32_t tow_ms,
+                          int prn,
+                          const u32 words[],
+                          int sz,
+                          u16 sender_id,
+                          void *context,
+                          void (*sbp_cb)(uint16_t sender_id,
+                                         sbp_msg_type_t msg_type,
+                                         const sbp_msg_t *msg,
+                                         void *context));
 
 #endif /* #ifndef GNSS_CONVERTERS_SBAS_H */

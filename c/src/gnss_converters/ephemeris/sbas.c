@@ -11,8 +11,8 @@
  */
 
 #include <gnss-converters/ubx_sbp.h>
-#include <libsbp/gnss.h>
-#include <libsbp/sbas.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/sbas.h>
 #include <string.h>
 #include <swiftnav/bits.h>
 #include <swiftnav/common.h>
@@ -23,11 +23,11 @@
 #include "common.h"
 
 /** SBAS preamble 1 0x53 */
-#define SBAS_PREAMBLE1 (0b01010011u)
+#define SBAS_PREAMBLE1 (0x53u)
 /** SBAS preamble 2 0x9a */
-#define SBAS_PREAMBLE2 (0b10011010u)
+#define SBAS_PREAMBLE2 (0x9au)
 /** SBAS preamble 3 0xc6 */
-#define SBAS_PREAMBLE3 (0b11000110u)
+#define SBAS_PREAMBLE3 (0xc6u)
 /** SBAS L1 message length [bits] */
 #define SBAS_MSG_LENGTH (250)
 /** SBAS preamble length in bits */
@@ -46,7 +46,7 @@ static void pack_sbas_data(const u8 *buffer,
                            u8 prn,
                            u32 tow_ms,
                            u8 message_type,
-                           msg_sbas_raw_t *msg) {
+                           sbp_msg_sbas_raw_t *msg) {
   msg->sid.code = CODE_SBAS_L1CA;
   msg->sid.sat = prn;
   msg->tow = tow_ms;
@@ -68,15 +68,17 @@ static void pack_sbas_data(const u8 *buffer,
  * @param sz must be 8 (number of 32 bit words per one SBAS message) or 9
  * (workaround for an alleged bug on u-blox F9 series receivers)
  */
-void sbas_decode_subframe(
-    struct eph_sat_data *data,
-    uint32_t tow_ms,
-    int prn,
-    const u32 words[],
-    int sz,
-    u16 sender_id,
-    void *context,
-    void (*sbp_cb)(u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx)) {
+void sbas_decode_subframe(struct eph_sat_data *data,
+                          uint32_t tow_ms,
+                          int prn,
+                          const u32 words[],
+                          int sz,
+                          u16 sender_id,
+                          void *context,
+                          void (*sbp_cb)(uint16_t sender_id,
+                                         sbp_msg_type_t msg_type,
+                                         const sbp_msg_t *msg,
+                                         void *context)) {
   (void)data;
   assert(words);
   if (prn < SBAS_FIRST_PRN || prn >= (SBAS_FIRST_PRN + NUM_SATS_SBAS) ||
@@ -116,10 +118,11 @@ void sbas_decode_subframe(
     return;
   }
 
-  msg_sbas_raw_t msg;
-  memset(&msg, 0, sizeof(msg));
-  pack_sbas_data(buffer, prn, tow_ms, message_type, &msg);
+  sbp_msg_t sbp_msg;
+  sbp_msg_sbas_raw_t *msg = &sbp_msg.sbas_raw;
+  memset(msg, 0, sizeof(*msg));
+  pack_sbas_data(buffer, prn, tow_ms, message_type, msg);
 
   assert(sbp_cb);
-  sbp_cb(SBP_MSG_SBAS_RAW, (u8)sizeof(msg), (u8 *)&msg, sender_id, context);
+  sbp_cb(sender_id, SbpMsgSbasRaw, &sbp_msg, context);
 }

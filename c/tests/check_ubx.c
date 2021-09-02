@@ -14,12 +14,11 @@
 
 #include <check.h>
 #include <libsbp/edc.h>
-#include <libsbp/imu.h>
-#include <libsbp/orientation.h>
-#include <libsbp/sbas.h>
-#include <libsbp/system.h>
-#include <libsbp/tracking.h>
-#include <libsbp/vehicle.h>
+#include <libsbp/v4/orientation.h>
+#include <libsbp/v4/sbas.h>
+#include <libsbp/v4/system.h>
+#include <libsbp/v4/tracking.h>
+#include <libsbp/v4/vehicle.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -52,114 +51,99 @@ struct temperature_encoding_expectations {
   int msg_index;
 };
 
+static void check_encoded_crc(uint16_t sender_id,
+                              sbp_msg_type_t msg_type,
+                              const sbp_msg_t *sbp_msg,
+                              uint16_t expected_crc) {
+  uint8_t encoded[SBP_MAX_PAYLOAD_LEN];
+  uint8_t written;
+
+  s8 ret = sbp_message_encode(
+      encoded, SBP_MAX_PAYLOAD_LEN, &written, msg_type, sbp_msg);
+  ck_assert(ret == SBP_OK);
+
+  uint8_t tmpbuf[5];
+  tmpbuf[0] = (uint8_t)msg_type;
+  tmpbuf[1] = (uint8_t)(((uint16_t)msg_type) >> 8);
+  tmpbuf[2] = (uint8_t)sender_id;
+  tmpbuf[3] = (uint8_t)(sender_id >> 8);
+  tmpbuf[4] = (uint8_t)written;
+
+  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
+  crc = crc16_ccitt(encoded, written, crc);
+  ck_assert(crc == expected_crc);
+}
+
 static const uint16_t hnr_pvt_crc[] = {57519, 39729};
-static void ubx_sbp_callback_hnr_pvt(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_hnr_pvt(uint16_t sender_id,
+                                     sbp_msg_type_t msg_type,
+                                     const sbp_msg_t *sbp_msg,
+                                     void *context) {
   (void)context;
   static int msg_index = 0;
   const u16 msg_order[] = {SBP_MSG_POS_LLH, SBP_MSG_ORIENT_EULER};
-  ck_assert_msg(msg_id == msg_order[msg_index],
+  ck_assert_msg(msg_type == msg_order[msg_index],
                 "Unexpected SBP message created");
 
-  /* This test depends on nav_pvt working correctly, since the first message is
-   * a nav_pvt message */
-  if (msg_id == SBP_MSG_POS_LLH) {
-    ck_assert(length == sizeof(msg_pos_llh_t));
-  }
-  if (msg_id == SBP_MSG_ORIENT_EULER) {
-    ck_assert(length == sizeof(msg_orient_euler_t));
-  }
-
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == hnr_pvt_crc[msg_index]);
-
+  check_encoded_crc(sender_id, msg_type, sbp_msg, hnr_pvt_crc[msg_index]);
   msg_index++;
 }
 
 static const uint16_t hnr_pvt_disabled_crc[] = {41409};
-static void ubx_sbp_callback_hnr_pvt_disabled(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_hnr_pvt_disabled(uint16_t sender_id,
+                                              sbp_msg_type_t msg_type,
+                                              const sbp_msg_t *sbp_msg,
+                                              void *context) {
   (void)context;
   static int msg_index = 0;
 
   /* This test depends on nav_pvt working correctly, since the first message is
    * a nav_pvt message */
-  ck_assert(msg_id == SBP_MSG_POS_LLH);
-  ck_assert(length == sizeof(msg_pos_llh_t));
+  ck_assert(msg_type == SBP_MSG_POS_LLH);
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == hnr_pvt_disabled_crc[msg_index]);
-
+  check_encoded_crc(
+      sender_id, msg_type, sbp_msg, hnr_pvt_disabled_crc[msg_index]);
   msg_index++;
 }
 
 static const uint16_t rxm_rawx_crc[] = {49772, 41438, 50010, 52301, 10854};
-static void ubx_sbp_callback_rxm_rawx(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_rxm_rawx(uint16_t sender_id,
+                                      sbp_msg_type_t msg_type,
+                                      const sbp_msg_t *sbp_msg,
+                                      void *context) {
   (void)context;
   static int msg_index = 0;
 
-  ck_assert(msg_id == SBP_MSG_OBS);
+  ck_assert(msg_type == SBP_MSG_OBS);
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == rxm_rawx_crc[msg_index]);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, rxm_rawx_crc[msg_index]);
   msg_index++;
 }
 
 static const u16 rxm_sfrbx_gps_crc = 0xC040;
-static void ubx_sbp_callback_rxm_sfrbx_gps(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_rxm_sfrbx_gps(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)context;
 
-  ck_assert(msg_id == SBP_MSG_EPHEMERIS_GPS);
+  ck_assert(msg_type == SBP_MSG_EPHEMERIS_GPS);
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == rxm_sfrbx_gps_crc);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, rxm_sfrbx_gps_crc);
 }
 
-static void ubx_sbp_callback_rxm_sfrbx_glo(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
-  (void)length;
+static void ubx_sbp_callback_rxm_sfrbx_glo(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)sender_id;
   (void)context;
 
-  if (msg_id != SBP_MSG_EPHEMERIS_GLO) {
+  if (msg_type != SBP_MSG_EPHEMERIS_GLO) {
     return;
   }
 
-  msg_ephemeris_glo_t *eph = (msg_ephemeris_glo_t *)buff;
+  const sbp_msg_ephemeris_glo_t *eph = &sbp_msg->ephemeris_glo;
 
   ck_assert(eph->common.toe.wn == 2081);
   ck_assert(eph->common.toe.tow == 251118);
@@ -167,65 +151,51 @@ static void ubx_sbp_callback_rxm_sfrbx_glo(
 }
 
 static const u16 rxm_sfrbx_bds_crc = 0x3EA4;
-static void ubx_sbp_callback_rxm_sfrbx_bds(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_rxm_sfrbx_bds(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)context;
 
-  ck_assert(msg_id == SBP_MSG_EPHEMERIS_BDS);
+  ck_assert(msg_type == SBP_MSG_EPHEMERIS_BDS);
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == rxm_sfrbx_bds_crc);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, rxm_sfrbx_bds_crc);
 }
 
 static const u16 rxm_sfrbx_gal_crc = 0x4929;
-static void ubx_sbp_callback_rxm_sfrbx_gal(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_rxm_sfrbx_gal(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)context;
 
-  ck_assert(msg_id == SBP_MSG_EPHEMERIS_GAL);
-
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == rxm_sfrbx_gal_crc);
+  ck_assert(msg_type == SBP_MSG_EPHEMERIS_GAL);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, rxm_sfrbx_gal_crc);
 }
 
-static void ubx_sbp_callback_rxm_sfrbx_sbas(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
-  (void)buff;
+static void ubx_sbp_callback_rxm_sfrbx_sbas(uint16_t sender_id,
+                                            sbp_msg_type_t msg_type,
+                                            const sbp_msg_t *sbp_msg,
+                                            void *context) {
+  (void)sbp_msg;
   (void)sender_id;
   (void)context;
 
-  ck_assert(msg_id == SBP_MSG_SBAS_RAW);
-  ck_assert(length == 34);
+  ck_assert(msg_type == SBP_MSG_SBAS_RAW);
 }
 
-static void ubx_sbp_callback_nav_sat(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_sat(uint16_t sender_id,
+                                     sbp_msg_type_t msg_type,
+                                     const sbp_msg_t *sbp_msg,
+                                     void *context) {
   (void)context;
-  (void)buff;
   (void)sender_id;
-  (void)length;
   static int msg_index = 0;
   const u16 msg_order[] = {SBP_MSG_SV_AZ_EL, SBP_MSG_MEASUREMENT_STATE};
-  ck_assert_msg(msg_id == msg_order[msg_index++],
+  ck_assert_msg(msg_type == msg_order[msg_index++],
                 "Unexpected SBP message created");
-  if (msg_id == SBP_MSG_SV_AZ_EL) {
-    msg_sv_az_el_t *msg = (msg_sv_az_el_t *)buff;
+  if (msg_type == SBP_MSG_SV_AZ_EL) {
+    const sbp_msg_sv_az_el_t *msg = &sbp_msg->sv_az_el;
     ck_assert_uint_eq(msg->azel[0].sid.sat, 0);
     ck_assert_uint_eq(msg->azel[0].sid.code, CODE_GPS_L1CA);
     ck_assert_uint_eq(msg->azel[0].az, 4);
@@ -238,10 +208,10 @@ static void ubx_sbp_callback_nav_sat(
     ck_assert_uint_eq(msg->azel[2].sid.code, CODE_BDS2_B1);
     ck_assert_uint_eq(msg->azel[2].az, 30);
     ck_assert_int_eq(msg->azel[2].el, 3);
-    ck_assert_int_eq(length, 12);
+    ck_assert_int_eq(msg->n_azel, 3);
   }
-  if (msg_id == SBP_MSG_MEASUREMENT_STATE) {
-    msg_measurement_state_t *msg = (msg_measurement_state_t *)buff;
+  if (msg_type == SBP_MSG_MEASUREMENT_STATE) {
+    const sbp_msg_measurement_state_t *msg = &sbp_msg->measurement_state;
     ck_assert_uint_eq(msg->states[0].mesid.sat, 0);
     ck_assert_uint_eq(msg->states[0].mesid.code, CODE_GPS_L1CA);
     ck_assert_uint_eq(msg->states[0].cn0, 12);
@@ -251,22 +221,23 @@ static void ubx_sbp_callback_nav_sat(
     ck_assert_uint_eq(msg->states[2].mesid.sat, 2);
     ck_assert_uint_eq(msg->states[2].mesid.code, CODE_BDS2_B1);
     ck_assert_uint_eq(msg->states[2].cn0, 80);
-    ck_assert_uint_eq(length, 9);
+    ck_assert_uint_eq(msg->n_states, 3);
   }
 }
 
-static void ubx_sbp_callback_nav_status(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_status(uint16_t sender_id,
+                                        sbp_msg_type_t msg_type,
+                                        const sbp_msg_t *sbp_msg,
+                                        void *context) {
   (void)context;
   (void)sender_id;
-  (void)length;
   static int msg_index = 0;
   const u16 msg_order[] = {
       SBP_MSG_OBS, SBP_MSG_IMU_AUX, SBP_MSG_IMU_RAW, SBP_MSG_GNSS_TIME_OFFSET};
-  ck_assert_msg(msg_id == msg_order[msg_index++],
+  ck_assert_msg(msg_type == msg_order[msg_index++],
                 "Unexpected SBP message created");
-  if (msg_id == SBP_MSG_GNSS_TIME_OFFSET) {
-    msg_gnss_time_offset_t *msg = (msg_gnss_time_offset_t *)buff;
+  if (msg_type == SBP_MSG_GNSS_TIME_OFFSET) {
+    const sbp_msg_gnss_time_offset_t *msg = &sbp_msg->gnss_time_offset;
     // The GPS week of the obs message was 1234, so this should also be the week
     // offset.
     ck_assert_int_eq(msg->weeks, 1234);
@@ -278,11 +249,12 @@ static void ubx_sbp_callback_nav_status(
   }
 }
 
-static void ubx_sbp_callback_imu_timestamp(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_imu_timestamp(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)context;
   (void)sender_id;
-  (void)length;
   static int msg_index = 0;
   u16 msg_order[23];
   msg_order[0] = SBP_MSG_IMU_AUX;
@@ -291,10 +263,10 @@ static void ubx_sbp_callback_imu_timestamp(
     msg_order[idx] = SBP_MSG_IMU_RAW;
   }
 
-  ck_assert_msg(msg_id == msg_order[msg_index],
+  ck_assert_msg(msg_type == msg_order[msg_index],
                 "Unexpected SBP message created");
-  if (msg_id == SBP_MSG_IMU_RAW) {
-    msg_imu_raw_t *msg = (msg_imu_raw_t *)buff;
+  if (msg_type == SBP_MSG_IMU_RAW) {
+    const sbp_msg_imu_raw_t *msg = &sbp_msg->imu_raw;
     const uint32_t mask = 0x3FFFFFFF;
     uint32_t timing_mode = (msg->tow & (~mask)) >> 30;
     uint32_t cpu_local_time = 1;
@@ -324,18 +296,19 @@ static void ubx_sbp_callback_imu_timestamp(
   msg_index++;
 }
 
-static void ubx_sbp_callback_msss_rollover(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_msss_rollover(uint16_t sender_id,
+                                           sbp_msg_type_t msg_type,
+                                           const sbp_msg_t *sbp_msg,
+                                           void *context) {
   (void)context;
   (void)sender_id;
-  (void)length;
   static int msg_index = 0;
   u16 msg_order[] = {SBP_MSG_IMU_AUX, SBP_MSG_IMU_RAW, SBP_MSG_IMU_RAW};
 
-  ck_assert_msg(msg_id == msg_order[msg_index],
+  ck_assert_msg(msg_type == msg_order[msg_index],
                 "Unexpected SBP message created");
-  if (msg_id == SBP_MSG_IMU_RAW) {
-    msg_imu_raw_t *msg = (msg_imu_raw_t *)buff;
+  if (msg_type == SBP_MSG_IMU_RAW) {
+    const sbp_msg_imu_raw_t *msg = &sbp_msg->imu_raw;
     const uint32_t mask = 0x3FFFFFFF;
     uint32_t timing_mode = (msg->tow & (~mask)) >> 30;
     uint32_t cpu_local_time = 1;
@@ -351,8 +324,10 @@ static void ubx_sbp_callback_msss_rollover(
 
 static const u16 esf_meas_crc[] = {
     0xBBD3, 0xBBD3, 0xFF50, 0x5501, 0x1182, 0xBBD3, 0x69F6, 0xF101};
-static void ubx_sbp_callback_esf_meas(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_esf_meas(uint16_t sender_id,
+                                      sbp_msg_type_t msg_type,
+                                      const sbp_msg_t *sbp_msg,
+                                      void *context) {
   (void)context;
 
   static int msg_index = 0;
@@ -361,8 +336,8 @@ static void ubx_sbp_callback_esf_meas(
   u8 velocity_source = -1;
   s32 velocity = 0;
   if (msg_index < 6) {
-    ck_assert(msg_id == SBP_MSG_WHEELTICK);
-    msg_wheeltick_t *msg = (msg_wheeltick_t *)buff;
+    ck_assert(msg_type == SBP_MSG_WHEELTICK);
+    const sbp_msg_wheeltick_t *msg = &sbp_msg->wheeltick;
 
     const u8 time_source = msg->flags;
     velocity_source = msg->source;
@@ -370,8 +345,8 @@ static void ubx_sbp_callback_esf_meas(
     ck_assert_int_eq(msg->time, 25269459000);
     ck_assert_int_eq(time_source, 2);
   } else {
-    ck_assert(msg_id == SBP_MSG_ODOMETRY);
-    msg_odometry_t *msg = (msg_odometry_t *)buff;
+    ck_assert(msg_type == SBP_MSG_ODOMETRY);
+    const sbp_msg_odometry_t *msg = &sbp_msg->odometry;
     const u8 vel_source_mask = 0b11000;
     const u8 time_source_mask = 0x3;
     velocity_source = (msg->flags & vel_source_mask) >> 3;
@@ -387,17 +362,7 @@ static void ubx_sbp_callback_esf_meas(
   ck_assert(velocity_source == vel_sources[msg_index]);
   ck_assert_int_eq(velocity, 25677);
 
-  /* Check the CRCs */
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert_int_eq(crc, esf_meas_crc[msg_index]);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, esf_meas_crc[msg_index]);
   msg_index++;
 }
 
@@ -412,16 +377,18 @@ static const u16 esf_raw_crc[] = {0x4214,
                                   0xB864,
                                   0x920D,
                                   0x87A8};
-static void ubx_sbp_callback_esf_raw(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_esf_raw(uint16_t sender_id,
+                                     sbp_msg_type_t msg_type,
+                                     const sbp_msg_t *sbp_msg,
+                                     void *context) {
   (void)context;
   static int msg_index = 0;
 
   /* Check that the first message we receive contains the IMU configuration with
      the expected IMU ranges */
   if (msg_index == 0) {
-    ck_assert(msg_id == SBP_MSG_IMU_AUX);
-    msg_imu_aux_t *msg = (msg_imu_aux_t *)buff;
+    ck_assert(msg_type == SBP_MSG_IMU_AUX);
+    const sbp_msg_imu_aux_t *msg = &sbp_msg->imu_aux;
     ck_assert(msg->imu_type == 0);
     const u8 gyro_mask = 0xF0;
     const u8 acc_mask = 0x0F;
@@ -432,8 +399,8 @@ static void ubx_sbp_callback_esf_raw(
     /* Check that accelerometer range is set to 4 g */
     ck_assert(acc_mode == 1);
   } else {
-    ck_assert(msg_id == SBP_MSG_IMU_RAW);
-    msg_imu_raw_t *msg = (msg_imu_raw_t *)buff;
+    ck_assert(msg_type == SBP_MSG_IMU_RAW);
+    const sbp_msg_imu_raw_t *msg = &sbp_msg->imu_raw;
     const u32 mask = 0x3FFFFFFF;
     ck_assert_int_ge(msg->tow & mask, 834462);
     ck_assert_int_le(msg->tow & mask, 834551);
@@ -442,70 +409,46 @@ static void ubx_sbp_callback_esf_raw(
   /* Check that we won't receive more than 11 messages from this test file */
   ck_assert_int_lt(msg_index, 11);
   /* Check the CRCs */
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert_int_eq(crc, esf_raw_crc[msg_index]);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, esf_raw_crc[msg_index]);
   msg_index++;
 }
 
 static const uint16_t nav_att_crc[] = {63972, 57794};
-static void ubx_sbp_callback_nav_att(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_att(uint16_t sender_id,
+                                     sbp_msg_type_t msg_type,
+                                     const sbp_msg_t *sbp_msg,
+                                     void *context) {
   (void)context;
   static int msg_index = 0;
 
   /* This test depends on nav_pvt working correctly, since the first message is
    * a nav_pvt message */
   if (msg_index == 0) {
-    ck_assert(msg_id == SBP_MSG_POS_LLH);
-    ck_assert(length == sizeof(msg_pos_llh_t));
+    ck_assert(msg_type == SBP_MSG_POS_LLH);
   } else {
-    ck_assert(msg_id == SBP_MSG_ORIENT_EULER);
-    ck_assert(length == sizeof(msg_orient_euler_t));
+    ck_assert(msg_type == SBP_MSG_ORIENT_EULER);
   }
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_att_crc[msg_index]);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, nav_att_crc[msg_index]);
   msg_index++;
 }
 
 static const uint16_t nav_pvt_crc = 23845;
-static void ubx_sbp_callback_nav_pvt(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_pvt(uint16_t sender_id,
+                                     sbp_msg_type_t msg_type,
+                                     const sbp_msg_t *sbp_msg,
+                                     void *context) {
   (void)context;
-  ck_assert(msg_id == SBP_MSG_POS_LLH);
-  ck_assert(length == sizeof(msg_pos_llh_t));
+  ck_assert(msg_type == SBP_MSG_POS_LLH);
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_pvt_crc);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, nav_pvt_crc);
 }
 
 static const uint16_t nav_pvt_corrupted_crc = 23845;
-static void ubx_sbp_callback_nav_pvt_corrupted(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_pvt_corrupted(uint16_t sender_id,
+                                               sbp_msg_type_t msg_type,
+                                               const sbp_msg_t *sbp_msg,
+                                               void *context) {
   (void)context;
   static int msg_index = 0;
 
@@ -515,19 +458,8 @@ static void ubx_sbp_callback_nav_pvt_corrupted(
    */
   ck_assert(msg_index == 0);
 
-  ck_assert(msg_id == SBP_MSG_POS_LLH);
-  ck_assert(length == sizeof(msg_pos_llh_t));
-
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_pvt_corrupted_crc);
+  ck_assert(msg_type == SBP_MSG_POS_LLH);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, nav_pvt_corrupted_crc);
 
   msg_index++;
 }
@@ -548,8 +480,10 @@ static const uint16_t nav_pvt_fix_type_crc[] = {32103,
                                                 32103,
                                                 64623,
                                                 27974};
-static void ubx_sbp_callback_nav_pvt_fix_type(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_pvt_fix_type(uint16_t sender_id,
+                                              sbp_msg_type_t msg_type,
+                                              const sbp_msg_t *sbp_msg,
+                                              void *context) {
   (void)context;
   static int msg_index = 0;
 
@@ -557,89 +491,63 @@ static void ubx_sbp_callback_nav_pvt_fix_type(
    * gnssFix true simultaneously). If we add semantic sanity checks to ubx_sbp
    * in the future, this test will need to be updated.
    */
-  ck_assert(msg_id == SBP_MSG_POS_LLH);
-  ck_assert(length == sizeof(msg_pos_llh_t));
-
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_pvt_fix_type_crc[msg_index]);
+  ck_assert(msg_type == SBP_MSG_POS_LLH);
+  check_encoded_crc(
+      sender_id, msg_type, sbp_msg, nav_pvt_fix_type_crc[msg_index]);
 
   msg_index++;
 }
 
 static const uint16_t nav_pvt_set_sender_id_crc[] = {19827};
-static void ubx_sbp_callback_nav_pvt_set_sender_id(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_pvt_set_sender_id(uint16_t sender_id,
+                                                   sbp_msg_type_t msg_type,
+                                                   const sbp_msg_t *sbp_msg,
+                                                   void *context) {
   (void)context;
   static int msg_index = 0;
 
-  ck_assert(msg_id == SBP_MSG_POS_LLH);
-  ck_assert(length == sizeof(msg_pos_llh_t));
-
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_pvt_set_sender_id_crc[msg_index]);
+  ck_assert(msg_type == SBP_MSG_POS_LLH);
+  check_encoded_crc(
+      sender_id, msg_type, sbp_msg, nav_pvt_set_sender_id_crc[msg_index]);
 
   msg_index++;
 }
 
 static const uint16_t nav_vel_ecef_crc[] = {57757, 36858};
-static void ubx_sbp_callback_nav_vel_ecef(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_nav_vel_ecef(uint16_t sender_id,
+                                          sbp_msg_type_t msg_type,
+                                          const sbp_msg_t *sbp_msg,
+                                          void *context) {
   (void)context;
   static int msg_index = 0;
 
   /* This test depends on nav_pvt working correctly, since the first message is
    * a nav_pvt message */
   if (msg_index == 0) {
-    ck_assert(msg_id == SBP_MSG_POS_LLH);
-    ck_assert(length == sizeof(msg_pos_llh_t));
+    ck_assert(msg_type == SBP_MSG_POS_LLH);
   } else if (msg_index == 1) {
-    ck_assert(msg_id == SBP_MSG_VEL_ECEF);
-    ck_assert(length == sizeof(msg_vel_ecef_t));
+    ck_assert(msg_type == SBP_MSG_VEL_ECEF);
   } else {
     ck_assert(false && "unexpected message");
   }
 
-  uint8_t tmpbuf[5];
-  tmpbuf[0] = (uint8_t)msg_id;
-  tmpbuf[1] = (uint8_t)(msg_id >> 8);
-  tmpbuf[2] = (uint8_t)sender_id;
-  tmpbuf[3] = (uint8_t)(sender_id >> 8);
-  tmpbuf[4] = (uint8_t)length;
-
-  u16 crc = crc16_ccitt(tmpbuf, sizeof(tmpbuf), 0);
-  crc = crc16_ccitt(buff, length, crc);
-  ck_assert(crc == nav_vel_ecef_crc[msg_index]);
+  check_encoded_crc(sender_id, msg_type, sbp_msg, nav_vel_ecef_crc[msg_index]);
 
   msg_index++;
 }
 
-static void ubx_sbp_callback_wheeltick_sign_handling(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
-  (void)length;
+static void ubx_sbp_callback_wheeltick_sign_handling(uint16_t sender_id,
+                                                     sbp_msg_type_t msg_type,
+                                                     const sbp_msg_t *sbp_msg,
+                                                     void *context) {
   (void)sender_id;
   (void)context;
   static int msg_index = 0;
   uint16_t expected_messages[] = {
       SBP_MSG_WHEELTICK, SBP_MSG_WHEELTICK, SBP_MSG_WHEELTICK};
 
-  ck_assert_int_eq(msg_id, expected_messages[msg_index]);
-  msg_wheeltick_t *msg_wheeltick = (msg_wheeltick_t *)buff;
+  ck_assert_int_eq(msg_type, expected_messages[msg_index]);
+  const sbp_msg_wheeltick_t *msg_wheeltick = &sbp_msg->wheeltick;
   if (msg_index == 0) {
     // Inserted first wheeltick message has tick count 91011
     ck_assert_uint_eq(msg_wheeltick->time, 1234000);
@@ -663,17 +571,18 @@ static void ubx_sbp_callback_wheeltick_sign_handling(
   msg_index++;
 }
 
-static void ubx_sbp_callback_speed_sign_handling(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
-  (void)length;
+static void ubx_sbp_callback_speed_sign_handling(uint16_t sender_id,
+                                                 sbp_msg_type_t msg_type,
+                                                 const sbp_msg_t *sbp_msg,
+                                                 void *context) {
   (void)sender_id;
   (void)context;
   static int msg_index = 0;
   uint16_t expected_messages[] = {
       SBP_MSG_ODOMETRY, SBP_MSG_ODOMETRY, SBP_MSG_ODOMETRY};
 
-  ck_assert_int_eq(msg_id, expected_messages[msg_index]);
-  msg_odometry_t *msg_odometry = (msg_odometry_t *)buff;
+  ck_assert_int_eq(msg_type, expected_messages[msg_index]);
+  const sbp_msg_odometry_t *msg_odometry = &sbp_msg->odometry;
   if (msg_index == 0) {
     // Inserted first wheeltick message has tick count 91011
     ck_assert_uint_eq(msg_odometry->tow, 1234);
@@ -696,29 +605,32 @@ static void ubx_sbp_callback_speed_sign_handling(
 }
 
 static void ubx_sbp_callback_test_no_conversion_invalid_calibtag(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
-  (void)length;
+    uint16_t sender_id,
+    sbp_msg_type_t msg_type,
+    const sbp_msg_t *sbp_msg,
+    void *context) {
   (void)sender_id;
   (void)context;
-  (void)msg_id;
-  (void)buff;
+  (void)msg_type;
+  (void)sbp_msg;
 #ifndef GNSS_CONVERTERS_DISABLE_CRC_VALIDATION
   ck_assert_msg(false, "No SBP message output expected for this test");
 #endif
 }
 
-static void ubx_sbp_callback_imu_temperature(
-    u16 msg_id, u8 length, u8 *buff, u16 sender_id, void *context) {
+static void ubx_sbp_callback_imu_temperature(uint16_t sender_id,
+                                             sbp_msg_type_t msg_type,
+                                             const sbp_msg_t *sbp_msg,
+                                             void *context) {
   (void)sender_id;
   (void)context;
-  (void)length;
   struct temperature_encoding_expectations *expectations =
       (struct temperature_encoding_expectations *)context;
   uint16_t expected_messages[] = {SBP_MSG_IMU_AUX, SBP_MSG_IMU_RAW};
-  ck_assert_int_eq(msg_id, expected_messages[expectations->msg_index]);
+  ck_assert_int_eq(msg_type, expected_messages[expectations->msg_index]);
 
   if (expectations->msg_index == 0) {
-    msg_imu_aux_t *msg = (msg_imu_aux_t *)buff;
+    const sbp_msg_imu_aux_t *msg = &sbp_msg->imu_aux;
     ck_assert_int_eq(
         msg->temp,
         (int)round((expectations->expected_temperature - 23.0) * 512.0));

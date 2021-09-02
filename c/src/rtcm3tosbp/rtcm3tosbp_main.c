@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <libsbp/sbp.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,9 +21,9 @@ static int readfn(uint8_t *buf, size_t len, void *context) {
   return (int)read(STDIN_FILENO, buf, len);
 }
 
-static int writefn(const uint8_t *buf, size_t count, void *context) {
+static s32 writefn(u8 *buff, u32 n, void *context) {
   (void)context;
-  return (int)write(STDOUT_FILENO, buf, count);
+  return (s32)write(STDOUT_FILENO, buff, n);
 }
 
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
@@ -32,7 +33,7 @@ int rtcm3tosbp_main(int argc,
                     char **argv,
                     const char *additional_opts_help,
                     readfn_ptr readfn,
-                    writefn_ptr writefn,
+                    sbp_write_fn_t writefn,
                     void *context);
 
 int main(int argc, char **argv) {

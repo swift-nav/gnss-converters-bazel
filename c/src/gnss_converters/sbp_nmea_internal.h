@@ -26,6 +26,6 @@
 void get_utc_time_string(bool time,
                          bool date,
                          bool trunc_date,
-                         const msg_utc_time_t *sbp_utc_time,
+                         const sbp_msg_utc_time_t *sbp_utc_time,
                          char *utc_str,
                          u8 size);

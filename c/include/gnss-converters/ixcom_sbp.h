@@ -33,24 +33,27 @@ struct ixcom_sbp_state {
   u8 read_buffer[IXCOM_BUFFER_SIZE];
   size_t index;
   u16 sender_id;
-  int (*read_stream_func)(u8 *buf, size_t len, void *ctx);
-  void (*cb_ixcom_to_sbp)(
-      u16 msg_id, u8 length, u8 *buf, u16 sender_id, void *ctx);
+  int (*read_stream_func)(u8 *buf, size_t len, void *context);
+  void (*cb_ixcom_to_sbp)(u16 sender_id,
+                          sbp_msg_type_t msg_type,
+                          const sbp_msg_t *msg,
+                          void *context);
   void *context;
   u8 imu_raw_msgs_sent;
 };
 
 void ixcom_sbp_init(struct ixcom_sbp_state *state,
-                    void (*cb_ixcom_to_sbp)(u16 msg_id,
-                                            u8 length,
-                                            u8 *buff,
-                                            u16 sender_id,
+                    void (*cb_ixcom_to_sbp)(u16 sender_id,
+                                            sbp_msg_type_t msg_type,
+                                            const sbp_msg_t *msg,
                                             void *context),
                     void *context);
 void ixcom_handle_frame(struct ixcom_sbp_state *state);
 void ixcom_set_sender_id(struct ixcom_sbp_state *state, u16 sender_id);
 int ixcom_sbp_process(struct ixcom_sbp_state *state,
-                      int (*read_stream_func)(u8 *buff, size_t len, void *ctx));
+                      int (*read_stream_func)(u8 *buff,
+                                              size_t len,
+                                              void *context));
 
 #ifdef __cplusplus
 }

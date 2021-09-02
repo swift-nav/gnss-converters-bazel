@@ -35,62 +35,53 @@ static void real_do_gpths_test(const char *file,
   sbp2nmea_soln_freq_set(&state, 10);
   sbp2nmea_rate_set(&state, 1, SBP2NMEA_NMEA_THS);
 
+  sbp_msg_t sbp_msg;
+
   // Group meta first. Normally the fused wagon would be much bigger than this
   // but for GPTHS we only need POS_LLH_COV and ORIENT_EULER so can just skip
   // everything else. sbp2nmea looks for SOLN_META to mark the end of the fused
   // wagon so we have to include that one as well, plus GROUP_META to start the
   // sequence
-  uint8_t msg_group_meta_buf[SBP_MAX_PAYLOAD_LEN];
-  memset(msg_group_meta_buf, 0, sizeof(msg_group_meta_buf));
-  msg_group_meta_t *msg_group_meta = (msg_group_meta_t *)msg_group_meta_buf;
+  memset(&sbp_msg, 0, sizeof(sbp_msg));
+  sbp_msg_group_meta_t *msg_group_meta = &sbp_msg.group_meta;
   msg_group_meta->n_group_msgs = 4;
   msg_group_meta->group_msgs[0] = SBP_MSG_UTC_TIME;
   msg_group_meta->group_msgs[1] = SBP_MSG_POS_LLH_COV;
   msg_group_meta->group_msgs[2] = SBP_MSG_ORIENT_EULER;
   msg_group_meta->group_msgs[3] = SBP_MSG_SOLN_META;
-  sbp2nmea(&state,
-           sizeof(*msg_group_meta) + sizeof(uint16_t) * 4,
-           msg_group_meta,
-           SBP2NMEA_SBP_GROUP_META);
+  msg_group_meta->n_group_msgs = 4;
+  sbp2nmea(&state, &sbp_msg, SBP2NMEA_SBP_GROUP_META);
 
   // Need a UTC time message in all cases, only the tow needs to be correct
-  msg_utc_time_t msg_utc_time;
-  memset(&msg_utc_time, 0, sizeof(msg_utc_time));
-  msg_utc_time.tow = 135264000;
-  msg_utc_time.flags = 1;
-  sbp2nmea(&state, sizeof(msg_utc_time), &msg_utc_time, SBP2NMEA_SBP_UTC_TIME);
+  memset(&sbp_msg, 0, sizeof(sbp_msg));
+  sbp_msg_utc_time_t *msg_utc_time = &sbp_msg.utc_time;
+  msg_utc_time->tow = 135264000;
+  msg_utc_time->flags = 1;
+  sbp2nmea(&state, &sbp_msg, SBP2NMEA_SBP_UTC_TIME);
 
   // Position. Don't really need any of the fields in this message other than
   // position mode and tow.
-  msg_pos_llh_cov_t msg_pos_llh_cov;
-  memset(&msg_pos_llh_cov, 0, sizeof(msg_pos_llh_cov));
-  msg_pos_llh_cov.tow = 135264000;
-  msg_pos_llh_cov.flags = pos_mode;
-  sbp2nmea(&state,
-           sizeof(msg_pos_llh_cov),
-           &msg_pos_llh_cov,
-           SBP2NMEA_SBP_POS_LLH_COV);
+  memset(&sbp_msg, 0, sizeof(sbp_msg));
+  sbp_msg_pos_llh_cov_t *msg_pos_llh_cov = &sbp_msg.pos_llh_cov;
+  msg_pos_llh_cov->tow = 135264000;
+  msg_pos_llh_cov->flags = pos_mode;
+  sbp2nmea(&state, &sbp_msg, SBP2NMEA_SBP_POS_LLH_COV);
 
   // Now orient euler. The tow needs to match, also INS mode is in this message.
   // Only the yaw is required to generate GPTHS
-  msg_orient_euler_t msg_orient_euler;
-  memset(&msg_orient_euler, 0, sizeof(msg_orient_euler));
-  msg_orient_euler.tow = 135264000;
-  msg_orient_euler.flags = orient_valid;
-  msg_orient_euler.yaw = yaw;
-  sbp2nmea(&state,
-           sizeof(msg_orient_euler),
-           &msg_orient_euler,
-           SBP2NMEA_SBP_ORIENT_EULER);
+  memset(&sbp_msg, 0, sizeof(sbp_msg));
+  sbp_msg_orient_euler_t *msg_orient_euler = &sbp_msg.orient_euler;
+  msg_orient_euler->tow = 135264000;
+  msg_orient_euler->flags = orient_valid;
+  msg_orient_euler->yaw = yaw;
+  sbp2nmea(&state, &sbp_msg, SBP2NMEA_SBP_ORIENT_EULER);
 
   // Finally soln meta to finish it off. There isn't any interesting information
   // in this message, it just needs to exist
-  uint8_t msg_soln_meta_buf[SBP_MAX_PAYLOAD_LEN];
-  memset(msg_soln_meta_buf, 0, sizeof(msg_soln_meta_buf));
-  msg_soln_meta_t *msg_soln_meta = (msg_soln_meta_t *)msg_soln_meta_buf;
+  memset(&sbp_msg, 0, sizeof(sbp_msg));
+  sbp_msg_soln_meta_t *msg_soln_meta = &sbp_msg.soln_meta;
   msg_soln_meta->tow = 135264000;
-  sbp2nmea(
-      &state, sizeof(*msg_soln_meta), msg_soln_meta, SBP2NMEA_SBP_SOLN_META);
+  sbp2nmea(&state, &sbp_msg, SBP2NMEA_SBP_SOLN_META);
 
   ck_assert_msg(strncmp(output, expected_ths, strlen(expected_ths)) == 0,
                 "%s:%d: Expected \"%s\" but got \"%s\"",

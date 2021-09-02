@@ -11,7 +11,7 @@
  */
 
 #include <assert.h>
-#include <libsbp/ssr.h>
+#include <libsbp/v4/ssr.h>
 #include <math.h>
 #include <rtcm3/msm_utils.h>
 #include <string.h>
@@ -19,12 +19,12 @@
 
 #define SSR_MESSAGE_LENGTH 256
 
-gps_time_sec_t compute_ssr_message_time(
+sbp_gps_time_sec_t compute_ssr_message_time(
     const enum constellation_e constellation,
     u32 epoch_time_ms,
     const gps_time_t *rover_time,
     struct rtcm3_sbp_state *state) {
-  gps_time_sec_t obs_time_sec;
+  sbp_gps_time_sec_t obs_time_sec;
   gps_time_t obs_time;
   if (constellation == CONSTELLATION_GLO) {
     compute_glo_time(epoch_time_ms, &obs_time, rover_time, state);
@@ -42,9 +42,8 @@ gps_time_sec_t compute_ssr_message_time(
 
 static bool rtcm_ssr_header_to_sbp_orbit_clock(
     const rtcm_msg_ssr_header *header,
-    uint8_t *length,
     const rtcm_msg_ssr_orbit_corr *orbit,
-    msg_ssr_orbit_clock_t *sbp_orbit_clock,
+    sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock,
     struct rtcm3_sbp_state *state) {
   sbp_orbit_clock->time = compute_ssr_message_time(header->constellation,
                                                    header->epoch_time * SECS_MS,
@@ -55,58 +54,31 @@ static bool rtcm_ssr_header_to_sbp_orbit_clock(
     /* Invalid time */
     return false;
   }
-  *length += sizeof(sbp_orbit_clock->time);
 
   sbp_orbit_clock->sid.code = constellation_to_l1_code(header->constellation);
-
   sbp_orbit_clock->sid.sat = orbit->sat_id;
-  *length += sizeof(sbp_orbit_clock->sid);
-
   sbp_orbit_clock->update_interval = header->update_interval;
-  *length += sizeof(sbp_orbit_clock->update_interval);
-
   sbp_orbit_clock->iod_ssr = header->iod_ssr;
-  *length += sizeof(sbp_orbit_clock->iod_ssr);
-
   sbp_orbit_clock->iod = orbit->iode;
-  *length += sizeof(sbp_orbit_clock->iod);
 
   return true;
 }
 
 static void rtcm_ssr_orbit_to_sbp(const rtcm_msg_ssr_orbit_corr *orbit,
-                                  uint8_t *length,
-                                  msg_ssr_orbit_clock_t *sbp_orbit_clock) {
+                                  sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock) {
   sbp_orbit_clock->radial = orbit->radial;
-  *length += sizeof(sbp_orbit_clock->radial);
-
   sbp_orbit_clock->along = orbit->along_track;
-  *length += sizeof(sbp_orbit_clock->along);
-
   sbp_orbit_clock->cross = orbit->cross_track;
-  *length += sizeof(sbp_orbit_clock->cross);
-
   sbp_orbit_clock->dot_radial = orbit->dot_radial;
-  *length += sizeof(sbp_orbit_clock->dot_radial);
-
   sbp_orbit_clock->dot_along = orbit->dot_along_track;
-  *length += sizeof(sbp_orbit_clock->dot_along);
-
   sbp_orbit_clock->dot_cross = orbit->dot_cross_track;
-  *length += sizeof(sbp_orbit_clock->dot_cross);
 }
 
 static void rtcm_ssr_clock_to_sbp(const rtcm_msg_ssr_clock_corr *clock,
-                                  uint8_t *length,
-                                  msg_ssr_orbit_clock_t *sbp_orbit_clock) {
+                                  sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock) {
   sbp_orbit_clock->c0 = clock->c0;
-  *length += sizeof(sbp_orbit_clock->c0);
-
   sbp_orbit_clock->c1 = clock->c1;
-  *length += sizeof(sbp_orbit_clock->c1);
-
   sbp_orbit_clock->c2 = clock->c2;
-  *length += sizeof(sbp_orbit_clock->c2);
 }
 
 void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
@@ -118,15 +90,13 @@ void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
   assert(msg_clock->header.epoch_time == msg_orbit->header.epoch_time);
   assert(msg_clock->header.iod_ssr == msg_orbit->header.iod_ssr);
 
-  uint8_t buffer[SSR_MESSAGE_LENGTH];
-  uint8_t length;
-  msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  sbp_msg_t msg;
+  sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock = &msg.ssr_orbit_clock;
 
   for (int sat_count = 0; (sat_count < msg_clock->header.num_sats) &&
                           (sat_count < msg_orbit->header.num_sats);
        ++sat_count) {
-    memset(buffer, 0, sizeof(buffer));
-    length = 0;
+    memset(sbp_orbit_clock, 0, sizeof(*sbp_orbit_clock));
 
     // We aren't guaranteed that the satellite info in the orbit and clock
     // messages is in the same order so we must search for pair of corrections
@@ -143,53 +113,37 @@ void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
     }
 
     if (!rtcm_ssr_header_to_sbp_orbit_clock(&msg_orbit->header,
-                                            &length,
                                             &msg_orbit->orbit[orbit_index],
                                             sbp_orbit_clock,
                                             state)) {
       return;
     }
-    rtcm_ssr_orbit_to_sbp(
-        &msg_orbit->orbit[orbit_index], &length, sbp_orbit_clock);
-    rtcm_ssr_clock_to_sbp(
-        &msg_clock->clock[clock_index], &length, sbp_orbit_clock);
+    rtcm_ssr_orbit_to_sbp(&msg_orbit->orbit[orbit_index], sbp_orbit_clock);
+    rtcm_ssr_clock_to_sbp(&msg_clock->clock[clock_index], sbp_orbit_clock);
 
-    state->cb_rtcm_to_sbp(SBP_MSG_SSR_ORBIT_CLOCK,
-                          length,
-                          (u8 *)sbp_orbit_clock,
-                          0,
-                          state->context);
+    state->cb_rtcm_to_sbp(0, SbpMsgSsrOrbitClock, &msg, state->context);
   }
 }
 
 void rtcm3_ssr_orbit_clock_to_sbp(rtcm_msg_orbit_clock *msg_orbit_clock,
                                   struct rtcm3_sbp_state *state) {
-  uint8_t buffer[SSR_MESSAGE_LENGTH];
-  uint8_t length;
-  msg_ssr_orbit_clock_t *sbp_orbit_clock = (msg_ssr_orbit_clock_t *)buffer;
+  sbp_msg_t msg;
+  sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock = &msg.ssr_orbit_clock;
 
   for (int sat_count = 0; sat_count < msg_orbit_clock->header.num_sats;
        sat_count++) {
-    memset(buffer, 0, SSR_MESSAGE_LENGTH);
-    length = 0;
+    memset(sbp_orbit_clock, 0, sizeof(*sbp_orbit_clock));
 
     if (!rtcm_ssr_header_to_sbp_orbit_clock(&msg_orbit_clock->header,
-                                            &length,
                                             &msg_orbit_clock->orbit[sat_count],
                                             sbp_orbit_clock,
                                             state)) {
       return;
     }
-    rtcm_ssr_orbit_to_sbp(
-        &msg_orbit_clock->orbit[sat_count], &length, sbp_orbit_clock);
-    rtcm_ssr_clock_to_sbp(
-        &msg_orbit_clock->clock[sat_count], &length, sbp_orbit_clock);
+    rtcm_ssr_orbit_to_sbp(&msg_orbit_clock->orbit[sat_count], sbp_orbit_clock);
+    rtcm_ssr_clock_to_sbp(&msg_orbit_clock->clock[sat_count], sbp_orbit_clock);
 
-    state->cb_rtcm_to_sbp(SBP_MSG_SSR_ORBIT_CLOCK,
-                          length,
-                          (u8 *)sbp_orbit_clock,
-                          0,
-                          state->context);
+    state->cb_rtcm_to_sbp(0, SbpMsgSsrOrbitClock, &msg, state->context);
   }
 }
 
@@ -202,19 +156,15 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
    * need to implement the same measures as has been implemented in
    * rtcm3_ssr_phase_bias_to_sbp.
    */
-  const size_t max_bias_count =
-      (SBP_MAX_PAYLOAD_LEN - sizeof(msg_ssr_code_biases_t)) /
-      sizeof(code_biases_content_t);
-  char __static_assert[(max_bias_count >= MAX_SSR_SATELLITES) ? 1 : -1];
+  char __static_assert
+      [(SBP_MSG_SSR_CODE_BIASES_BIASES_MAX >= MAX_SSR_SATELLITES) ? 1 : -1];
   (void)__static_assert;
 
-  uint8_t buffer[SBP_MAX_PAYLOAD_LEN];
-  uint8_t length;
-  msg_ssr_code_biases_t *sbp_code_bias = (msg_ssr_code_biases_t *)buffer;
+  sbp_msg_t msg;
+  sbp_msg_ssr_code_biases_t *sbp_code_bias = &msg.ssr_code_biases;
   for (int sat_count = 0; sat_count < msg_code_biases->header.num_sats;
        sat_count++) {
-    memset(buffer, 0, SBP_MAX_PAYLOAD_LEN);
-    length = 0;
+    memset(sbp_code_bias, 0, sizeof(*sbp_code_bias));
     sbp_code_bias->time =
         compute_ssr_message_time(msg_code_biases->header.constellation,
                                  msg_code_biases->header.epoch_time * SECS_MS,
@@ -225,49 +175,37 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
       /* Invalid time */
       return;
     }
-    length += sizeof(sbp_code_bias->time);
 
     sbp_code_bias->sid.code =
         constellation_to_l1_code(msg_code_biases->header.constellation);
 
     sbp_code_bias->sid.sat = msg_code_biases->sats[sat_count].sat_id;
-    length += sizeof(sbp_code_bias->sid);
 
     sbp_code_bias->update_interval = msg_code_biases->header.update_interval;
-    length += sizeof(sbp_code_bias->update_interval);
 
     sbp_code_bias->iod_ssr = msg_code_biases->header.iod_ssr;
-    length += sizeof(sbp_code_bias->iod_ssr);
 
-    for (int sig_count = 0;
-         sig_count < msg_code_biases->sats[sat_count].num_code_biases;
+    int sig_count = 0;
+    for (; sig_count < msg_code_biases->sats[sat_count].num_code_biases;
          sig_count++) {
       sbp_code_bias->biases[sig_count].code =
           msg_code_biases->sats[sat_count].signals[sig_count].signal_id;
-      length += sizeof(sbp_code_bias->biases[sig_count].code);
       sbp_code_bias->biases[sig_count].value =
           msg_code_biases->sats[sat_count].signals[sig_count].code_bias;
-      length += sizeof(sbp_code_bias->biases[sig_count].value);
     }
-    state->cb_rtcm_to_sbp(SBP_MSG_SSR_CODE_BIASES,
-                          length,
-                          (u8 *)sbp_code_bias,
-                          0,
-                          state->context);
+    sbp_code_bias->n_biases = sig_count;
+    state->cb_rtcm_to_sbp(0, SbpMsgSsrCodeBiases, &msg, state->context);
   }
 }
 
 void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state) {
-  uint8_t buffer[SBP_MAX_PAYLOAD_LEN];
-  const size_t max_bias_count =
-      (sizeof(buffer) - sizeof(msg_ssr_phase_biases_t)) /
-      sizeof(phase_biases_content_t);
-  msg_ssr_phase_biases_t *sbp_phase_bias = (msg_ssr_phase_biases_t *)buffer;
+  sbp_msg_t msg;
+  sbp_msg_ssr_phase_biases_t *sbp_phase_bias = &msg.ssr_phase_biases;
 
   for (int sat_count = 0; sat_count < msg_phase_biases->header.num_sats;
        sat_count++) {
-    memset(buffer, 0, sizeof(buffer));
+    memset(sbp_phase_bias, 0, sizeof(*sbp_phase_bias));
     sbp_phase_bias->time =
         compute_ssr_message_time(msg_phase_biases->header.constellation,
                                  msg_phase_biases->header.epoch_time * SECS_MS,
@@ -312,26 +250,16 @@ void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
       sbp_phase_bias->biases[bias_index].bias =
           msg_phase_biases->sats[sat_count].signals[sig_count].phase_bias;
 
-      if (++bias_index >= max_bias_count) {
-        state->cb_rtcm_to_sbp(
-            SBP_MSG_SSR_PHASE_BIASES,
-            sizeof(msg_ssr_phase_biases_t) +
-                max_bias_count * sizeof(phase_biases_content_t),
-            (u8 *)sbp_phase_bias,
-            0,
-            state->context);
+      if (++bias_index >= SBP_MSG_SSR_PHASE_BIASES_BIASES_MAX) {
+        sbp_phase_bias->n_biases = bias_index;
+        state->cb_rtcm_to_sbp(0, SbpMsgSsrPhaseBiases, &msg, state->context);
         bias_index = 0;
       }
     }
 
     if (sig_count == 0 || bias_index > 0) {
-      state->cb_rtcm_to_sbp(
-          SBP_MSG_SSR_PHASE_BIASES,
-          sizeof(msg_ssr_phase_biases_t) +
-              MIN(sig_count, bias_index) * sizeof(phase_biases_content_t),
-          (u8 *)sbp_phase_bias,
-          0,
-          state->context);
+      sbp_phase_bias->n_biases = bias_index;
+      state->cb_rtcm_to_sbp(0, SbpMsgSsrPhaseBiases, &msg, state->context);
     }
   }
 }

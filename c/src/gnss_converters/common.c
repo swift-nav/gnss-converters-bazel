@@ -13,7 +13,7 @@
 #include "common.h"
 
 void pack_ephemeris_common_content(const ephemeris_t *e,
-                                   ephemeris_common_content_t *common) {
+                                   sbp_ephemeris_common_content_t *common) {
   common->toe.tow = (u32)round(e->toe.tow);
   common->toe.wn = e->toe.wn;
   common->valid = e->valid;
@@ -22,11 +22,4 @@ void pack_ephemeris_common_content(const ephemeris_t *e,
   common->sid.sat = e->sid.sat;
   common->fit_interval = e->fit_interval;
   common->ura = e->ura;
-}
-
-gps_time_t sbp_gps_time_2_gps_time(const gps_time_sec_t *s) {
-  gps_time_t t;
-  t.wn = s->wn;
-  t.tow = s->tow;
-  return t;
 }

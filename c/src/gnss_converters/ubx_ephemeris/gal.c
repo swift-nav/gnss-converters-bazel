@@ -11,8 +11,8 @@
  */
 
 #include <gnss-converters/ubx_sbp.h>
-#include <libsbp/gnss.h>
-#include <libsbp/observation.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <string.h>
 #include <swiftnav/bits.h>
 #include <swiftnav/common.h>
@@ -34,16 +34,15 @@ static void invalidate_pages(struct gal_sat_data *sat, unsigned mask) {
  * @param src the GAL ephemeris source (0 - I/NAV, 1 - F/NAV)
  */
 static void pack_ephemeris_gal(const ephemeris_t *e,
-                               msg_ephemeris_t *m,
+                               sbp_msg_ephemeris_gal_t *msg,
                                int src) {
   assert(e);
-  assert(m);
+  assert(msg);
   assert((0 == src) || (1 == src));
 
-  memset(m, 0, sizeof(*m));
+  memset(msg, 0, sizeof(*msg));
 
-  const ephemeris_kepler_t *k = &e->kepler;
-  msg_ephemeris_gal_t *msg = &m->gal;
+  const ephemeris_kepler_t *k = &e->data.kepler;
   pack_ephemeris_common_content(e, &msg->common);
   msg->bgd_e1e5a = k->tgd.gal_s[0];
   msg->bgd_e1e5b = k->tgd.gal_s[1];
@@ -166,22 +165,21 @@ void gal_decode_page(struct ubx_sbp_state *data,
 
   ephemeris_t e;
   memset(&e, 0, sizeof(e));
-  if (!decode_gal_ephemeris_safe(page, &e)) {
+  if (!decode_gal_ephemeris_safe((const u8(*)[GAL_INAV_CONTENT_BYTE])page,
+                                 &e)) {
     return;
   }
 
   e.sid.code = CODE_GAL_E1B;
 
-  msg_ephemeris_t msg;
+  sbp_msg_t sbp_msg;
+  sbp_msg_ephemeris_gal_t *msg = &sbp_msg.ephemeris_gal;
   /* I/NAV message as per UBX-13003221-R17
      u-blox8 / u-blox M8 Receiver Description Manual */
-  pack_ephemeris_gal(&e, &msg, /*src=*/0);
+  pack_ephemeris_gal(&e, msg, /*src=*/0);
 
   assert(data->cb_ubx_to_sbp);
-  data->cb_ubx_to_sbp(SBP_MSG_EPHEMERIS_GAL,
-                      (u8)sizeof(msg.gal),
-                      (u8 *)&msg.gal,
-                      data->sender_id,
-                      data->context);
+  data->cb_ubx_to_sbp(
+      data->sender_id, SbpMsgEphemerisGal, &sbp_msg, data->context);
   invalidate_pages(sat, /*mask=*/ALL_PAGES_MASK);
 }
