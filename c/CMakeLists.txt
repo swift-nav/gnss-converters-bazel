@@ -9,16 +9,12 @@ include(SwiftCmakeOptions)
 include(TestTargets)
 include(LanguageStandards)
 include(CompileOptions)
-
-set(disable_tests FALSE)
-if(MSVC)
-  message(STATUS "MSVC detected, skipping unit tests")
-  set(disable_tests TRUE)
-endif()
+include(SwiftTargets)
+include(CodeCoverage)
+add_code_coverage_all_targets()
 
 swift_create_project_options(
         HAS_TESTS
-        DISABLE_TEST_COMPONENTS ${disable_tests}
         TEST_PACKAGES "Check"
 )
 
@@ -29,6 +25,9 @@ swift_setup_clang_format()
 
 include(ClangTidy)
 swift_setup_clang_tidy(PATTERNS "src/*.c")
+
+include(CheckAttributes)
+create_check_attributes_target()
 
 add_subdirectory (src)
 
