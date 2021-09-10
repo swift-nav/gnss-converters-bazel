@@ -1915,6 +1915,73 @@ START_TEST(tc_rtcm_eph_wn_rollover2) {
 }
 END_TEST
 
+START_TEST(tc_rtcm_eph_invalid_gal_time) {
+  current_time = (gps_time_t){.wn = 3198, .tow = 733440};
+
+  time_truth_init(&time_truth);
+  time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time);
+
+  rtcm2sbp_init(&state, &time_truth, NULL, NULL, NULL);
+  state.time_from_input_data = current_time;
+  state.leap_seconds = 18;
+  state.leap_second_known = true;
+
+  rtcm_msg_eph rtcm_ephemeris;
+  const rtcm_msg_eph template_rtcm_ephemeris = {
+      .sat_id = 31,
+      .constellation = RTCM_CONSTELLATION_GAL,
+      .wn = 2174,
+      .toe = 8992,
+      .ura = 107,
+      .fit_interval = 0,
+      .health_bits = 0,
+      .data = {.kepler = {.tgd =
+                              {
+                                  .gal_s[0] = 20,
+                                  .gal_s[1] = 0,
+                              },
+                          .crc = 9765,
+                          .crs = 2135,
+                          .cuc = 1742,
+                          .cus = 1109,
+                          .cic = -15,
+                          .cis = 5,
+                          .dn = 9134,
+                          .m0 = 1844301003,
+                          .ecc = 3887045,
+                          .sqrta = 2852448227,
+                          .omega0 = -892216638,
+                          .omegadot = -16740,
+                          .w = -1071265542,
+                          .inc = 666967268,
+                          .inc_dot = 436,
+                          .af0 = -8339072,
+                          .af1 = -33,
+                          .af2 = 0,
+                          .toc = 8992,
+                          .iodc = 0,
+                          .iode = 37,
+                          .codeL2 = 0,
+                          .L2_data_bit = false}}};
+
+  sbp_msg_ephemeris_gal_t sbp_ephemeris;
+
+  memcpy(&rtcm_ephemeris, &template_rtcm_ephemeris, sizeof(rtcm_ephemeris));
+  ck_assert(rtcm3_gal_eph_to_sbp(
+      &rtcm_ephemeris, EPH_SOURCE_GAL_FNAV, &sbp_ephemeris, &state));
+
+  memcpy(&rtcm_ephemeris, &template_rtcm_ephemeris, sizeof(rtcm_ephemeris));
+  rtcm_ephemeris.toe = 12224;
+  ck_assert(!rtcm3_gal_eph_to_sbp(
+      &rtcm_ephemeris, EPH_SOURCE_GAL_FNAV, &sbp_ephemeris, &state));
+
+  memcpy(&rtcm_ephemeris, &template_rtcm_ephemeris, sizeof(rtcm_ephemeris));
+  rtcm_ephemeris.data.kepler.toc = 12224;
+  ck_assert(!rtcm3_gal_eph_to_sbp(
+      &rtcm_ephemeris, EPH_SOURCE_GAL_FNAV, &sbp_ephemeris, &state));
+}
+END_TEST
+
 static s32 rtcm_roundtrip_cb(u8 *buffer, u16 length, void *context) {
   (void)context;
 
@@ -2507,6 +2574,7 @@ Suite *rtcm3_suite(void) {
   tcase_add_test(tc_eph, tc_rtcm_eph_bds);
   tcase_add_test(tc_eph, tc_rtcm_eph_wn_rollover);
   tcase_add_test(tc_eph, tc_rtcm_eph_wn_rollover2);
+  tcase_add_test(tc_eph, tc_rtcm_eph_invalid_gal_time);
 
   suite_add_tcase(s, tc_eph);
 

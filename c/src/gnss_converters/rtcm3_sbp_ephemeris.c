@@ -106,6 +106,9 @@ static bool gps_time_sec_match_weeks(sbp_gps_time_sec_t *t,
   if (!gps_time_match_weeks_safe(&t_u, ref)) {
     return false;
   }
+  if (!gps_time_valid(&t_u)) {
+    return false;
+  }
   t->wn = t_u.wn;
   return true;
 }

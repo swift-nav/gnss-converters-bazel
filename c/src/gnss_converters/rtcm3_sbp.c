@@ -337,11 +337,13 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       if (RC_OK == rtcm3_decode_gal_eph_fnav_bitstream(&bitstream, &msg_eph)) {
         sbp_msg_t msg;
         sbp_msg_ephemeris_gal_t *sbp_gal_eph = &msg.ephemeris_gal;
-        rtcm3_gal_eph_to_sbp(&msg_eph, EPH_SOURCE_GAL_FNAV, sbp_gal_eph, state);
-        state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
-                              SbpMsgEphemerisGal,
-                              &msg,
-                              state->context);
+        if (rtcm3_gal_eph_to_sbp(
+                &msg_eph, EPH_SOURCE_GAL_FNAV, sbp_gal_eph, state)) {
+          state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
+                                SbpMsgEphemerisGal,
+                                &msg,
+                                state->context);
+        }
       }
       break;
     }
@@ -351,11 +353,13 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       if (RC_OK == rtcm3_decode_gal_eph_inav_bitstream(&bitstream, &msg_eph)) {
         sbp_msg_t msg;
         sbp_msg_ephemeris_gal_t *sbp_gal_eph = &msg.ephemeris_gal;
-        rtcm3_gal_eph_to_sbp(&msg_eph, EPH_SOURCE_GAL_INAV, sbp_gal_eph, state);
-        state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
-                              SbpMsgEphemerisGal,
-                              &msg,
-                              state->context);
+        if (rtcm3_gal_eph_to_sbp(
+                &msg_eph, EPH_SOURCE_GAL_INAV, sbp_gal_eph, state)) {
+          state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
+                                SbpMsgEphemerisGal,
+                                &msg,
+                                state->context);
+        }
       }
       break;
     }
