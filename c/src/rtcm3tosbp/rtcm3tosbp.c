@@ -99,6 +99,7 @@ static void help(char *arg, const char *additional_opts_help) {
           "  -l CODE:BIAS applies a liner phase bias to Glonass signals with "
           "code CODE_GLO_L1OF or CODE_GLO_L2OF\n");
   fprintf(stderr,
+          "  -t print the current GPS time, then exit\n"
           "  -w GPS WN:GPS TOW passes time to the converter, needs to be "
           "accurate to within a half "
           "week for GPS only and within a half day for glonass, TOW is in "
@@ -109,9 +110,27 @@ static void help(char *arg, const char *additional_opts_help) {
           "the converter, needs to be accurate to within a half week for GPS "
           "only and within a half day "
           "for glonass\n");
-  fprintf(stderr, "  -o Use observations instead of ephemerides time source");
+  fprintf(stderr, "  -s passes the current system time to the converter\n");
+  fprintf(stderr,
+          "  -o Use observations instead of ephemerides time source, requires "
+          "a time to be provided with -d, -w, or -s\n");
   fprintf(stderr, "  -[GREICJS] disables a constellation\n");
   fprintf(stderr, "  -v for stderr verbosity\n");
+}
+
+gps_time_t time2gps_apply_offset(const time_t t_unix) {
+  /* set time, account for UTC<->GPS leap second difference */
+  gps_time_t gps_no_offset = time2gps_t(t_unix);
+  double leap_seconds = get_gps_utc_offset(&gps_no_offset, NULL);
+  time_t unix_with_offset = t_unix + (u8)rint(leap_seconds);
+  gps_time_t gps_with_offset = time2gps_t(unix_with_offset);
+  return gps_with_offset;
+}
+
+void print_current_gps_time() {
+  time_t current_time_s = time(NULL);
+  gps_time_t gps_time = time2gps_apply_offset(current_time_s);
+  printf("%" PRIi16 ":%f\n", gps_time.wn, gps_time.tow);
 }
 
 int rtcm3tosbp_main(int argc,
@@ -128,7 +147,7 @@ int rtcm3tosbp_main(int argc,
   g_writefn = writefn;
 
   int opt;
-  while ((opt = getopt(argc, argv, "hb:c:l:w:d:oGRECJS:v")) != -1) {
+  while ((opt = getopt(argc, argv, "hb:c:l:tw:d:soGRECJS:v")) != -1) {
     if (optarg && *optarg == '=') {
       optarg++;
     }
@@ -145,6 +164,9 @@ int rtcm3tosbp_main(int argc,
       case 'l':
         parse_glonass_phase_biases(optarg);
         break;
+      case 't':
+        print_current_gps_time();
+        return 0;
       case 'w': {
         s16 week_num;
         double time_of_week;
@@ -156,6 +178,11 @@ int rtcm3tosbp_main(int argc,
         }
         if (gps_time_valid(&(gps_time_t){time_of_week, week_num})) {
           ct_utc_unix = gps2time(&(gps_time_t){time_of_week, week_num});
+        } else {
+          fprintf(stderr,
+                  "provided GPS week number and time of week is not valid\n");
+          help(argv[0], additional_opts_help);
+          return -1;
         }
         break;
       }
@@ -174,6 +201,9 @@ int rtcm3tosbp_main(int argc,
 
         break;
       }
+      case 's':
+        ct_utc_unix = time(NULL);
+        break;
       case 'o':
         use_obs_time = true;
         break;
@@ -212,15 +242,7 @@ int rtcm3tosbp_main(int argc,
   time_truth_init(&time_truth);
 
   if (ct_utc_unix > 0) {
-    /* set time, account for UTC<->GPS leap second difference */
-    gps_time_t noleapsec = time2gps_t(ct_utc_unix);
-    double gps_utc_offset = get_gps_utc_offset(&noleapsec, NULL);
-    ct_utc_unix += (s8)rint(gps_utc_offset);
-    gps_time_t withleapsec = time2gps_t(ct_utc_unix);
-    gps_time_t current_time;
-    current_time.tow = withleapsec.tow;
-    current_time.wn = withleapsec.wn;
-
+    gps_time_t current_time = time2gps_apply_offset(ct_utc_unix);
     time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time);
   }
 
@@ -228,6 +250,13 @@ int rtcm3tosbp_main(int argc,
       &state, &time_truth, cb_rtcm_to_sbp, cb_base_obs_invalid, context);
 
   if (use_obs_time) {
+    if (ct_utc_unix == 0) {
+      fprintf(stderr,
+              "A date must be specified using either -d, -w, or -s when using "
+              "the -o flag.\nUse -t to print the current GPS WN:TOW pair.\n");
+      help(argv[0], additional_opts_help);
+      return -1;
+    }
     state.use_time_from_input_obs = true;
     time_truth_get(&time_truth, NULL, &state.time_from_input_data);
   }
