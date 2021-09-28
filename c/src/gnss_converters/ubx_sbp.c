@@ -903,7 +903,12 @@ static void handle_esf_raw(struct ubx_sbp_state *state,
       continue;
     }
 
-    if (state->esf_state.running_imu_msss == -1) {
+    // A gap of more than 1 second in IMU samples may indicate the ME has reset.
+    // In that case msss will likely be less than the previous value cached in
+    // the state object and would cause wrap around and numerical errors down
+    // the processing chain
+    if ((state->esf_state.running_imu_msss == -1) ||
+        ((esf_raw.msss - state->esf_state.last_imu_msss) > 1000)) {
       state->esf_state.running_imu_msss = esf_raw.msss;
     } else {
       state->esf_state.running_imu_msss +=
