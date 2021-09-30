@@ -22,7 +22,6 @@ include(ClangFormat)
 swift_setup_clang_format()
 
 include(ClangTidy)
-swift_setup_clang_tidy(PATTERNS "src/*.c")
 
 include(TestTargets)
 
@@ -34,3 +33,5 @@ if(librtcm_BUILD_TESTS)
   add_subdirectory (test)
 endif()
 
+swift_validate_targets()
+swift_create_clang_tidy_targets()
