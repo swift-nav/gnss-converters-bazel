@@ -560,6 +560,32 @@ START_TEST(test_nmea_time_string) {
 }
 END_TEST
 
+START_TEST(test_check_nmea_rate) {
+  // Invalid Entry
+  ck_assert(!check_nmea_rate(0, 453568, 10.0));
+
+  // Test cases with solutions at 200ms with output rate at 1s.
+  ck_assert(!check_nmea_rate(5, 519092899, 5.0));
+  ck_assert(check_nmea_rate(5, 519092900, 5.0));
+  ck_assert(check_nmea_rate(5, 519092901, 5.0));
+  ck_assert(check_nmea_rate(5, 519092999, 5.0));
+  ck_assert(check_nmea_rate(5, 519093001, 5.0));
+  ck_assert(check_nmea_rate(5, 519093099, 5.0));
+  ck_assert(!check_nmea_rate(5, 519093100, 5.0));
+
+  // Test cases with solutions at 100ms with output rate at 1.9s.
+  ck_assert(!check_nmea_rate(19, 1900 - 125, 10.0));
+  ck_assert(!check_nmea_rate(19, 1900 - 75, 10.0));
+  ck_assert(!check_nmea_rate(19, 1900 - 51, 10.0));
+  ck_assert(check_nmea_rate(19, 1900 - 50, 10.0));
+  ck_assert(check_nmea_rate(19, 1900 - 49, 10.0));
+  ck_assert(check_nmea_rate(19, 1900, 10.0));
+  ck_assert(check_nmea_rate(19, 1900 + 49, 10.0));
+  ck_assert(!check_nmea_rate(19, 1900 + 50, 10.0));
+  ck_assert(!check_nmea_rate(19, 1900 + 75, 10.0));
+  ck_assert(!check_nmea_rate(19, 1900 + 125, 10.0));
+}
+
 Suite *nmea_suite(void) {
   Suite *s = suite_create("NMEA");
 
@@ -575,6 +601,7 @@ Suite *nmea_suite(void) {
   tcase_add_test(tc_nmea, test_nmea_gpgst);
   tcase_add_test(tc_nmea, test_nmea_gpgsv);
   tcase_add_test(tc_nmea, test_nmea_time_string);
+  tcase_add_test(tc_nmea, test_check_nmea_rate);
   suite_add_tcase(s, tc_nmea);
 
   return s;
