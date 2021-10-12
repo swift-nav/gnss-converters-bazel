@@ -125,6 +125,7 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   rtcm_init_logging(&rtcm_log_callback_fn, state);
 
   sbp_state_init(&state->sbp_state);
+  sbp_state_set_io_context(&state->sbp_state, context);
 
   fifo_init(&(state->fifo), state->fifo_buf, RTCM3_FIFO_SIZE);
 }
