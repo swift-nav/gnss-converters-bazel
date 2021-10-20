@@ -476,6 +476,30 @@ static void sbp_obs_to_freq_data(const packed_obs_content_t *sbp_freq,
   rtcm_freq->flags.fields.valid_dop = 0;
 }
 
+static uint32_t compute_glo_tow_ms(uint32_t gps_tow_ms,
+                                   const struct rtcm3_out_state *state) {
+  if (!state->leap_second_known) {
+    return -1;
+  }
+
+  double gps_tow_s = (double)gps_tow_ms / SECS_MS;
+
+  double glo_tow_s =
+      gps_tow_s + UTC_SU_OFFSET * HOUR_SECS - state->leap_seconds;
+
+  if (glo_tow_s < 0) {
+    glo_tow_s += WEEK_SECS;
+  }
+  /* TODO: this fails during the leap second event */
+  if (glo_tow_s >= WEEK_SECS) {
+    glo_tow_s -= WEEK_SECS;
+  }
+
+  assert(glo_tow_s >= 0 && glo_tow_s < (WEEK_SECS + 1));
+
+  return ((uint32_t)rint(glo_tow_s * SECS_MS)) % (WEEK_SECS * SECS_MS);
+}
+
 /* initialize the MSM structure */
 static void msm_init_obs_message(rtcm_msm_message *msg,
                                  const struct rtcm3_out_state *state,
@@ -488,8 +512,8 @@ static void msm_init_obs_message(rtcm_msm_message *msg,
   /* GPS time of week DF004 uint32 30 */
   msg->header.tow_ms = state->sbp_header.t.tow;
   if (RTCM_CONSTELLATION_GLO == cons) {
-    /* GLO epoch time DF034 uint32 27 */
-    msg->header.tow_ms = compute_glo_tod_ms(state->sbp_header.t.tow, state);
+    /* Note: TOW field will be converted DF416/DF034 in librtcm */
+    msg->header.tow_ms = compute_glo_tow_ms(state->sbp_header.t.tow, state);
   } else if (RTCM_CONSTELLATION_BDS == cons) {
     gps_tow_to_beidou_tow(&msg->header.tow_ms);
   }
@@ -599,23 +623,7 @@ uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms,
   if (!state->leap_second_known) {
     return -1;
   }
-
-  double gps_tod_s = (double)gps_tow_ms / SECS_MS;
-  gps_tod_s -= floor(gps_tod_s / DAY_SECS) * DAY_SECS;
-
-  double glo_tod_s =
-      gps_tod_s + UTC_SU_OFFSET * HOUR_SECS - state->leap_seconds;
-
-  if (glo_tod_s < 0) {
-    glo_tod_s += DAY_SECS;
-  }
-  /* TODO: this fails during the leap second event */
-  if (glo_tod_s >= DAY_SECS) {
-    glo_tod_s -= DAY_SECS;
-  }
-
-  assert(glo_tod_s >= 0 && glo_tod_s < (DAY_SECS + 1));
-  return (uint32_t)rint(glo_tod_s * SECS_MS);
+  return compute_glo_tow_ms(gps_tow_ms, state) % (DAY_SECS * SECS_MS);
 }
 
 static void rtcm_init_obs_message(rtcm_obs_message *msg,

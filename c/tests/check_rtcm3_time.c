@@ -1432,7 +1432,7 @@ END_TEST
  *
  * GLO observation message with TOD of 75612000 (WN: 2165 and TOW: 237630) of
  * gets pushed into the converter. This test case is conducted for both legacy
- * and none legacy conversion.
+ * and non-legacy conversion.
  *
  * Expected result: RTCM to SBP converter determines leap second to be equal
  * to 18 and the GLO observation message is correctly processed with a WN: 2165
@@ -1479,7 +1479,7 @@ END_TEST
  *
  * GLO observation message with TOD of 75712000 (WN: 2165 and TOW: 237730) of
  * gets pushed into the converter. This test case is conducted for both legacy
- * and none legacy conversion.
+ * and non-legacy conversion.
  *
  * Expected result: RTCM to SBP converter determines leap second to be equal
  * to 18 and the GLO observation message is NOT processed. It is expected not to
@@ -1524,7 +1524,7 @@ END_TEST
  *
  * GPS observation message with TOW of 247600 gets pushed into the converter.
  * Following that a GLO observation message with TOW of 247630 gets pushed into
- * the converter.This test case is conducted for both legacy and none legacy
+ * the converter.This test case is conducted for both legacy and non-legacy
  * conversion.
  *
  * Expected result: RTCM to SBP converter determines leap second to be equal
@@ -1585,7 +1585,7 @@ END_TEST
  *
  * GPS observation message with TOW of 247600 gets pushed into the converter.
  * Following that a GLO observation message with TOW of 257630 gets pushed into
- * the converter. This test case is conducted for both legacy and none legacy
+ * the converter. This test case is conducted for both legacy and non-legacy
  * conversion.
  *
  * Expected result: RTCM to SBP converter determines leap second to be equal to
