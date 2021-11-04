@@ -590,7 +590,7 @@ void send_gsa(sbp2nmea_t *state) {
      *   - maximum group size is GSA_MAX_SV
      *   - if SV is reported already by another signal (eg. GPS L1CA vs L2C)
      */
-    if (num_prns[id] > GSA_MAX_SV) {
+    if (num_prns[id] >= GSA_MAX_SV) {
       /* Talker ID specific sentence already maxed out */
       continue;
     }
