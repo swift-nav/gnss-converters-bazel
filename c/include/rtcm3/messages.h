@@ -17,6 +17,10 @@
 #include <stdint.h>
 #include "rtcm3/constants.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum freq_e { L1_FREQ, L2_FREQ, NUM_FREQS } freq_t;
 
 typedef enum msm_type_e {
@@ -408,5 +412,9 @@ typedef struct {
   uint8_t frame_count; /* Frame Count uint8 6 */
   rtcm_ndf_frame frames[MAX_NDF_FRAMES];
 } rtcm_msg_ndf;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SWIFTNAV_RTCM3_MESSAGES_H */
