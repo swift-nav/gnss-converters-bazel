@@ -14,8 +14,8 @@
 #define CHECK_RTCM3_H
 
 #include <libsbp/logging.h>
-#include "../src/gnss_converters/rtcm3_sbp_internal.h"
-#include "../src/gnss_converters_extra/sbp_rtcm3_internal.h"
+#include "../gnss_converters/src/rtcm3_sbp_internal.h"
+#include "../gnss_converters_extra/src/sbp_rtcm3_internal.h"
 
 /* rtcm helper defines and functions */
 

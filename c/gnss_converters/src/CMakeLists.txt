@@ -21,7 +21,7 @@ if(BUILD_SHARED_LIBS)
   )
 endif()
 
-target_include_directories(gnss_converters_c11 PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(gnss_converters_c11 PUBLIC ${PROJECT_SOURCE_DIR}/gnss_converters/include)
 target_link_libraries(gnss_converters_c11
   PUBLIC
     swiftnav::sbp
@@ -58,12 +58,12 @@ endif()
 
 target_compile_options(gnss_converters PRIVATE "-UNDEBUG")
 target_link_libraries(gnss_converters PUBLIC m swiftnav sbp rtcm ubx ixcom)
-target_include_directories(gnss_converters PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_include_directories(gnss_converters PUBLIC ${PROJECT_SOURCE_DIR}/gnss_converters/include)
 target_include_directories(gnss_converters PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(gnss_converters PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ubx_ephemeris)
 
 install(TARGETS gnss_converters DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(
-  DIRECTORY ${PROJECT_SOURCE_DIR}/include/gnss-converters
+  DIRECTORY ${PROJECT_SOURCE_DIR}/gnss_converters/include/gnss-converters
   DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/
 )

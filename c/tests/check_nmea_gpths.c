@@ -8,7 +8,7 @@
 #include <string.h>
 #include <swiftnav/pvt_result.h>
 
-#include "../src/gnss_converters/sbp_nmea_internal.h"
+#include "../gnss_converters/src/sbp_nmea_internal.h"
 #include "check_suites.h"
 #include "config.h"
 

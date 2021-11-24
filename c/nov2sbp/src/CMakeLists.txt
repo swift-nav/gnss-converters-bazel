@@ -1,5 +1,3 @@
-add_subdirectory(parser)
-
 swift_add_tool_library(nov2sbp_main
   SOURCES
     nov2sbp.cc
