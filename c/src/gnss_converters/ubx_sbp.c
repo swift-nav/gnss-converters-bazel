@@ -641,6 +641,18 @@ static void handle_esf_meas(struct ubx_sbp_state *state,
         return;
       }
 
+      // A gap of more than 1 second in odo samples may indicate the ME has
+      // reset. In that case msss will likely be less than the previous value
+      // cached in the state object and would cause wrap around and
+      // errors down the processing chain
+      if ((state->esf_state.running_odo_msss != -1) &&
+          ((uint64_t)esf_meas.calib_tag -
+           (uint64_t)state->esf_state.running_odo_msss) > 1000) {
+        state->esf_state.running_odo_msss = -1;
+        // The first packet after a reset appears to contain bad data so just
+        // drop it, the next packet to arrive should be valid
+        return;
+      }
       if (state->esf_state.running_odo_msss == -1) {
         state->esf_state.running_odo_msss = esf_meas.calib_tag;
       } else {
@@ -905,10 +917,17 @@ static void handle_esf_raw(struct ubx_sbp_state *state,
 
     // A gap of more than 1 second in IMU samples may indicate the ME has reset.
     // In that case msss will likely be less than the previous value cached in
-    // the state object and would cause wrap around and numerical errors down
+    // the state object and would cause wrap around and errors down
     // the processing chain
-    if ((state->esf_state.running_imu_msss == -1) ||
-        ((esf_raw.msss - state->esf_state.last_imu_msss) > 1000)) {
+    if ((state->esf_state.running_imu_msss != -1) &&
+        (esf_raw.msss - state->esf_state.last_imu_msss) > 1000) {
+      state->esf_state.running_imu_msss = -1;
+      // The first packet after a reset appears to contain bad data so just drop
+      // it, the next packet to arrive should be valid
+      return;
+    }
+
+    if (state->esf_state.running_imu_msss == -1) {
       state->esf_state.running_imu_msss = esf_raw.msss;
     } else {
       state->esf_state.running_imu_msss +=
