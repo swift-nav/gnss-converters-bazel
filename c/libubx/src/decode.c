@@ -280,8 +280,8 @@ ubx_rc ubx_decode_nav_pvt_bytestream(swiftnav_bytestream_t *buff,
   // if (msg_nav_pvt->flags & 0x20)
   {
     BYTESTREAM_DECODE_BYTES(buff, msg_nav_pvt->magnetic_declination, 2);
-    BYTESTREAM_DECODE_BYTES(buff, msg_nav_pvt->magnetic_declination_accuracy,
-                            2);
+    BYTESTREAM_DECODE_BYTES(
+        buff, msg_nav_pvt->magnetic_declination_accuracy, 2);
   }
   return RC_OK;
 }
