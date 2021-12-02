@@ -34,11 +34,13 @@ static int readfn(uint8_t *bytes, uint32_t n_bytes, void *context) {
   return static_cast<int>(fread(bytes, sizeof(*bytes), n_bytes, stdin));
 }
 
-static int32_t writefn(uint8_t *bytes, uint32_t n_bytes, void *context) {
+static int32_t nov2sbp_writefn(uint8_t *bytes,
+                               uint32_t n_bytes,
+                               void *context) {
   (void)context;
   return static_cast<int>(fwrite(bytes, sizeof(*bytes), n_bytes, stdout));
 }
 
 int main(int argc, char **argv) {
-  return nov2sbp_main(argc, argv, "", readfn, writefn, nullptr);
+  return nov2sbp_main(argc, argv, "", readfn, nov2sbp_writefn, nullptr);
 }

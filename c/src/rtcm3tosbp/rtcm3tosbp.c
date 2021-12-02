@@ -39,7 +39,7 @@ static time_truth_t time_truth;
 
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
 
-sbp_write_fn_t g_writefn;
+static sbp_write_fn_t rtcm3tosbp_writefn;
 
 static struct rtcm3_sbp_state state;
 static void parse_biases(char *arg);
@@ -72,8 +72,8 @@ static void cb_rtcm_to_sbp(uint16_t sender_id,
   }
 
   (void)(context); /* squash warning */
-  s8 ret =
-      sbp_message_send(&state.sbp_state, msg_type, sender_id, msg, g_writefn);
+  s8 ret = sbp_message_send(
+      &state.sbp_state, msg_type, sender_id, msg, rtcm3tosbp_writefn);
 
   if (ret != SBP_OK) {
     fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
@@ -144,7 +144,7 @@ int rtcm3tosbp_main(int argc,
   /* use observations instead of ephemerides as time source */
   bool use_obs_time = false;
 
-  g_writefn = writefn;
+  rtcm3tosbp_writefn = writefn;
 
   int opt;
   while ((opt = getopt(argc, argv, "hb:c:l:tw:d:soGRECJS:v")) != -1) {

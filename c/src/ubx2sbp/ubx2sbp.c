@@ -18,9 +18,9 @@
 #include <gnss-converters/ubx_sbp.h>
 #include "ubx2sbp_main.h"
 
-sbp_state_t sbp_state;
+static sbp_state_t sbp_state;
 
-writefn_ptr g_writefn;
+static writefn_ptr ubx2sbp_writefn;
 
 static void sbp_write(uint16_t sender_id,
                       sbp_msg_type_t msg_type,
@@ -28,7 +28,7 @@ static void sbp_write(uint16_t sender_id,
                       void *context) {
   (void)context;
 
-  sbp_message_send(&sbp_state, msg_type, sender_id, msg, g_writefn);
+  sbp_message_send(&sbp_state, msg_type, sender_id, msg, ubx2sbp_writefn);
 }
 
 static void help(char *arg, const char *additional_opts_help) {
@@ -56,7 +56,7 @@ int ubx2sbp_main(int argc,
   sbp_state_init(&sbp_state);
   sbp_state_set_io_context(&sbp_state, context);
 
-  g_writefn = writefn;
+  ubx2sbp_writefn = writefn;
 
   struct ubx_sbp_state state;
   ubx_sbp_init(&state, &sbp_write, context);

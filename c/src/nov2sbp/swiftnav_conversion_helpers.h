@@ -28,10 +28,10 @@
 #include <swiftnav/nav_meas.h>
 #include <swiftnav/pvt_result.h>
 
-#include <libsbp/imu.h>
-#include <libsbp/navigation.h>
-#include <libsbp/observation.h>
-#include <libsbp/orientation.h>
+#include <libsbp/legacy/imu.h>
+#include <libsbp/legacy/navigation.h>
+#include <libsbp/legacy/observation.h>
+#include <libsbp/legacy/orientation.h>
 #include <libsbp/sbp.h>
 
 namespace Novatel {

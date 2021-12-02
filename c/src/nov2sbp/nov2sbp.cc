@@ -23,7 +23,7 @@
 typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
 typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
 
-writefn_ptr g_writefn;
+static writefn_ptr nov2sbp_writefn;
 
 static void logfn(const char *msg) { log_warn("%s", msg); }
 
@@ -72,7 +72,7 @@ static void send_sbp_fn(uint32_t msg_id, size_t n_bytes, uint8_t *bytes) {
                               kNovatelSbpSenderId,
                               static_cast<uint8_t>(n_bytes),
                               bytes,
-                              g_writefn);
+                              nov2sbp_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -88,7 +88,7 @@ static void send_time_message(msg_gps_time_t *time_msg) {
                          kNovatelSbpSenderId,
                          sizeof(*time_msg),
                          reinterpret_cast<uint8_t *>(time_msg),  // NOLINT
-                         g_writefn);
+                         nov2sbp_writefn);
     assert(ret == SBP_OK);
   }
 
@@ -137,7 +137,7 @@ static void write_sbp_gps_ephem(const BinaryHeader *header, const void *data) {
                        kNovatelSbpSenderId,
                        sizeof(ephem_msg),
                        reinterpret_cast<uint8_t *>(&ephem_msg),  // NOLINT
-                       g_writefn);
+                       nov2sbp_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -160,7 +160,7 @@ static void write_sbp_best_pos(const BinaryHeader *header, const void *data) {
                               kNovatelSbpSenderId,
                               sizeof(llh_msg),
                               reinterpret_cast<uint8_t *>(&llh_msg),  // NOLINT
-                              g_writefn);
+                              nov2sbp_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -179,7 +179,7 @@ static void write_sbp_best_vel(const BinaryHeader *header, const void *data) {
                               kNovatelSbpSenderId,
                               sizeof(vel_msg),
                               reinterpret_cast<uint8_t *>(&vel_msg),  // NOLINT
-                              g_writefn);
+                              nov2sbp_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -195,7 +195,7 @@ static void write_sbp_ins_att(const BinaryHeader *header, const void *data) {
       kNovatelSbpSenderId,
       sizeof(orient_euler_msg),
       reinterpret_cast<uint8_t *>(&orient_euler_msg),  // NOLINT
-      g_writefn);
+      nov2sbp_writefn);
   assert(ret == SBP_OK);
 }
 
@@ -212,7 +212,7 @@ static void write_sbp_raw_imu(const BinaryHeader *header, const void *data) {
         kNovatelSbpSenderId,
         sizeof(angular_rate_msg),
         reinterpret_cast<uint8_t *>(&angular_rate_msg),  // NOLINT
-        g_writefn);
+        nov2sbp_writefn);
     assert(ret == SBP_OK);
   }
 
@@ -225,7 +225,7 @@ static void write_sbp_raw_imu(const BinaryHeader *header, const void *data) {
                          kNovatelSbpSenderId,
                          sizeof(imu_raw_msg),
                          reinterpret_cast<uint8_t *>(&imu_raw_msg),  // NOLINT
-                         g_writefn);
+                         nov2sbp_writefn);
     assert(ret == SBP_OK);
   }
 
@@ -238,7 +238,7 @@ static void write_sbp_raw_imu(const BinaryHeader *header, const void *data) {
                          kNovatelSbpSenderId,
                          sizeof(imu_aux_msg),
                          reinterpret_cast<uint8_t *>(&imu_aux_msg),  // NOLINT
-                         g_writefn);
+                         nov2sbp_writefn);
     assert(ret == SBP_OK);
 
     time_tracker.imu_aux_time.tow = static_cast<uint32_t>(header->ms);
@@ -292,7 +292,7 @@ extern "C" int nov2sbp_main(int argc,
   sbp_state_init(&sbp);
   sbp_state_set_io_context(&sbp, context);
 
-  g_writefn = writefn;
+  nov2sbp_writefn = writefn;
 
   // Initialize Novatel parser.
   Novatel::Message::CallbackArray callbacks = {{

@@ -29,7 +29,7 @@
 typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
 typedef int (*writefn_ptr)(uint8_t *, uint16_t, void *);
 
-writefn_ptr g_writefn;
+static writefn_ptr sbp2rtcm_writefn;
 
 typedef struct {
   sbp_msg_callbacks_node_t base_pos;
@@ -72,7 +72,7 @@ int sbp2rtcm_main(int argc,
     }
   }
 
-  g_writefn = writefn;
+  sbp2rtcm_writefn = writefn;
 
   /* set time from systime, account for UTC<->GPS leap second difference */
   time_t ct_utc_unix = time(NULL);
@@ -80,7 +80,7 @@ int sbp2rtcm_main(int argc,
   double gps_utc_offset = get_gps_utc_offset(&noleapsec, NULL);
 
   struct rtcm3_out_state state;
-  sbp2rtcm_init(&state, g_writefn, context);
+  sbp2rtcm_init(&state, sbp2rtcm_writefn, context);
   sbp2rtcm_set_leap_second((s8)lrint(gps_utc_offset), &state);
 
   sbp_nodes_t sbp_nodes;

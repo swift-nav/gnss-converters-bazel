@@ -176,16 +176,15 @@ jobs:
           submodules: recursive
           ssh-key: ${{ secrets.SSH_KEY }}
 
-      - name: Install MinGW 6.4.0
+      - name: Install SQLite
         run: |
-          choco install -y --no-progress --allow-downgrade --version=6.4.0 mingw;
           choco install -y --no-progress sqlite;
 
       - name: Install msys2 packages
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
-          install: git base-devel
+          msystem: mingw64
+          install: git base-devel mingw-w64-x86_64-toolchain
           update: true
 
       - name: Install MinGW Rust toolchain
@@ -196,15 +195,14 @@ jobs:
           components: rustfmt, clippy
 
       - name: Run build
-        shell: msys2 {0}
+        shell: bash
         env:
-          CC: gcc
-          CXX: g++
+          CC: C:/msys64/mingw64/bin/gcc.exe
+          CXX: C:/msys64/mingw64/bin/g++.exe
           TESTENV: rust
           OS_NAME: windows
           CMAKE_GENERATOR: MinGW Makefiles
         run: |
-          export PATH="$PATH:/C/Rust/.cargo/bin:/C/ProgramData/chocolatey/bin:/C/Program Files/CMake/bin"
           bash ./ci-build.sh
           echo "RELEASE_ARCHIVE=$(cat release-archive.filename)" >>$GITHUB_ENV
 
