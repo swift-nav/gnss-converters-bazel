@@ -37,9 +37,6 @@ find_package(Swiftnav REQUIRED)
 option(librtcm_ENABLE_TESTS "" OFF)
 find_package(Rtcm REQUIRED)
 
-option(libubx_ENABLE_TESTS "" OFF)
-find_package(Ubx REQUIRED)
-
 option(libixcom_ENABLE_TESTS "" OFF)
 find_package(Ixcom REQUIRED)
 
@@ -52,6 +49,7 @@ if (nov2sbp_BUILD)
   set(CMAKE_C_FLAGS "-DGEOID_MODEL_15_MINUTE_RESOLUTION ${CMAKE_C_FLAGS}")
 endif()
 
+add_subdirectory(libubx)
 add_subdirectory(gnss_converters)
 add_subdirectory(gnss_converters_extra)
 if (gnss-converters_BUILD_BINARIES)
