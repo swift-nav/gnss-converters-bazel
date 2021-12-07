@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8.7)
-
 set(libixcom_HEADERS
   ${PROJECT_SOURCE_DIR}/libixcom/include/ixcom/messages.h
   ${PROJECT_SOURCE_DIR}/libixcom/include/ixcom/XCOMdat.h
