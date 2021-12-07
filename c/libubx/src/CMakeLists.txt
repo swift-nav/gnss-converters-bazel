@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8.7)
-
 set(libubx_HEADERS
   ${PROJECT_SOURCE_DIR}/libubx/include/ubx/ubx_messages.h
   ${PROJECT_SOURCE_DIR}/libubx/include/ubx/encode.h
