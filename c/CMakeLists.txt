@@ -67,3 +67,4 @@ endif()
 
 swift_validate_targets()
 swift_create_clang_tidy_targets()
+
