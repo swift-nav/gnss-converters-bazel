@@ -34,9 +34,6 @@ find_package(Sbp REQUIRED)
 option(libswiftnav_ENABLE_TESTS "" OFF)
 find_package(Swiftnav REQUIRED)
 
-option(librtcm_ENABLE_TESTS "" OFF)
-find_package(Rtcm REQUIRED)
-
 option(nov2sbp_BUILD "" OFF)
 option(BUILD_TESTING "" OFF)
 option(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION "Disable all CRC validation" OFF)
@@ -47,6 +44,7 @@ if (nov2sbp_BUILD)
 endif()
 
 add_subdirectory(libixcom)
+add_subdirectory(librtcm)
 add_subdirectory(libubx)
 add_subdirectory(gnss_converters)
 add_subdirectory(gnss_converters_extra)

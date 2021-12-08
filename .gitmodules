@@ -1,6 +1,3 @@
-[submodule "c/third_party/librtcm"]
-	path = c/third_party/librtcm
-	url = git@github.com:swift-nav/librtcm-private.git
 [submodule "c/third_party/libsbp"]
 	path = c/third_party/libsbp
 	url = https://github.com/swift-nav/libsbp.git

@@ -8,7 +8,10 @@ set -o errexit
 set -o pipefail
 
 function build_haskell () {
-    cd haskell/gnss_converters
+    cd haskell/rtcm
+    stack build --test
+
+    cd ../gnss_converters
     stack build --test
     cd ../..
 }
