@@ -8,9 +8,9 @@ set -o errexit
 set -o pipefail
 
 function build_haskell () {
-    cd haskell
+    cd haskell/gnss_converters
     stack build --test
-    cd ..
+    cd ../..
 }
 
 function build_rust () {
