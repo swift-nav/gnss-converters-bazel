@@ -7,15 +7,6 @@ set -x
 set -o errexit
 set -o pipefail
 
-function build_haskell () {
-    cd haskell/rtcm
-    stack build --test
-
-    cd ../gnss_converters
-    stack build --test
-    cd ../..
-}
-
 function build_rust () {
   VERBOSE=1 cargo test --all-features --all-targets --release -vv
   VERBOSE=1 cargo build --all-features --all-targets --release -vv
@@ -94,9 +85,7 @@ function build_codecov() {
       "${SONAR_ORGANIZATION_CMD_ARG}"
 }
 
-if [ "$TESTENV" == "stack" ]; then
-  build_haskell
-elif [ "$TESTENV" == "codecov" ]; then
+if [ "$TESTENV" == "codecov" ]; then
   build_codecov
 elif [ "$TESTENV" == "rust" ]; then
   build_rust
