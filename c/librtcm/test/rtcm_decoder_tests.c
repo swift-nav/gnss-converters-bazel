@@ -59,6 +59,13 @@ int main(void) {
   test_logging();
 }
 
+void set_valid(
+    rtcm_obs_message *msg, uint8_t sat, uint8_t pr, uint8_t cp, uint8_t lock) {
+  msg->sats[sat].obs[0].flags.fields.valid_pr = pr;
+  msg->sats[sat].obs[0].flags.fields.valid_cp = cp;
+  msg->sats[sat].obs[0].flags.fields.valid_lock = lock;
+}
+
 void test_rtcm_1001(void) {
   rtcm_obs_header header;
   header.msg_num = 1001;
@@ -77,27 +84,21 @@ void test_rtcm_1001(void) {
   msg1001.sats[0].obs[0].pseudorange = 20000004.4;
   msg1001.sats[0].obs[0].carrier_phase = 105100794.4;
   msg1001.sats[0].obs[0].lock = 900;
-  msg1001.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1001.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1001.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1001, 0, 1, 1, 1);
 
   msg1001.sats[1].svId = 6;
   msg1001.sats[1].obs[0].code = 0;
   msg1001.sats[1].obs[0].pseudorange = 22000004.4;
   msg1001.sats[1].obs[0].carrier_phase = 115610703.4;
   msg1001.sats[1].obs[0].lock = 254;
-  msg1001.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1001.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1001.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1001, 1, 1, 1, 1);
 
   msg1001.sats[2].svId = 6;
   msg1001.sats[2].obs[0].code = 0;
   msg1001.sats[2].obs[0].pseudorange = 22000004.4;
   msg1001.sats[2].obs[0].carrier_phase = 115610553.4;
   msg1001.sats[2].obs[0].lock = 254;
-  msg1001.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1001.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1001.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1001, 2, 1, 0, 0);
 
   uint8_t buff[1024];
   memset(buff, 0, 1024);
@@ -127,9 +128,7 @@ void test_rtcm_1002(void) {
   msg1002.sats[0].obs[0].pseudorange = 20000004.4;
   msg1002.sats[0].obs[0].carrier_phase = 105100794.4;
   msg1002.sats[0].obs[0].lock = 900;
-  msg1002.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1002.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1002.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1002, 0, 1, 1, 1);
   msg1002.sats[0].obs[0].cnr = 3.4;
   msg1002.sats[0].obs[0].flags.fields.valid_cnr = 1;
 
@@ -138,9 +137,7 @@ void test_rtcm_1002(void) {
   msg1002.sats[1].obs[0].pseudorange = 22000004.4;
   msg1002.sats[1].obs[0].carrier_phase = 115610703.4;
   msg1002.sats[1].obs[0].lock = 254;
-  msg1002.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1002.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1002.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1002, 1, 1, 1, 1);
   msg1002.sats[1].obs[0].cnr = 50.2;
   msg1002.sats[1].obs[0].flags.fields.valid_cnr = 1;
 
@@ -149,9 +146,7 @@ void test_rtcm_1002(void) {
   msg1002.sats[2].obs[0].pseudorange = 22000004.4;
   msg1002.sats[2].obs[0].carrier_phase = 115610553.4;
   msg1002.sats[2].obs[0].lock = 254;
-  msg1002.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1002.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1002.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1002, 2, 1, 0, 0);
   msg1002.sats[2].obs[0].cnr = 50.2;
   msg1002.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
@@ -183,9 +178,7 @@ void test_rtcm_1003(void) {
   msg1003.sats[0].obs[0].pseudorange = 20000004.4;
   msg1003.sats[0].obs[0].carrier_phase = 105100794.4;
   msg1003.sats[0].obs[0].lock = 900;
-  msg1003.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1003.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1003.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1003, 0, 1, 1, 1);
   msg1003.sats[0].obs[0].flags.fields.valid_cnr = 0;
   msg1003.sats[0].obs[1] = msg1003.sats[0].obs[0];
   msg1003.sats[0].obs[1].pseudorange = 20000124.4;
@@ -196,9 +189,7 @@ void test_rtcm_1003(void) {
   msg1003.sats[1].obs[0].pseudorange = 22000004.4;
   msg1003.sats[1].obs[0].carrier_phase = 115610703.4;
   msg1003.sats[1].obs[0].lock = 254;
-  msg1003.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1003.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1003.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1003, 1, 1, 1, 1);
   msg1003.sats[1].obs[0].flags.fields.valid_cnr = 0;
   msg1003.sats[1].obs[1] = msg1003.sats[1].obs[0];
   msg1003.sats[1].obs[1].pseudorange = 22000024.4;
@@ -209,9 +200,7 @@ void test_rtcm_1003(void) {
   msg1003.sats[2].obs[0].pseudorange = 22000004.4;
   msg1003.sats[2].obs[0].carrier_phase = 115610553.4;
   msg1003.sats[2].obs[0].lock = 254;
-  msg1003.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1003.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1003.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1003, 2, 1, 0, 0);
   msg1003.sats[2].obs[0].cnr = 50.2;
   msg1003.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
@@ -243,9 +232,7 @@ void test_rtcm_1004(void) {
   msg1004.sats[0].obs[0].pseudorange = 20000004.4;
   msg1004.sats[0].obs[0].carrier_phase = 105100794.4;
   msg1004.sats[0].obs[0].lock = 900;
-  msg1004.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1004.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1004.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1004, 0, 1, 1, 1);
   msg1004.sats[0].obs[0].cnr = 3.4;
   msg1004.sats[0].obs[0].flags.fields.valid_cnr = 1;
   msg1004.sats[0].obs[1] = msg1004.sats[0].obs[0];
@@ -259,9 +246,7 @@ void test_rtcm_1004(void) {
   msg1004.sats[1].obs[0].pseudorange = 22000004.4;
   msg1004.sats[1].obs[0].carrier_phase = 115610703.4;
   msg1004.sats[1].obs[0].lock = 254;
-  msg1004.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1004.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1004.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1004, 1, 1, 1, 1);
   msg1004.sats[1].obs[0].cnr = 50.2;
   msg1004.sats[1].obs[0].flags.fields.valid_cnr = 1;
   msg1004.sats[1].obs[0].cnr = 50.2;
@@ -275,9 +260,7 @@ void test_rtcm_1004(void) {
   msg1004.sats[2].obs[0].pseudorange = 22000004.4;
   msg1004.sats[2].obs[0].carrier_phase = 115610553.4;
   msg1004.sats[2].obs[0].lock = 254;
-  msg1004.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1004.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1004.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1004, 2, 1, 0, 0);
   msg1004.sats[2].obs[0].cnr = 50.2;
   msg1004.sats[2].obs[0].flags.fields.valid_cnr = 0;
   msg1004.sats[2].obs[0].cnr = 50.2;
@@ -291,9 +274,7 @@ void test_rtcm_1004(void) {
   msg1004.sats[3].obs[0].pseudorange = 22000004.4;
   msg1004.sats[3].obs[0].carrier_phase = 115610703.4;
   msg1004.sats[3].obs[0].lock = 254;
-  msg1004.sats[3].obs[0].flags.fields.valid_pr = 1;
-  msg1004.sats[3].obs[0].flags.fields.valid_cp = 1;
-  msg1004.sats[3].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1004, 3, 1, 1, 1);
   msg1004.sats[3].obs[0].cnr = 50.2;
   msg1004.sats[3].obs[0].flags.fields.valid_cnr = 1;
   msg1004.sats[3].obs[0].cnr = 50.2;
@@ -306,9 +287,7 @@ void test_rtcm_1004(void) {
   msg1004.sats[4].obs[0].pseudorange = 22000004.4;
   msg1004.sats[4].obs[0].carrier_phase = 125610703.4; /* divergent phase */
   msg1004.sats[4].obs[0].lock = 254;
-  msg1004.sats[4].obs[0].flags.fields.valid_pr = 1;
-  msg1004.sats[4].obs[0].flags.fields.valid_cp = 1;
-  msg1004.sats[4].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1004, 4, 1, 1, 1);
   msg1004.sats[4].obs[0].cnr = 50.2;
   msg1004.sats[4].obs[0].flags.fields.valid_cnr = 1;
   msg1004.sats[4].obs[0].cnr = 50.2;
@@ -435,9 +414,7 @@ void test_rtcm_1010(void) {
   msg1010.sats[0].obs[0].pseudorange = 20000004.4;
   msg1010.sats[0].obs[0].carrier_phase = 106949010.6;
   msg1010.sats[0].obs[0].lock = 900;
-  msg1010.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1010.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1010.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1010, 0, 1, 1, 1);
   msg1010.sats[0].obs[0].cnr = 3.4;
   msg1010.sats[0].obs[0].flags.fields.valid_cnr = 1;
 
@@ -447,9 +424,7 @@ void test_rtcm_1010(void) {
   msg1010.sats[1].obs[0].pseudorange = 22000004.4;
   msg1010.sats[1].obs[0].carrier_phase = 117396240.5;
   msg1010.sats[1].obs[0].lock = 254;
-  msg1010.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1010.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1010.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1010, 1, 1, 1, 1);
   msg1010.sats[1].obs[0].cnr = 50.2;
   msg1010.sats[1].obs[0].flags.fields.valid_cnr = 1;
 
@@ -459,9 +434,7 @@ void test_rtcm_1010(void) {
   msg1010.sats[2].obs[0].pseudorange = 22000004.4;
   msg1010.sats[2].obs[0].carrier_phase = 117396248.1;
   msg1010.sats[2].obs[0].lock = 254;
-  msg1010.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1010.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1010.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1010, 2, 1, 0, 0);
   msg1010.sats[2].obs[0].cnr = 50.2;
   msg1010.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
@@ -494,9 +467,7 @@ void test_rtcm_1012(void) {
   msg1012.sats[0].obs[0].pseudorange = 20000004.4;
   msg1012.sats[0].obs[0].carrier_phase = 106874009.6;
   msg1012.sats[0].obs[0].lock = 900;
-  msg1012.sats[0].obs[0].flags.fields.valid_pr = 1;
-  msg1012.sats[0].obs[0].flags.fields.valid_cp = 1;
-  msg1012.sats[0].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1012, 0, 1, 1, 1);
   msg1012.sats[0].obs[0].cnr = 3.4;
   msg1012.sats[0].obs[0].flags.fields.valid_cnr = 1;
   msg1012.sats[0].obs[1] = msg1012.sats[0].obs[0];
@@ -511,9 +482,7 @@ void test_rtcm_1012(void) {
   msg1012.sats[1].obs[0].pseudorange = 22000004.4;
   msg1012.sats[1].obs[0].carrier_phase = 117809044.6;
   msg1012.sats[1].obs[0].lock = 254;
-  msg1012.sats[1].obs[0].flags.fields.valid_pr = 1;
-  msg1012.sats[1].obs[0].flags.fields.valid_cp = 1;
-  msg1012.sats[1].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1012, 1, 1, 1, 1);
   msg1012.sats[1].obs[0].cnr = 50.2;
   msg1012.sats[1].obs[0].flags.fields.valid_cnr = 1;
   msg1012.sats[1].obs[0].cnr = 50.2;
@@ -528,9 +497,7 @@ void test_rtcm_1012(void) {
   msg1012.sats[2].obs[0].pseudorange = 22000004.4;
   msg1012.sats[2].obs[0].carrier_phase = 117396239.7;
   msg1012.sats[2].obs[0].lock = 254;
-  msg1012.sats[2].obs[0].flags.fields.valid_pr = 1;
-  msg1012.sats[2].obs[0].flags.fields.valid_cp = 0;
-  msg1012.sats[2].obs[0].flags.fields.valid_lock = 0;
+  set_valid(&msg1012, 2, 1, 0, 0);
   msg1012.sats[2].obs[0].cnr = 50.2;
   msg1012.sats[2].obs[0].flags.fields.valid_cnr = 0;
   msg1012.sats[2].obs[0].cnr = 50.2;
@@ -544,9 +511,7 @@ void test_rtcm_1012(void) {
   msg1012.sats[3].obs[0].pseudorange = 20000004.4;
   msg1012.sats[3].obs[0].carrier_phase = 106874009.6;
   msg1012.sats[3].obs[0].lock = 900;
-  msg1012.sats[3].obs[0].flags.fields.valid_pr = 1;
-  msg1012.sats[3].obs[0].flags.fields.valid_cp = 1;
-  msg1012.sats[3].obs[0].flags.fields.valid_lock = 1;
+  set_valid(&msg1012, 3, 1, 1, 1);
   msg1012.sats[3].obs[0].cnr = 3.4;
   msg1012.sats[3].obs[0].flags.fields.valid_cnr = 1;
   /* no L2 observation */
