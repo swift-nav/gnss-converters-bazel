@@ -13,7 +13,7 @@
 #include <gnss-converters-extra/sbp_conv.h>
 
 #include <assert.h>
-#include <libsbp/logging.h>
+#include <libsbp/legacy/logging.h>
 #include <libsbp/sbp.h>
 #include <swiftnav/fifo_byte.h>
 #include <swiftnav/gnss_time.h>

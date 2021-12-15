@@ -1,4 +1,4 @@
-#include <libsbp/logging.h>
+#include <libsbp/legacy/logging.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_encode.h>
 #include <string.h>

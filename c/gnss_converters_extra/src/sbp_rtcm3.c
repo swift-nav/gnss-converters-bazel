@@ -15,8 +15,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libsbp/gnss.h>
-#include <libsbp/logging.h>
+#include <libsbp/legacy/gnss.h>
+#include <libsbp/legacy/logging.h>
 #include <rtcm3/bits.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>

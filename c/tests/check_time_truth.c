@@ -12,7 +12,7 @@
 
 #include <check.h>
 #include <gnss-converters/time_truth.h>
-#include <libsbp/observation.h>
+#include <libsbp/legacy/observation.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <swiftnav/gnss_time.h>

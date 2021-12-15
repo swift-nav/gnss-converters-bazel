@@ -13,7 +13,7 @@
 #ifndef CHECK_RTCM3_H
 #define CHECK_RTCM3_H
 
-#include <libsbp/logging.h>
+#include <libsbp/legacy/logging.h>
 #include "../gnss_converters/src/rtcm3_sbp_internal.h"
 #include "../gnss_converters_extra/src/sbp_rtcm3_internal.h"
 

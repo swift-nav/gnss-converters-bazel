@@ -13,7 +13,7 @@
 #ifndef CHECK_UBX_H
 #define CHECK_UBX_H
 
-#include <libsbp/logging.h>
+#include <libsbp/legacy/logging.h>
 
 #include <gnss-converters/ubx_sbp.h>
 #include <ubx/decode.h>

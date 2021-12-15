@@ -14,9 +14,9 @@
 #define GNSS_CONVERTERS_EXTRA_SBP_RTCM3_INTERFACE_H
 
 #include <gnss-converters/rtcm3_sbp.h>
-#include <libsbp/observation.h>
+#include <libsbp/legacy/observation.h>
+#include <libsbp/legacy/ssr.h>
 #include <libsbp/sbp.h>
-#include <libsbp/ssr.h>
 #include <rtcm3/messages.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>

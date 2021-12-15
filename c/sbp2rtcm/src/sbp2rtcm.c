@@ -14,8 +14,8 @@
  * and writes RTCM3 on stdout. */
 
 #include <assert.h>
-#include <libsbp/logging.h>
-#include <libsbp/observation.h>
+#include <libsbp/legacy/logging.h>
+#include <libsbp/legacy/observation.h>
 #include <libsbp/sbp.h>
 #include <math.h>
 #include <stdint.h>
