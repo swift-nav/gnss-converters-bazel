@@ -181,8 +181,8 @@ jobs:
       - name: Run build
         shell: bash
         env:
-          CC: C:/msys64/mingw64/bin/gcc.exe
-          CXX: C:/msys64/mingw64/bin/g++.exe
+          CC: x86_64-w64-mingw32-gcc
+          CXX: x86_64-w64-mingw32-g++
           TESTENV: rust
           OS_NAME: windows
           CMAKE_GENERATOR: MinGW Makefiles
