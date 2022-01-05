@@ -14,8 +14,8 @@
 #define CHECK_RTCM3_H
 
 #include <libsbp/legacy/logging.h>
-#include "../gnss_converters/src/rtcm3_sbp_internal.h"
-#include "../gnss_converters_extra/src/sbp_rtcm3_internal.h"
+#include "../../gnss_converters/src/rtcm3_sbp_internal.h"
+#include "../../gnss_converters_extra/src/sbp_rtcm3_internal.h"
 
 /* rtcm helper defines and functions */
 
@@ -36,5 +36,11 @@ void test_RTCM3(const char *filename,
                                        const sbp_msg_t *msg,
                                        void *context),
                 gps_time_t current_time);
+
+typedef struct Suite Suite;
+
+Suite *rtcm3_suite(void);
+Suite *rtcm3_ssr_suite(void);
+Suite *rtcm3_time_suite(void);
 
 #endif /* CHECK_RTCM3_H */

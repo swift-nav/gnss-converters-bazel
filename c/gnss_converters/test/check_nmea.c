@@ -19,8 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../gnss_converters/src/sbp_nmea_internal.h"
-#include "check_suites.h"
+#include "../src/sbp_nmea_internal.h"
 #include "config.h"
 #include "nmea_truth.h"
 

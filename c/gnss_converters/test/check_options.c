@@ -17,7 +17,6 @@
 #include <rtcm3/messages.h>
 #include <rtcm3/msm_utils.h>
 #include <rtcm3_utils.h>
-#include "check_suites.h"
 
 #define FLOAT_EPS 1e-6
 

@@ -11,6 +11,6 @@
 	path = c/third_party/check
 	url = https://github.com/swift-nav/check.git
 [submodule "c/tests/afl/findings"]
-	path = c/tests/afl/findings
+	path = c/afl/findings
 	url = git@github.com:swift-nav/gnss-converters-fuzz-testcases.git
         update = none

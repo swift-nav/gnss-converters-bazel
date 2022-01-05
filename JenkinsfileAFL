@@ -56,7 +56,7 @@ pipeline {
                 target: 'rtcm3tosbp'
               )
 
-              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/tests/afl/testcases/rtcm3tosbp -o afl_output c/build/src/rtcm3tosbp/rtcm3tosbp -w 1945:27750")
+              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/afl/testcases/rtcm3tosbp -o afl_output c/build/rtcm3tosbp/src/rtcm3tosbp -w 1945:27750")
 
               def crashes = findFiles(glob: 'afl_output/**/crashes/*')
               def hangs = findFiles(glob: 'afl_output/**/hangs/*')
@@ -100,7 +100,7 @@ pipeline {
                 target: 'ubx2sbp'
               )
 
-              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/tests/afl/testcases/ubx2sbp -o afl_output c/build/src/ubx2sbp/ubx2sbp -w 1945:27750")
+              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/afl/testcases/ubx2sbp -o afl_output c/build/ubx2sbp/src/ubx2sbp -w 1945:27750")
 
               def crashes = findFiles(glob: 'afl_output/**/crashes/*')
               def hangs = findFiles(glob: 'afl_output/**/hangs/*')

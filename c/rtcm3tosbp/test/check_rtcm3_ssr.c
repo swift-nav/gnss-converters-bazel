@@ -18,7 +18,6 @@
 #include <string.h>
 
 #include "check_rtcm3.h"
-#include "check_suites.h"
 #include "config.h"
 
 static bool gps_orbit_clock_processed = false;

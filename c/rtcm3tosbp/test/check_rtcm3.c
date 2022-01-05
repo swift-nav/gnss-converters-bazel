@@ -27,7 +27,6 @@
 #include <swiftnav/sid_set.h>
 
 #include "check_rtcm3.h"
-#include "check_suites.h"
 #include "config.h"
 
 #define GPS_TOW_TOLERANCE 1e-4
@@ -812,7 +811,7 @@ void test_RTCM3(const char *filename,
   previous_num_obs = 0;
 
   FILE *fp = fopen(filename, "rb");
-  u8 buffer[MAX_FILE_SIZE];
+  u8 buffer[MAX_FILE_SIZE] = {0};
   if (fp == NULL) {
     fprintf(stderr, "Can't open input file! %s\n", filename);
     exit(1);

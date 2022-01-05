@@ -60,7 +60,7 @@ if (gnss-converters_BUILD_BINARIES)
 endif()
 
 if(gnss-converters_BUILD_TESTS)
-  add_subdirectory(tests)
+  add_subdirectory(afl)
 endif()
 
 swift_validate_targets()

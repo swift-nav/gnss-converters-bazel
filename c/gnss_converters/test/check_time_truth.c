@@ -18,6 +18,8 @@
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/logging.h>
 
+#include "check_gnss_converters.h"
+
 /** Build time */
 static const gps_time_t BUILD_GPS_TIME = {.wn = GPS_WEEK_REFERENCE, .tow = 0};
 

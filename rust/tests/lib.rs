@@ -17,7 +17,7 @@ fn rtcm3tosbp_convert() {
     cmd.arg("-o")
         .arg("-w")
         .arg("2080:123")
-        .arg("c/tests/data/piksi-5Hz.rtcm3")
+        .arg("c/rtcm3tosbp/test/data/piksi-5Hz.rtcm3")
         .arg(tempfile.path())
         .assert()
         .success();

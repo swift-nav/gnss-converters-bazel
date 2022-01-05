@@ -10,10 +10,15 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "check_ubx.h"
+#include <gnss-converters/ubx_sbp.h>
+
+#include <ubx/decode.h>
+#include <ubx/encode.h>
+#include <ubx/ubx_messages.h>
 
 #include <check.h>
 #include <libsbp/edc.h>
+#include <libsbp/legacy/logging.h>
 #include <libsbp/v4/orientation.h>
 #include <libsbp/v4/sbas.h>
 #include <libsbp/v4/system.h>
@@ -28,11 +33,9 @@
 #include <swiftnav/nav_meas.h>
 #include <swiftnav/signal.h>
 
-#include <ubx/encode.h>
-
-#include "check_suites.h"
-#include "check_ubx.h"
 #include "config.h"
+
+#define MAX_FILE_SIZE 1048576
 
 static FILE *fp;
 static char tmp_file_name[FILENAME_MAX] = {0};
@@ -1312,4 +1315,21 @@ Suite *ubx_suite(void) {
   suite_add_tcase(s, tc_rxm);
 
   return s;
+}
+
+int main(void) {
+  int number_failed = 0;
+
+  Suite *s = {0};
+
+  SRunner *sr = srunner_create(s);
+  srunner_set_xml(sr, "test_results.xml");
+
+  srunner_add_suite(sr, ubx_suite());
+
+  srunner_set_fork_status(sr, CK_NOFORK);
+  srunner_run_all(sr, CK_NORMAL);
+  number_failed = srunner_ntests_failed(sr);
+  srunner_free(sr);
+  return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

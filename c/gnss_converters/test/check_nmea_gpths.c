@@ -8,8 +8,7 @@
 #include <string.h>
 #include <swiftnav/pvt_result.h>
 
-#include "../gnss_converters/src/sbp_nmea_internal.h"
-#include "check_suites.h"
+#include "../src/sbp_nmea_internal.h"
 #include "config.h"
 
 #define MAX_NMEA_LEN 100

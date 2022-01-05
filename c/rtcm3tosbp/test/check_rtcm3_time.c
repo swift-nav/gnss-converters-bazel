@@ -29,7 +29,6 @@
 #include <swiftnav/sid_set.h>
 
 #include "check_rtcm3.h"
-#include "check_suites.h"
 #include "config.h"
 
 static uint8_t iobuf[4096];

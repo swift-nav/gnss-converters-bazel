@@ -150,5 +150,5 @@ pipeline {
  * @return
  */
 def fetchTestData(Map args = [:]) {
-    sh 'git submodule update --init --checkout --recursive c/tests/afl/findings'
+    sh 'git submodule update --init --checkout --recursive c/afl/findings'
 }

@@ -22,9 +22,14 @@
 
 #include <gnss-converters/ixcom_sbp.h>
 
-#include "check_ixcom.h"
-#include "check_suites.h"
+#include <libsbp/v4/logging.h>
+
+#include <ixcom/decode.h>
+#include <ixcom/messages.h>
+
 #include "config.h"
+
+#define MAX_FILE_SIZE 1048576
 
 static FILE *fp;
 
@@ -145,4 +150,21 @@ Suite *ixcom_suite(void) {
   suite_add_tcase(s, tc_wheeldata);
 
   return s;
+}
+
+int main(void) {
+  int number_failed = 0;
+
+  Suite *s = {0};
+
+  SRunner *sr = srunner_create(s);
+  srunner_set_xml(sr, "test_results.xml");
+
+  srunner_add_suite(sr, ixcom_suite());
+
+  srunner_set_fork_status(sr, CK_NOFORK);
+  srunner_run_all(sr, CK_NORMAL);
+  number_failed = srunner_ntests_failed(sr);
+  srunner_free(sr);
+  return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

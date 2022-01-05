@@ -78,7 +78,6 @@ function build_codecov() {
       "-Dsonar.cfamily.llvm-cov.reportPath=./build/ccov/coverage.txt" \
       "-Dsonar.host.url=${SONAR_HOST_URL}" \
       "-Dsonar.projectKey=${SONAR_PROJECT_KEY}" \
-      "-Dsonar.exclusions=c/tests/**" \
       ${SONAR_OTHER_ARGS} \
       "${SONAR_PROJECT_NAME_CMD_ARG}" \
       "${SONAR_TOKEN_CMD_ARG}" \
