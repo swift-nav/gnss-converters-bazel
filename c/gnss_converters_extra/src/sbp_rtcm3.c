@@ -596,7 +596,7 @@ static void sbp_obs_to_msm_signal_data(const packed_obs_content_t *sbp_obs,
     /* DF420 Half-cycle ambiguity indicator
      * 0 = no ambiguity
      * 1 = ambiguity */
-    signal_data->hca_indicator = (0 == (sbp_flags & MSG_OBS_FLAGS_CODE_VALID));
+    signal_data->hca_indicator = (0 == (sbp_flags & MSG_OBS_FLAGS_HALF_CYCLE_KNOWN));
     msm_flags->fields.valid_cp = true;
   } else {
     msm_flags->fields.valid_cp = false;
