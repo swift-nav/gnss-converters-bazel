@@ -407,7 +407,6 @@ typedef struct {
 /* Navigation Data Frame: encodes raw navigation data bits */
 /* TODO add reference to def */
 typedef struct {
-  uint16_t msg_type;   /* Msg Num DF002 uint16 12 */
   uint16_t stn_id;     /* Reference Station ID uint16 12 */
   uint8_t frame_count; /* Frame Count uint8 6 */
   rtcm_ndf_frame frames[MAX_NDF_FRAMES];

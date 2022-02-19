@@ -613,7 +613,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
     }
     case 4075: {
       rtcm_msg_ndf ndf_msg;
-      if (RC_OK == rtcm3_decode_4075(payload, &ndf_msg)) {
+      if (RC_OK == rtcm3_decode_4075_bitstream(&bitstream, &ndf_msg)) {
         handle_ndf_frame(&ndf_msg, state);
       }
       break;

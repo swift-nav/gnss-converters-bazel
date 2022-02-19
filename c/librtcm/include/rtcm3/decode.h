@@ -58,7 +58,8 @@ rtcm3_rc rtcm3_decode_msm7_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_msm_message *msg);
 rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_msg_swift_proprietary *msg);
-rtcm3_rc rtcm3_decode_4075(const uint8_t buff[], rtcm_msg_ndf *msg);
+rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_bitstream_t *buff,
+                                     rtcm_msg_ndf *msg);
 
 double rtcm3_decode_lock_time(uint8_t lock);
 
@@ -189,6 +190,13 @@ static inline rtcm3_rc rtcm3_decode_4062(const uint8_t buff[],
   swiftnav_bitstream_t bitstream;
   swiftnav_bitstream_init(&bitstream, buff, UINT32_MAX);
   return rtcm3_decode_4062_bitstream(&bitstream, msg);
+}
+
+static inline rtcm3_rc rtcm3_decode_4075(const uint8_t buff[],
+                                         rtcm_msg_ndf *msg) {
+  swiftnav_bitstream_t bitstream;
+  swiftnav_bitstream_init(&bitstream, buff, UINT32_MAX);
+  return rtcm3_decode_4075_bitstream(&bitstream, msg);
 }
 
 #ifdef __cplusplus
