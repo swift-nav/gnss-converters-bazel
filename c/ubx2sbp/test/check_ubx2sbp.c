@@ -47,6 +47,14 @@ static void tmp_file_teardown() {
   }
 }
 
+// Write n_bytes to file and check that n_bytes > 0 and the correct number of
+// bytes has been written
+static void write_bytes_to_file(uint8_t *buffer, int n_bytes, FILE *fptr) {
+  ck_assert_int_gt(n_bytes, 0);
+  size_t bytes_written = fwrite(buffer, sizeof(char), n_bytes, fptr);
+  ck_assert_int_eq(bytes_written, n_bytes);
+}
+
 // Struct containing expected results and context information for temperature
 // encoding tests. Passed around using the SBP context mechanism.
 struct temperature_encoding_expectations {
@@ -642,6 +650,17 @@ static void ubx_sbp_callback_imu_temperature(uint16_t sender_id,
   expectations->msg_index++;
 }
 
+static void ubx_sbp_callback_esf_raw_timetag_consistency(
+    u16 sender_id,
+    sbp_msg_type_t msg_type,
+    const sbp_msg_t *sbp_msg,
+    void *context) {
+  (void)sender_id;
+  (void)context;
+  (void)sbp_msg;
+  ck_assert_int_ne(msg_type, SBP_MSG_IMU_RAW);
+}
+
 int read_file_check_ubx(uint8_t *buf, size_t len, void *ctx) {
   (void)ctx;
   return fread(buf, sizeof(uint8_t), len, fp);
@@ -684,6 +703,55 @@ static int create_esf_raw_imu_messages(uint8_t *dest,
                           ESF_Y_AXIS_GYRO_ANG_RATE,
                           ESF_Z_AXIS_GYRO_ANG_RATE};
   for (sample_idx = 0; sample_idx < num_samples; sample_idx++) {
+    for (sensor_idx = 0; sensor_idx < 6; sensor_idx++) {
+      msg_esf_raw.data[sample_idx * 6 + sensor_idx] =
+          (sensor_tag[sensor_idx] << 24) | 0;
+      msg_esf_raw.sensor_time_tag[sample_idx * 6 + sensor_idx] =
+          1234 + sample_idx * spacing;
+    }
+  }
+
+  dest[0] = UBX_SYNC_CHAR_1;
+  dest[1] = UBX_SYNC_CHAR_2;
+  n_bytes = ubx_encode_esf_raw(&msg_esf_raw, &dest[2]);
+  ubx_checksum(&dest[2], n_bytes, (u8 *)&dest[2 + n_bytes]);
+  n_bytes += 4;
+  return n_bytes;
+}
+
+static int create_esf_raw_imu_messages_with_inconsistent_timestamp(
+    uint8_t *dest, double sample_interval_seconds, int num_samples) {
+  ubx_esf_raw msg_esf_raw;
+  memset(&msg_esf_raw, 0, sizeof(ubx_esf_raw));
+
+  const uint32_t starting_msss = 5678;
+
+  msg_esf_raw.msss = starting_msss;
+  msg_esf_raw.length = 4 + 8 * 6 * num_samples;
+  msg_esf_raw.class_id = UBX_CLASS_ESF;
+  msg_esf_raw.msg_id = UBX_MSG_ESF_RAW;
+  int sensor_idx;
+  int sample_idx = 0;
+  int n_bytes;
+  const double ubx_clock_tick_seconds = 39.06525e-6;
+  long spacing = lround(sample_interval_seconds / ubx_clock_tick_seconds);
+
+  uint8_t sensor_tag[] = {ESF_X_AXIS_ACCEL_SPECIFIC_FORCE,
+                          ESF_Y_AXIS_ACCEL_SPECIFIC_FORCE,
+                          ESF_Z_AXIS_ACCEL_SPECIFIC_FORCE,
+                          ESF_X_AXIS_GYRO_ANG_RATE,
+                          ESF_Y_AXIS_GYRO_ANG_RATE,
+                          ESF_Z_AXIS_GYRO_ANG_RATE};
+
+  // Create sensor data for first sample - set time tag to 32768
+  for (sensor_idx = 0; sensor_idx < 6; sensor_idx++) {
+    msg_esf_raw.data[sensor_idx] = (sensor_tag[sensor_idx] << 24) | 0;
+    msg_esf_raw.sensor_time_tag[sensor_idx] = (1 << 15);
+  }
+
+  // Create sensor data for other samples - setting time tag to 1234 +
+  // sample_idx * spacing
+  for (sample_idx = 1; sample_idx < num_samples; sample_idx++) {
     for (sensor_idx = 0; sensor_idx < 6; sensor_idx++) {
       msg_esf_raw.data[sample_idx * 6 + sensor_idx] =
           (sensor_tag[sensor_idx] << 24) | 0;
@@ -967,13 +1035,13 @@ START_TEST(test_wheeltick_sign) {
   uint32_t positive_ticks = 91011;
   int n_bytes = create_esf_meas_messages(
       buffer, 1234, true, 5678, ESF_FRONT_LEFT_WHEEL_TICKS, positive_ticks);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Increment ticks by 10
   positive_ticks += 10;
   n_bytes = create_esf_meas_messages(
       buffer, 1244, true, 5678, ESF_FRONT_LEFT_WHEEL_TICKS, positive_ticks);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Decrement ticks by 20
   uint32_t decrement_ticks_by_20 = (1 << 23) | (positive_ticks + 20);
@@ -983,7 +1051,7 @@ START_TEST(test_wheeltick_sign) {
                                      5678,
                                      ESF_FRONT_LEFT_WHEEL_TICKS,
                                      decrement_ticks_by_20);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1005,19 +1073,18 @@ START_TEST(test_odometry_sign) {
   uint32_t positive_speed = 91011;
   int n_bytes = create_esf_meas_messages(
       buffer, 1234, true, 5678, ESF_SPEED, positive_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Insert second odomety message - negative speed
   uint32_t negative_speed = 0xFFFFFF;  // -1 in 24 bit two's complement
   n_bytes = create_esf_meas_messages(
       buffer, 1244, true, 5678, ESF_SPEED, negative_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Insert third odomety message - positive speed
   n_bytes = create_esf_meas_messages(
       buffer, 1254, true, 5678, ESF_SPEED, positive_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
-
+  write_bytes_to_file(buffer, n_bytes, fp);
   fclose(fp);
 
   test_UBX(&state, tmp_file_name);
@@ -1039,18 +1106,18 @@ START_TEST(test_no_conversion_invalid_calibtag) {
   uint32_t positive_speed = 91011;
   int n_bytes = create_esf_meas_messages(
       buffer, 1234, false, 5678, ESF_SPEED, positive_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Insert second odomety message - negative speed
   uint32_t negative_speed = 0xFFFFFF;  // -1 in 24 bit two's complement
   n_bytes = create_esf_meas_messages(
       buffer, 1244, false, 5678, ESF_SPEED, negative_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Insert third odomety message - positive speed
   n_bytes = create_esf_meas_messages(
       buffer, 1254, false, 5678, ESF_SPEED, positive_speed);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1071,7 +1138,7 @@ START_TEST(test_nav_sat) {
   int n_bytes;
 
   n_bytes = create_nav_sat_message(buffer);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1093,7 +1160,7 @@ START_TEST(test_nav_status) {
   int n_bytes;
 
   n_bytes = create_nav_status_message(buffer, 1234, 5670);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Create an obs message to set week number
   ubx_rxm_rawx msg_rawx;
@@ -1109,15 +1176,16 @@ START_TEST(test_nav_status) {
   n_bytes = ubx_encode_rawx(&msg_rawx, &buffer[2]);
   ubx_checksum(&buffer[2], n_bytes, (u8 *)&buffer[2 + n_bytes]);
   n_bytes += 4;
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
+  ;
 
   // Create IMU messages
   n_bytes = create_esf_raw_imu_messages(buffer, 4711, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Create NAV-STATUS message
   n_bytes = create_nav_status_message(buffer, 1234, 5670);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
   fclose(fp);
 
   // Run tests
@@ -1139,19 +1207,18 @@ START_TEST(test_imu_timestamps) {
 
   // Create IMU messages
   int n_bytes = create_esf_raw_imu_messages(buffer, 4711, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // The next IMU message has an msss which is 100 ms bigger
   n_bytes = create_esf_raw_imu_messages(buffer, 4721, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   // Make a burst of IMU messages in a single ESF-RAW message
   n_bytes = create_esf_raw_imu_messages(buffer, 4731, 0.01, 10);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
-
+  write_bytes_to_file(buffer, n_bytes, fp);
   // Check IMU time week rollover behavior
   n_bytes = create_esf_raw_imu_messages(buffer, 604800000, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1173,10 +1240,10 @@ START_TEST(test_imu_timestamps_msss_rollover) {
 
   // Create IMU messages - MSSS rollover from UINT32_MAX
   int n_bytes = create_esf_raw_imu_messages(buffer, UINT32_MAX, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   n_bytes = create_esf_raw_imu_messages(buffer, 9, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1228,10 +1295,10 @@ START_TEST(test_encode_negative_temperature) {
   uint32_t *tmp = (uint32_t *)&gyro_temp_centi_celsius;
   *tmp &= 0xFFFFFF;
   int n_bytes = create_esf_raw_imu_temp_message(buffer, 1234, *tmp);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   n_bytes = create_esf_raw_imu_messages(buffer, 1234, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   fclose(fp);
 
@@ -1258,11 +1325,38 @@ START_TEST(test_encode_positive_temperature) {
   uint32_t *tmp = (uint32_t *)&gyro_temp_centi_celsius;
   *tmp &= 0xFFFFFF;
   int n_bytes = create_esf_raw_imu_temp_message(buffer, 1234, *tmp);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
   n_bytes = create_esf_raw_imu_messages(buffer, 1234, 0.01, 1);
-  fwrite(buffer, n_bytes, sizeof(char), fp);
+  write_bytes_to_file(buffer, n_bytes, fp);
 
+  fclose(fp);
+
+  // Run tests
+  test_UBX(&state, tmp_file_name);
+}
+END_TEST
+
+START_TEST(test_reject_inconsistent_esf_raw_timestamps) {
+  // Initialise ubx_sbp with the callback set to
+  // ubx_sbp_callback_esf_raw_timetag_consistency This callback will assert that
+  // we don't receive any IMU_RAW messages in this test
+  struct ubx_sbp_state state;
+  ubx_sbp_init(&state, ubx_sbp_callback_esf_raw_timetag_consistency, NULL);
+
+  // Open a temporary file for this test and write a single ESF-RAW message into
+  // this file. The sensor time tags of the generated ESF-RAW message will
+  // contain a jump back without being close to the 24bit overflow.
+  strncpy(tmp_file_name, "XXXXXX", FILENAME_MAX);
+  int fd = mkstemp(tmp_file_name);
+  fp = fdopen(fd, "wb");
+  ck_assert_ptr_nonnull(fp);
+  uint8_t buffer[512];
+  memset(buffer, 0, 512);
+
+  int n_bytes =
+      create_esf_raw_imu_messages_with_inconsistent_timestamp(buffer, 0.01, 10);
+  write_bytes_to_file(buffer, n_bytes, fp);
   fclose(fp);
 
   // Run tests
@@ -1301,6 +1395,7 @@ Suite *ubx_suite(void) {
   tcase_add_test(tc_esf, test_wheeltick_sign);
   tcase_add_test(tc_esf, test_odometry_sign);
   tcase_add_test(tc_esf, test_no_conversion_invalid_calibtag);
+  tcase_add_test(tc_esf, test_reject_inconsistent_esf_raw_timestamps);
   tcase_add_checked_fixture(tc_esf, NULL, tmp_file_teardown);
   suite_add_tcase(s, tc_esf);
 

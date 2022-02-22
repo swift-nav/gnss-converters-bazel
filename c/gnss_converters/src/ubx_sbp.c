@@ -118,6 +118,11 @@ static int reload_ubx_buffer(struct ubx_sbp_state *state) {
   return bytes_read;
 }
 
+static void reset_esf_state(struct ubx_esf_state *state) {
+  state->running_imu_msss = -1;
+  state->running_odo_msss = -1;
+}
+
 /** Attempts to read `length` bytes into `buf`, implemented as a memcpy from
  * state->read_buffer. If there are not enough bytes in the read_buffer, we
  * attempt to reload the read_buffer. If we still do not have sufficient bytes,
@@ -648,7 +653,7 @@ static void handle_esf_meas(struct ubx_sbp_state *state,
       if ((state->esf_state.running_odo_msss != -1) &&
           ((uint64_t)esf_meas.calib_tag -
            (uint64_t)state->esf_state.running_odo_msss) > 1000) {
-        state->esf_state.running_odo_msss = -1;
+        reset_esf_state(&state->esf_state);
         // The first packet after a reset appears to contain bad data so just
         // drop it, the next packet to arrive should be valid
         return;
@@ -737,10 +742,9 @@ static s16 float_to_s16_clamped(float val) {
   return ret;
 }
 
-static void maybe_parse_imu_data(u32 data,
+static void maybe_parse_imu_data(s32 parsed_value,
                                  u8 data_type,
                                  sbp_msg_imu_raw_t *msg) {
-  s32 parsed_value = convert24b(data);
   if (data_type == ESF_X_AXIS_GYRO_ANG_RATE ||
       data_type == ESF_Y_AXIS_GYRO_ANG_RATE ||
       data_type == ESF_Z_AXIS_GYRO_ANG_RATE) {
@@ -885,6 +889,44 @@ static bool is_imu_data(u8 data_type) {
          (ESF_Z_AXIS_ACCEL_SPECIFIC_FORCE == data_type);
 }
 
+static u8 get_esf_raw_num_msgs(const ubx_esf_raw *esf_raw) {
+  return (esf_raw->length - 4) / 8;
+}
+
+static u8 get_esf_raw_data_type(u32 data_field) {
+  return (data_field >> 24) & 0xFF;
+}
+
+static s32 get_esf_raw_parsed_data(u32 data_field) {
+  u32 data = data_field & 0xFFFFFF;
+  return convert24b(data);
+}
+
+static bool are_imu_timestamps_consistent(const ubx_esf_raw *esf_raw) {
+  u8 num_raw = get_esf_raw_num_msgs(esf_raw);
+  for (int i = 0; i < num_raw; i++) {
+    u8 data_type = get_esf_raw_data_type(esf_raw->data[i]);
+    if (!is_imu_data(data_type)) {
+      continue;
+    }
+
+    s32 time_tag_diff_to_first_sample =
+        esf_raw->sensor_time_tag[i] - esf_raw->sensor_time_tag[0];
+    // Sensor time tags have a 24 bit rollover. Here we check whether the first
+    // sensor sample contained in the current ESF-RAW message is close to a 24
+    // bit overflow (e.g. larger than 0x00EFFFFF). If we detect a decreasing
+    // timestamp but the first sample of the message was not close to the
+    // overflow, we claim the timestamps to be inconsistent.
+    const u32 time_tag_near_overflow = 0x00EFFFFF;
+    bool first_sample_near_overflow =
+        (esf_raw->sensor_time_tag[0] >= time_tag_near_overflow);
+    if (time_tag_diff_to_first_sample < 0 && !first_sample_near_overflow) {
+      return false;
+    }
+  }
+  return true;
+}
+
 static void handle_esf_raw(struct ubx_sbp_state *state,
                            swiftnav_bytestream_t *inbuf) {
   ubx_esf_raw esf_raw;
@@ -895,17 +937,22 @@ static void handle_esf_raw(struct ubx_sbp_state *state,
     return;
   }
 
-  u8 num_raw = (esf_raw.length - 4) / 8;
+  // If timestamps in this message are inconsistent, it's better not to convert
+  // this message at all
+  if (!are_imu_timestamps_consistent(&esf_raw)) {
+    return;
+  }
+
+  u8 num_raw = get_esf_raw_num_msgs(&esf_raw);
 
   const size_t MAX_MESSAGES = ESF_Z_AXIS_ACCEL_SPECIFIC_FORCE + 1;
   s16 received_number_msgs[MAX_MESSAGES];
   memset(received_number_msgs, 0, sizeof(s16) * MAX_MESSAGES);
   s16 current_msg_number = 0;
   for (int i = 0; i < num_raw; i++) {
-    u8 data_type = (esf_raw.data[i] >> 24) & 0xFF;
-    u32 data = esf_raw.data[i] & 0xFFFFFF;
+    u8 data_type = get_esf_raw_data_type(esf_raw.data[i]);
+    s32 parsed_value = get_esf_raw_parsed_data(esf_raw.data[i]);
     if (data_type == ESF_GYRO_TEMP) {
-      s32 parsed_value = convert24b(data);
       const double ubx_scale_temp = 0.01;
       state->esf_state.last_imu_temp = ubx_scale_temp * parsed_value;
       state->esf_state.temperature_set = true;
@@ -921,7 +968,7 @@ static void handle_esf_raw(struct ubx_sbp_state *state,
     // the processing chain
     if ((state->esf_state.running_imu_msss != -1) &&
         (esf_raw.msss - state->esf_state.last_imu_msss) > 1000) {
-      state->esf_state.running_imu_msss = -1;
+      reset_esf_state(&state->esf_state);
       // The first packet after a reset appears to contain bad data so just drop
       // it, the next packet to arrive should be valid
       return;
@@ -942,7 +989,7 @@ static void handle_esf_raw(struct ubx_sbp_state *state,
                           &state->esf_state)) {
       return;
     }
-    maybe_parse_imu_data(data, data_type, msg);
+    maybe_parse_imu_data(parsed_value, data_type, msg);
 
     received_number_msgs[data_type]++;
     // Before getting the next sample for an axis, we expect to receive all
@@ -1380,10 +1427,15 @@ void ubx_sbp_init(struct ubx_sbp_state *state,
   state->last_tow_ms = -1;
   state->esf_state.last_obs_time_gnss = GPS_TIME_UNKNOWN;
   state->esf_state.last_imu_time_msss = GPS_TIME_UNKNOWN;
-  state->esf_state.running_imu_msss = -1;
-  state->esf_state.running_odo_msss = -1;
-
+  state->esf_state.last_imu_msss = 0;
+  state->esf_state.last_odo_msss = 0;
+  state->esf_state.imu_raw_msgs_sent = 0;
   state->esf_state.last_input_tick_count = UINT32_MAX;
+  state->esf_state.output_tick_count = 0;
+  state->esf_state.last_imu_temp = 0;
+  state->esf_state.temperature_set = false;
+  state->esf_state.weeknumber_set = false;
+  reset_esf_state(&state->esf_state);
 
   state->leap_second_known = false;
 }
