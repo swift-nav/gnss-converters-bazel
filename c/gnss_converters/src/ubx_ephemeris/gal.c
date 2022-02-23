@@ -88,7 +88,7 @@ void gal_decode_page(struct ubx_sbp_state *data,
                      int sz) {
   assert(data);
   assert(words);
-  if (prn < GAL_FIRST_PRN || prn >= (GAL_FIRST_PRN + NUM_SATS_GAL) || 8 >= sz) {
+  if (prn < GAL_FIRST_PRN || prn >= (GAL_FIRST_PRN + NUM_SATS_GAL) || sz < 8) {
     return;
   }
 
