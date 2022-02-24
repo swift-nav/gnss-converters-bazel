@@ -99,6 +99,12 @@ struct rtcm3_sbp_state {
   fifo_t fifo;
   struct eph_sat_data eph_data;
   sbp_state_t sbp_state;
+
+  /* Track azel and meas full msg when receiving stgsv msg */
+  uint32_t tow_ms_azel;
+  uint32_t tow_ms_meas;
+  sbp_msg_t msg_azel_full;
+  sbp_msg_t msg_meas_full;
 };
 
 void rtcm2sbp_decode_frame(const uint8_t *frame,

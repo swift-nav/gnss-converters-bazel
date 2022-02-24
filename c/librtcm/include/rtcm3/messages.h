@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+
 #include "rtcm3/constants.h"
 
 #ifdef __cplusplus
@@ -45,6 +46,50 @@ typedef enum rtcm_constellation_e {
   RTCM_CONSTELLATION_GAL,
   RTCM_CONSTELLATION_COUNT,
 } rtcm_constellation_t;
+
+/* Proprietary RTCM3 Messages */
+typedef enum {
+  RTCM_TESEOV_RSS = 1,
+  RTCM_TESEOV_RCC = 2,
+
+  RTCM_TESEOV_PVT = 4,
+  RTCM_TESEOV_POSQM = 5,
+  RTCM_TESEOV_OBSQM = 6,
+  RTCM_TESEOV_ICB = 7,
+  RTCM_TESEOV_IFB = 8,
+  RTCM_TESEOV_IONOPAR = 9,
+
+  RTCM_TESEOV_SUSPEND = 15,
+  RTCM_TESEOV_RESTART = 16,
+  RTCM_TESEOV_STDTM = 17,
+  RTCM_TESEOV_TXREQ = 18,
+  RTCM_TESEOV_RESP = 19,
+  RTCM_TESEOV_TEST = 20,
+  RTCM_TESEOV_EPVT = 21,
+  RTCM_TESEOV_AUX = 22,
+  RTCM_TESEOV_SETMTI = 23,
+  RTCM_TESEOV_RFS = 24,
+  RTCM_TESEOV_FWVER = 25,
+  RTCM_TESEOV_SIGQM2 = 26,
+  RTCM_TESEOV_IFBDATA = 27,
+  RTCM_TESEOV_STGSV = 28,
+  RTCM_TESEOV_STGSA = 29,
+  RTCM_TESEOV_STGST = 30,
+  RTCM_TESEOV_STGBS = 31,
+  RTCM_TESEOV_STGRS = 32,
+
+  RTCM_TESEOV_SENS = 64,
+} rtcm_teseov_subtype;
+
+typedef enum {
+  RTCM_TESEOV_GPS = 0,
+  RTCM_TESEOV_GLO = 1,
+  RTCM_TESEOV_QZS = 2,
+  RTCM_TESEOV_GAL = 3,
+  RTCM_TESEOV_SBAS = 4,
+  RTCM_TESEOV_BDS7 = 7,
+  RTCM_TESEOV_BDS13 = 13,
+} rtcm_teseov_constellation_t;
 
 /* return codes for the decoders */
 typedef enum rtcm3_rc_e {
@@ -381,6 +426,32 @@ typedef struct {
   uint8_t len;
   uint8_t data[255];
 } rtcm_msg_swift_proprietary;
+
+typedef struct {
+  uint8_t sat_id; /* Equivalent bit in the GNSS satellite mask DF07P */
+  int8_t el;      /* Elevation angle [deg] (8) */
+  uint16_t az;    /* Azimuth angle [deg] (9) */
+  uint8_t cn0_b1; /* Signal Strength (CN0) – 1st band (8) */
+  uint8_t cn0_b2; /* Signal Strength (CN0) – 2nd band (8) */
+  uint8_t cn0_b3; /* Signal Strength (CN0) – 3rd band (8) */
+} rtcm_999_stgsv_fv;
+
+/* Encodes STGSV message 999 subtype 28 */
+typedef struct {
+  uint32_t tow_ms;       /* GPS/GLO time of week DF004/DF034 uint32 30/27 */
+  uint8_t constellation; /* GNSS ID DF06P (4) */
+  uint8_t field_mask;    /* Fields mask (8) */
+  bool mul_msg_ind;      /* Multiple Message Indicator DF23P (1) */
+  uint8_t n_sat;         /* Number of satellites */
+  rtcm_999_stgsv_fv field_value[RTCM_STGSV_SATELLITE_MASK_SIZE];
+} rtcm_msg_999_stgsv;
+
+typedef struct {
+  uint8_t sub_type_id;
+  union {
+    rtcm_msg_999_stgsv stgsv;
+  } data;
+} rtcm_msg_999;
 
 #define NDF_SYS_GPS 0
 #define NDF_SYS_GLO 1

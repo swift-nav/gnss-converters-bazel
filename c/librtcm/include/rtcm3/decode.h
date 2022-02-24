@@ -22,6 +22,8 @@ extern "C" {
 
 #include <rtcm3/messages.h>
 
+rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_bitstream_t *buff,
+                                    rtcm_msg_999 *msg_999);
 rtcm3_rc rtcm3_decode_1001_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_obs_message *msg_1001);
 rtcm3_rc rtcm3_decode_1002_bitstream(swiftnav_bitstream_t *buff,
@@ -65,6 +67,13 @@ double rtcm3_decode_lock_time(uint8_t lock);
 
 /* Backwards compatibility versions, these are all susceptible to buffer
  * overflows */
+
+static inline rtcm3_rc rtcm3_decode_999(const uint8_t buff[],
+                                        rtcm_msg_999 *msg_999) {
+  swiftnav_bitstream_t bitstream;
+  swiftnav_bitstream_init(&bitstream, buff, UINT32_MAX);
+  return rtcm3_decode_999_bitstream(&bitstream, msg_999);
+}
 
 static inline rtcm3_rc rtcm3_decode_1001(const uint8_t buff[],
                                          rtcm_obs_message *msg_1001) {

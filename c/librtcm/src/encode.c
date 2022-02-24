@@ -369,6 +369,86 @@ static uint16_t rtcm3_write_glo_header(const rtcm_obs_header *header,
   return bit;
 }
 
+static uint16_t rtcm3_encode_999_stgsv_fv_base(
+    const rtcm_999_stgsv_fv *msg_999_stgsv_fv,
+    uint8_t buff[],
+    uint16_t *bit,
+    const uint8_t field_mask) {
+  if (field_mask & RTCM_STGSV_FIELDMASK_EL) {
+    rtcm_setbits(buff, *bit, 8, msg_999_stgsv_fv->el);
+    *bit += 8;
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_AZ) {
+    rtcm_setbitu(buff, *bit, 9, msg_999_stgsv_fv->az);
+    *bit += 9;
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B1) {
+    rtcm_setbitu(buff, *bit, 8, msg_999_stgsv_fv->cn0_b1);
+    *bit += 8;
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B2) {
+    rtcm_setbitu(buff, *bit, 8, msg_999_stgsv_fv->cn0_b2);
+    *bit += 8;
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B3) {
+    rtcm_setbitu(buff, *bit, 8, msg_999_stgsv_fv->cn0_b3);
+    *bit += 8;
+  }
+
+  /* Round number of bits up to nearest whole byte. */
+  return (*bit + 7) / 8;
+}
+
+static uint16_t rtcm3_encode_999_stgsv_base(
+    const rtcm_msg_999_stgsv *msg_999_stgsv, uint8_t buff[], uint16_t *bit) {
+  rtcm_setbitu(buff, *bit, 30, msg_999_stgsv->tow_ms);
+  *bit += 30;
+  rtcm_setbitu(buff, *bit, 4, msg_999_stgsv->constellation);
+  *bit += 4;
+
+  uint64_t sat_mask = 0;
+  uint8_t sat_mask_size = (msg_999_stgsv->constellation == RTCM_TESEOV_BDS13
+                               ? RTCM_STGSV_SATELLITE_MASK_SIZE_GNSS13
+                               : RTCM_STGSV_SATELLITE_MASK_SIZE);
+  size_t max_n_sat = MIN(msg_999_stgsv->n_sat, sat_mask_size);
+
+  for (uint8_t i = 0; i < max_n_sat; i++) {
+    sat_mask |= (INT64_C(1) << (RTCM_STGSV_SATELLITE_MASK_SIZE -
+                                msg_999_stgsv->field_value[i].sat_id - 1));
+  }
+
+  rtcm_setbitul(buff, *bit, 40, sat_mask);
+  *bit += 40;
+  rtcm_setbitu(buff, *bit, 8, msg_999_stgsv->field_mask);
+  *bit += 8;
+  rtcm_setbitu(buff, *bit, 1, msg_999_stgsv->mul_msg_ind);
+  *bit += 1;
+
+  for (uint8_t i = 0; i < max_n_sat; i++) {
+    rtcm3_encode_999_stgsv_fv_base(
+        &msg_999_stgsv->field_value[i], buff, bit, msg_999_stgsv->field_mask);
+  }
+
+  /* Round number of bits up to nearest whole byte. */
+  return (*bit + 7) / 8;
+}
+
+uint16_t rtcm3_encode_999(const rtcm_msg_999 *msg_999, uint8_t buff[]) {
+  assert(msg_999);
+  uint16_t bit = 0;
+  rtcm_setbitu(buff, bit, 12, 999);
+  bit += 12;
+  rtcm_setbitu(buff, bit, 8, 28);
+  bit += 8;
+
+  switch (msg_999->sub_type_id) {
+    case RTCM_TESEOV_STGSV:
+      return rtcm3_encode_999_stgsv_base(&msg_999->data.stgsv, buff, &bit);
+    default:
+      return RC_INVALID_MESSAGE;
+  }
+}
+
 uint16_t rtcm3_encode_1001(const rtcm_obs_message *msg_1001, uint8_t buff[]) {
   assert(msg_1001);
   uint16_t bit = 64; /* Start at end of header. */

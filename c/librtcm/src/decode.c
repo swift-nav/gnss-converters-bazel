@@ -1532,3 +1532,98 @@ rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_bitstream_t *buff,
 
   return RC_OK;
 }
+
+static rtcm3_rc rtcm3_decode_999_stgsv_fv_base(
+    swiftnav_bitstream_t *buff,
+    rtcm_999_stgsv_fv *msg_999_stgsv_fv,
+    const uint8_t field_mask) {
+  if (field_mask & RTCM_STGSV_FIELDMASK_EL) {
+    BITSTREAM_DECODE_S8(buff, msg_999_stgsv_fv->el, 8);
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_AZ) {
+    BITSTREAM_DECODE_U16(buff, msg_999_stgsv_fv->az, 9);
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B1) {
+    BITSTREAM_DECODE_U8(buff, msg_999_stgsv_fv->cn0_b1, 8);
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B2) {
+    BITSTREAM_DECODE_U8(buff, msg_999_stgsv_fv->cn0_b2, 8);
+  }
+  if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B3) {
+    BITSTREAM_DECODE_U8(buff, msg_999_stgsv_fv->cn0_b3, 8);
+  }
+
+  return RC_OK;
+}
+
+static uint8_t count_sat_active(uint64_t sat_mask,
+                                uint8_t sat_mask_size,
+                                uint8_t sat_active[]) {
+  uint8_t n_sat = 0;
+  for (uint8_t i = 0; i < sat_mask_size; i++) {
+    if (sat_mask & (INT64_C(1) << (RTCM_STGSV_SATELLITE_MASK_SIZE - i - 1))) {
+      sat_active[n_sat] = i;
+      n_sat++;
+    }
+  }
+  return n_sat;
+}
+
+static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_bitstream_t *buff,
+                                            rtcm_msg_999_stgsv *msg_999_stgsv) {
+  uint64_t sat_mask_64 = 0;
+
+  BITSTREAM_DECODE_U32(buff, msg_999_stgsv->tow_ms, 30);
+  BITSTREAM_DECODE_U8(buff, msg_999_stgsv->constellation, 4);
+  BITSTREAM_DECODE_U64(buff, sat_mask_64, RTCM_STGSV_SATELLITE_MASK_SIZE);
+  BITSTREAM_DECODE_U8(buff, msg_999_stgsv->field_mask, 8);
+  BITSTREAM_DECODE_U8(buff, msg_999_stgsv->mul_msg_ind, 1);
+
+  uint8_t sat_mask_size = (msg_999_stgsv->constellation == RTCM_TESEOV_BDS13
+                               ? RTCM_STGSV_SATELLITE_MASK_SIZE_GNSS13
+                               : RTCM_STGSV_SATELLITE_MASK_SIZE);
+
+  uint8_t sat_active_arr[RTCM_STGSV_SATELLITE_MASK_SIZE] = {0};
+  msg_999_stgsv->n_sat =
+      count_sat_active(sat_mask_64, sat_mask_size, sat_active_arr);
+
+  rtcm3_rc rc_status_fv_base = RC_OK;
+  for (uint8_t i = 0; i < msg_999_stgsv->n_sat; i++) {
+    msg_999_stgsv->field_value[i].sat_id = sat_active_arr[i];
+
+    rc_status_fv_base = rtcm3_decode_999_stgsv_fv_base(
+        buff, &msg_999_stgsv->field_value[i], msg_999_stgsv->field_mask);
+    if (rc_status_fv_base != RC_OK) {
+      return rc_status_fv_base;
+    }
+  }
+
+  return RC_OK;
+}
+
+/** Decode 999 message
+ *
+ * \param buff The input data buffer
+ * \param msg  message struct
+ * \return  - RC_OK : Success
+ *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
+ *          - RC_INVALID_MESSAGE : Nonzero reserved bits (invalid format)
+ */
+rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_bitstream_t *buff,
+                                    rtcm_msg_999 *msg_999) {
+  assert(msg_999);
+  uint32_t msg_num;
+  BITSTREAM_DECODE_U32(buff, msg_num, 12);
+  BITSTREAM_DECODE_U8(buff, msg_999->sub_type_id, 8);
+
+  if (msg_num != 999) {
+    return RC_MESSAGE_TYPE_MISMATCH;
+  }
+
+  switch (msg_999->sub_type_id) {
+    case RTCM_TESEOV_STGSV:
+      return rtcm3_decode_999_stgsv_base(buff, &msg_999->data.stgsv);
+    default:
+      return RC_INVALID_MESSAGE;
+  }
+}

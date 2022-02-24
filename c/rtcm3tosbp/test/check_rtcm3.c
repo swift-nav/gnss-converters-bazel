@@ -10,23 +10,23 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <check.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "check_rtcm3.h"
 
+#include <check.h>
 #include <libsbp/sbp.h>
 #include <libsbp/v4/observation.h>
+#include <math.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/eph_encode.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/sid_set.h>
 
-#include "check_rtcm3.h"
 #include "config.h"
 
 #define GPS_TOW_TOLERANCE 1e-4
@@ -2511,6 +2511,254 @@ START_TEST(test_sbp_to_rtcm_1046_roundtrip) {
 }
 END_TEST
 
+/* Test rtcm 999 stgsv masseage conversion */
+/* Sample payload for single & multiple msg for rtcm 999 stgsv msg conversion
+ * rtcm_999_stgsv_payload_msg1: multi_msg_indicator == true
+ * rtcm_999_stgsv_payload_msg2: multi_msg_indicator == false */
+static uint8_t rtcm_999_stgsv_payload_msg0[50] = {
+    0x3e, 0x71, 0xc6, 0xc8, 0x9b, 0x4a, 0x02, 0xc1, 0x02, 0x32,
+    0x08, 0x00, 0x3e, 0x70, 0xf9, 0x10, 0xff, 0x1e, 0x75, 0xff,
+    0xff, 0x88, 0xc9, 0x42, 0xff, 0xc2, 0xc9, 0x25, 0x63, 0x60,
+    0xce, 0x0f, 0xff, 0xf3, 0xc9, 0xf8, 0x7f, 0xf9, 0xaa, 0x28,
+    0x4f, 0xfc, 0x18, 0xed, 0xff, 0xfe, 0x76, 0x47, 0x27, 0xff};
+
+static uint8_t rtcm_999_stgsv_payload_msg1[50] = {
+    0x3e, 0x71, 0xc6, 0xc8, 0x9c, 0x44, 0x02, 0xc1, 0x02, 0x32,
+    0x08, 0x00, 0x3e, 0x70, 0xf9, 0x10, 0xff, 0x1e, 0x75, 0xff,
+    0xff, 0x88, 0xc9, 0x42, 0xff, 0xc2, 0xc9, 0x25, 0x63, 0x60,
+    0xce, 0x0f, 0xff, 0xf3, 0xc9, 0xf8, 0x7f, 0xf9, 0xaa, 0x28,
+    0x4f, 0xfc, 0x18, 0xed, 0xff, 0xfe, 0x76, 0x47, 0x27, 0xff};
+
+static uint8_t rtcm_999_stgsv_payload_msg2[22] = {
+    0x3e, 0x71, 0xc6, 0xc8, 0x9c, 0x44, 0x34, 0x50, 0x00, 0x00, 0x00,
+    0x00, 0x3c, 0x10, 0xd9, 0xff, 0xff, 0x1a, 0x12, 0x7f, 0xff, 0x80};
+
+/* Assign expected values for az & el */
+static bool get_sbp_msg_sv_az_el_ev_msg1(sbp_msg_sv_az_el_t *sv_az_el_ev) {
+  int16_t sv_az_el_ev_ar[9][3] = {{1, 56, 124},
+                                  {3, 30, 117},
+                                  {4, 17, 146},
+                                  {10, 11, 36},
+                                  {17, 6, 112},
+                                  {21, 60, 159},
+                                  {22, 53, 69},
+                                  {25, 6, 59},
+                                  {31, 59, 35}};
+
+  uint8_t first_index = sv_az_el_ev->n_azel;
+  sv_az_el_ev->n_azel = 9 + first_index;
+  if (sv_az_el_ev->n_azel > SBP_MSG_SV_AZ_EL_AZEL_MAX) {
+    return false;
+  }
+
+  for (size_t i = first_index; i < sv_az_el_ev->n_azel; i++) {
+    sv_az_el_ev->azel[i].sid.code = CODE_GPS_L1CA;
+    sv_az_el_ev->azel[i].sid.sat = sv_az_el_ev_ar[i - first_index][0];
+    sv_az_el_ev->azel[i].el = (int8_t)sv_az_el_ev_ar[i - first_index][1];
+    sv_az_el_ev->azel[i].az = (uint8_t)sv_az_el_ev_ar[i - first_index][2];
+  }
+  return true;
+}
+
+/* Assign expected values for signal strength*/
+static bool get_sbp_msg_measurement_state_ev_msg1(
+    sbp_msg_measurement_state_t *measurement_state_ev) {
+  uint8_t measurement_state_ev_ar[6][2] = {
+      {1, 64}, {4, 44}, {10, 172}, {21, 60}, {22, 76}, {31, 156}};
+
+  uint8_t first_index = measurement_state_ev->n_states;
+  measurement_state_ev->n_states = 6 + first_index;
+  if (measurement_state_ev->n_states > SBP_MSG_MEASUREMENT_STATE_STATES_MAX) {
+    return false;
+  }
+
+  for (size_t i = first_index; i < measurement_state_ev->n_states; i++) {
+    measurement_state_ev->states[i].mesid.code = CODE_GPS_L1CA;
+    measurement_state_ev->states[i].mesid.sat =
+        measurement_state_ev_ar[i - first_index][0];
+    measurement_state_ev->states[i].cn0 =
+        measurement_state_ev_ar[i - first_index][1];
+  }
+  return true;
+}
+
+/* Assign expected values for az & el */
+static bool get_sbp_msg_sv_az_el_ev_msg2(sbp_msg_sv_az_el_t *sv_az_el_ev) {
+  int16_t sv_az_el_ev_ar[2][3] = {{44, 8, 108}, {46, 26, 18}};
+
+  uint8_t first_index = sv_az_el_ev->n_azel;
+  sv_az_el_ev->n_azel = 2 + first_index;
+  if (sv_az_el_ev->n_azel > SBP_MSG_SV_AZ_EL_AZEL_MAX) {
+    return false;
+  }
+
+  for (size_t i = first_index; i < sv_az_el_ev->n_azel; i++) {
+    sv_az_el_ev->azel[i].sid.code = CODE_BDS2_B1;
+    sv_az_el_ev->azel[i].sid.sat = sv_az_el_ev_ar[i - first_index][0];
+    sv_az_el_ev->azel[i].el = (int8_t)sv_az_el_ev_ar[i - first_index][1];
+    sv_az_el_ev->azel[i].az = (uint8_t)sv_az_el_ev_ar[i - first_index][2];
+  }
+  return true;
+}
+
+/* Assign expected values for signal strength*/
+static bool get_sbp_msg_measurement_state_ev_msg2(
+    sbp_msg_measurement_state_t *measurement_state_ev) {
+  uint8_t first_index = measurement_state_ev->n_states;
+
+  measurement_state_ev->n_states = 0 + first_index;
+  if (measurement_state_ev->n_states > SBP_MSG_MEASUREMENT_STATE_STATES_MAX) {
+    return false;
+  }
+
+  return true;
+}
+
+typedef struct {
+  sbp_msg_sv_az_el_t sv_az_el_ev;
+  sbp_msg_measurement_state_t meas_state_ev;
+} rtcm_999_stgsv_test;  // Test msg content only
+
+void cb_test_rtcm_999_stgsv_to_sbp(uint16_t sender_id,
+                                   sbp_msg_type_t msg_type,
+                                   const sbp_msg_t *msg,
+                                   void *content) {
+  (void)sender_id;
+
+  rtcm_999_stgsv_test *ctx = (rtcm_999_stgsv_test *)content;
+  if (msg_type == SbpMsgSvAzEl) {
+    ck_assert_int_eq(msg->sv_az_el.n_azel, ctx->sv_az_el_ev.n_azel);
+    for (uint8_t i = 0; i < msg->sv_az_el.n_azel; i++) {
+      ck_assert_int_eq(msg->sv_az_el.azel[i].sid.sat,
+                       ctx->sv_az_el_ev.azel[i].sid.sat);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].sid.code,
+                       ctx->sv_az_el_ev.azel[i].sid.code);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].el, ctx->sv_az_el_ev.azel[i].el);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].az, ctx->sv_az_el_ev.azel[i].az);
+    }
+  } else if (msg_type == SbpMsgMeasurementState) {
+    ck_assert_int_eq(msg->measurement_state.n_states,
+                     ctx->meas_state_ev.n_states);
+    for (uint8_t i = 0; i < msg->measurement_state.n_states; i++) {
+      ck_assert_int_eq(msg->measurement_state.states[i].mesid.sat,
+                       ctx->meas_state_ev.states[i].mesid.sat);
+      ck_assert_int_eq(msg->measurement_state.states[i].mesid.code,
+                       ctx->meas_state_ev.states[i].mesid.code);
+      ck_assert_int_eq(msg->measurement_state.states[i].cn0,
+                       ctx->meas_state_ev.states[i].cn0);
+    }
+  } else {
+    ck_assert(false);
+  }
+}
+
+START_TEST(test_rtcm_999_stgsv_to_sbp_single_msg) {
+  uint16_t payload_len = 22;
+
+  rtcm_999_stgsv_test ev = {0};
+  if (!get_sbp_msg_sv_az_el_ev_msg2(&ev.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg2(&ev.meas_state_ev)) {
+    assert(false);
+  }
+
+  time_truth_init(&time_truth);
+  rtcm2sbp_init(&state, &time_truth, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
+  rtcm2sbp_decode_payload(rtcm_999_stgsv_payload_msg2, payload_len, &state);
+}
+END_TEST
+
+START_TEST(test_rtcm_999_stgsv_to_sbp_multi_msg) {
+  uint16_t payload_len_msg1 = 50;
+  uint16_t payload_len_msg2 = 22;
+
+  rtcm_999_stgsv_test ev = {0};
+  if (!get_sbp_msg_sv_az_el_ev_msg1(&ev.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg1(&ev.meas_state_ev) ||
+      !get_sbp_msg_sv_az_el_ev_msg2(&ev.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg2(&ev.meas_state_ev)) {
+    assert(false);
+  }
+
+  time_truth_init(&time_truth);
+  rtcm2sbp_init(&state, &time_truth, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
+  rtcm2sbp_decode_payload(
+      rtcm_999_stgsv_payload_msg1, payload_len_msg1, &state);
+  rtcm2sbp_decode_payload(
+      rtcm_999_stgsv_payload_msg2, payload_len_msg2, &state);
+}
+END_TEST
+
+void cb_test_rtcm_999_stgsv_to_sbp_missing_msg(uint16_t sender_id,
+                                               sbp_msg_type_t msg_type,
+                                               const sbp_msg_t *msg,
+                                               void *content) {
+  (void)sender_id;
+
+  static uint8_t count = 0;
+  uint8_t index = (++count < 2 ? 0 : 1);
+  rtcm_999_stgsv_test *ctx = (rtcm_999_stgsv_test *)content + index;
+  if (msg_type == SbpMsgSvAzEl) {
+    ck_assert_int_eq(msg->sv_az_el.n_azel, ctx->sv_az_el_ev.n_azel);
+    for (uint8_t i = 0; i < msg->sv_az_el.n_azel; i++) {
+      ck_assert_int_eq(msg->sv_az_el.azel[i].sid.sat,
+                       ctx->sv_az_el_ev.azel[i].sid.sat);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].sid.code,
+                       ctx->sv_az_el_ev.azel[i].sid.code);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].el, ctx->sv_az_el_ev.azel[i].el);
+      ck_assert_int_eq(msg->sv_az_el.azel[i].az, ctx->sv_az_el_ev.azel[i].az);
+    }
+  } else if (msg_type == SbpMsgMeasurementState) {
+    ck_assert_int_eq(msg->measurement_state.n_states,
+                     ctx->meas_state_ev.n_states);
+    for (uint8_t i = 0; i < msg->measurement_state.n_states; i++) {
+      ck_assert_int_eq(msg->measurement_state.states[i].mesid.sat,
+                       ctx->meas_state_ev.states[i].mesid.sat);
+      ck_assert_int_eq(msg->measurement_state.states[i].mesid.code,
+                       ctx->meas_state_ev.states[i].mesid.code);
+      ck_assert_int_eq(msg->measurement_state.states[i].cn0,
+                       ctx->meas_state_ev.states[i].cn0);
+    }
+  } else {
+    ck_assert(false);
+  }
+}
+
+START_TEST(test_rtcm_999_stgsv_to_sbp_multi_msg_missing_final_msg) {
+  uint16_t payload_len_msg0 = 50;
+  uint16_t payload_len_msg1 = 50;
+  uint16_t payload_len_msg2 = 22;
+
+  rtcm_999_stgsv_test ev1 = {0};
+  if (!get_sbp_msg_sv_az_el_ev_msg1(&ev1.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg1(&ev1.meas_state_ev)) {
+    assert(false);
+  }  // msg 0 same as msg 1 except for tow (sample)
+
+  rtcm_999_stgsv_test ev2 = {0};
+  if (!get_sbp_msg_sv_az_el_ev_msg1(&ev2.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg1(&ev2.meas_state_ev) ||
+      !get_sbp_msg_sv_az_el_ev_msg2(&ev2.sv_az_el_ev) ||
+      !get_sbp_msg_measurement_state_ev_msg2(&ev2.meas_state_ev)) {
+    assert(false);
+  }
+
+  rtcm_999_stgsv_test ev[2] = {ev1, ev2};
+  time_truth_init(&time_truth);
+  rtcm2sbp_init(&state,
+                &time_truth,
+                cb_test_rtcm_999_stgsv_to_sbp_missing_msg,
+                NULL,
+                &ev);
+
+  rtcm2sbp_decode_payload(
+      rtcm_999_stgsv_payload_msg0, payload_len_msg0, &state);
+  rtcm2sbp_decode_payload(
+      rtcm_999_stgsv_payload_msg1, payload_len_msg1, &state);
+  rtcm2sbp_decode_payload(
+      rtcm_999_stgsv_payload_msg2, payload_len_msg2, &state);
+}
+END_TEST
+
 Suite *rtcm3_suite(void) {
   Suite *s = suite_create("RTCMv3");
 
@@ -2592,6 +2840,14 @@ Suite *rtcm3_suite(void) {
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_1045_roundtrip);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_1046_roundtrip);
   suite_add_tcase(s, tc_sbp_to_rtcm);
+
+  TCase *tc_rtcm_to_sbp = tcase_create("rtcm2sbp");
+  tcase_add_checked_fixture(tc_rtcm_to_sbp, rtcm3_setup_basic, NULL);
+  tcase_add_test(tc_rtcm_to_sbp, test_rtcm_999_stgsv_to_sbp_single_msg);
+  tcase_add_test(tc_rtcm_to_sbp, test_rtcm_999_stgsv_to_sbp_multi_msg);
+  tcase_add_test(tc_rtcm_to_sbp,
+                 test_rtcm_999_stgsv_to_sbp_multi_msg_missing_final_msg);
+  suite_add_tcase(s, tc_rtcm_to_sbp);
 
   return s;
 }

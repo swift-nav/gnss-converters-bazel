@@ -24,6 +24,7 @@ extern "C" {
 
 #include "rtcm3/messages.h"
 
+uint16_t rtcm3_encode_999(const rtcm_msg_999 *msg_999, uint8_t buff[]);
 uint16_t rtcm3_encode_1001(const rtcm_obs_message *msg_1001, uint8_t buff[]);
 uint16_t rtcm3_encode_1002(const rtcm_obs_message *msg_1002, uint8_t buff[]);
 uint16_t rtcm3_encode_1003(const rtcm_obs_message *msg_1003, uint8_t buff[]);

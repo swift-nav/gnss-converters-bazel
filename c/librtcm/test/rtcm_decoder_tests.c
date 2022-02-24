@@ -11,11 +11,13 @@
  */
 
 #include "rtcm_decoder_tests.h"
+
 #include <math.h>
 #include <rtcm3/messages.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "rtcm3/bits.h"
 #include "rtcm3/decode.h"
 #include "rtcm3/encode.h"
@@ -26,12 +28,13 @@
 
 #define LIBRTCM_LOG_INTERNAL
 #include "rtcm3/logging.h"
-
 #include "test_assert.h"
 
 int main(void) {
   test_msm_bit_utils();
   test_lock_time_decoding();
+  test_rtcm_999_stgsv_en_de();
+  test_rtcm_999_stgsv_de_en();
   test_rtcm_1001();
   test_rtcm_1002();
   test_rtcm_1003();
@@ -64,6 +67,103 @@ void set_valid(
   msg->sats[sat].obs[0].flags.fields.valid_pr = pr;
   msg->sats[sat].obs[0].flags.fields.valid_cp = cp;
   msg->sats[sat].obs[0].flags.fields.valid_lock = lock;
+}
+
+/* Test rtcm 999 stgsv massage encode -> decode */
+void test_rtcm_999_stgsv_en_de() {
+  rtcm_msg_999 msg_999 = {0};
+  msg_999.sub_type_id = 28;
+
+  msg_999.data.stgsv.tow_ms = 91743000;  // (0x15DF8C6<<2 | 0)
+  msg_999.data.stgsv.constellation = 0;  // 0x0
+  msg_999.data.stgsv.field_mask = 15;    // 0b0F
+  msg_999.data.stgsv.mul_msg_ind = true;
+  msg_999.data.stgsv.n_sat = 9;
+
+  msg_999.data.stgsv.field_value[0].sat_id = 10;
+  msg_999.data.stgsv.field_value[0].el = 47;
+  msg_999.data.stgsv.field_value[0].az = 305;
+  msg_999.data.stgsv.field_value[0].cn0_b1 = 23;
+  msg_999.data.stgsv.field_value[0].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[1].sat_id = 13;
+  msg_999.data.stgsv.field_value[1].el = 16;
+  msg_999.data.stgsv.field_value[1].az = 134;
+  msg_999.data.stgsv.field_value[1].cn0_b1 = 26;
+  msg_999.data.stgsv.field_value[1].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[2].sat_id = 15;
+  msg_999.data.stgsv.field_value[2].el = 38;
+  msg_999.data.stgsv.field_value[2].az = 110;
+  msg_999.data.stgsv.field_value[2].cn0_b1 = 0xFF;
+  msg_999.data.stgsv.field_value[2].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[3].sat_id = 16;
+  msg_999.data.stgsv.field_value[3].el = 29;
+  msg_999.data.stgsv.field_value[3].az = 254;
+  msg_999.data.stgsv.field_value[3].cn0_b1 = 0xFF;
+  msg_999.data.stgsv.field_value[3].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[4].sat_id = 18;
+  msg_999.data.stgsv.field_value[4].el = 62;
+  msg_999.data.stgsv.field_value[4].az = 136;
+  msg_999.data.stgsv.field_value[4].cn0_b1 = 20;
+  msg_999.data.stgsv.field_value[4].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[5].sat_id = 23;
+  msg_999.data.stgsv.field_value[5].el = 82;
+  msg_999.data.stgsv.field_value[5].az = 265;
+  msg_999.data.stgsv.field_value[5].cn0_b1 = 16;
+  msg_999.data.stgsv.field_value[5].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[6].sat_id = 26;
+  msg_999.data.stgsv.field_value[6].el = 25;
+  msg_999.data.stgsv.field_value[6].az = 296;
+  msg_999.data.stgsv.field_value[6].cn0_b1 = 0xFF;
+  msg_999.data.stgsv.field_value[6].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[7].sat_id = 27;
+  msg_999.data.stgsv.field_value[7].el = 21;
+  msg_999.data.stgsv.field_value[7].az = 224;
+  msg_999.data.stgsv.field_value[7].cn0_b1 = 0xFF;
+  msg_999.data.stgsv.field_value[7].cn0_b2 = 0xFF;
+
+  msg_999.data.stgsv.field_value[8].sat_id = 29;
+  msg_999.data.stgsv.field_value[8].el = 31;
+  msg_999.data.stgsv.field_value[8].az = 38;
+  msg_999.data.stgsv.field_value[8].cn0_b1 = 47;
+  msg_999.data.stgsv.field_value[8].cn0_b2 = 0xFF;
+
+  uint8_t buff[218];
+  memset(buff, 0, 218);
+  rtcm3_encode_999(&msg_999, buff);
+
+  rtcm_msg_999 msg_999_out;
+  rtcm3_rc ret = rtcm3_decode_999(buff, &msg_999_out);
+
+  assert(RC_OK == ret &&
+         msg999stgsv_equals(&msg_999.data.stgsv, &msg_999_out.data.stgsv));
+}
+
+/* Test rtcm 999 stgsv massage decode -> encode */
+void test_rtcm_999_stgsv_de_en() {
+  const uint8_t msg_999_payload[50] = {
+      0x3e, 0x71, 0xc1, 0x5d, 0xf8, 0xc6, 0x00, 0x01, 0x2d, 0x09,
+      0xa0, 0x00, 0x3e, 0x5f, 0x31, 0x17, 0xff, 0x10, 0x43, 0x0d,
+      0x7f, 0x93, 0x1b, 0xbf, 0xff, 0xc7, 0x5f, 0xdf, 0xff, 0xe7,
+      0xc8, 0x81, 0x4f, 0xf5, 0x28, 0x48, 0x87, 0xf8, 0xcc, 0xa3,
+      0xff, 0xfc, 0x55, 0xc1, 0xff, 0xfe, 0x3e, 0x26, 0x2f, 0xff};
+
+  rtcm_msg_999 msg_999 = {0};
+  rtcm3_rc ret_de = rtcm3_decode_999(msg_999_payload, &msg_999);
+  assert(RC_OK == ret_de);
+
+  uint8_t msg_999_payload_ev[218];
+  memset(msg_999_payload_ev, 0, 218);
+  rtcm3_encode_999(&msg_999, msg_999_payload_ev);
+
+  assert(payload_equals(
+      msg_999_payload, msg_999_payload_ev, sizeof(msg_999_payload)));
 }
 
 void test_rtcm_1001(void) {
@@ -654,6 +754,15 @@ void test_rtcm_1230(void) {
   assert(RC_OK == ret && msg1230_equals(&msg1230, &msg1230_out_2));
 }
 
+bool payload_equals(const uint8_t lhs[], const uint8_t rhs[], uint8_t len) {
+  for (uint8_t i = 0; i < len; i++) {
+    if (lhs[i] != rhs[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool msgobs_equals(const rtcm_obs_message *msg_in,
                    const rtcm_obs_message *msg_out) {
   if (msg_in->header.msg_num != msg_out->header.msg_num) {
@@ -956,6 +1065,32 @@ bool msgobs_glo_equals(const rtcm_obs_message *msg_in,
     ++out_sat_idx;
   }
 
+  return true;
+}
+
+static bool msg999stgsv_fv_equals(const rtcm_999_stgsv_fv *lhs,
+                                  const rtcm_999_stgsv_fv *rhs) {
+  if ((lhs->sat_id != rhs->sat_id) || (lhs->el != rhs->el) ||
+      (lhs->az != rhs->az) || (lhs->cn0_b1 != rhs->cn0_b1) ||
+      (lhs->cn0_b2 != rhs->cn0_b2)) {
+    return false;
+  }
+  return true;
+}
+
+bool msg999stgsv_equals(const rtcm_msg_999_stgsv *lhs,
+                        const rtcm_msg_999_stgsv *rhs) {
+  if ((lhs->tow_ms != rhs->tow_ms) ||
+      (lhs->constellation != rhs->constellation) ||
+      (lhs->field_mask != rhs->field_mask) ||
+      (lhs->mul_msg_ind != rhs->mul_msg_ind) || (lhs->n_sat != rhs->n_sat)) {
+    return false;
+  }
+
+  for (uint8_t i = 0; i < lhs->n_sat; i++) {
+    if (!msg999stgsv_fv_equals(&lhs->field_value[i], &rhs->field_value[i]))
+      return false;
+  }
   return true;
 }
 

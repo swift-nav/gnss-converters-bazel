@@ -15,6 +15,8 @@
 
 #include <rtcm3/messages.h>
 
+void test_rtcm_999_stgsv_en_de(void);
+void test_rtcm_999_stgsv_de_en(void);
 static void test_rtcm_1001(void);
 static void test_rtcm_1002(void);
 static void test_rtcm_1003(void);
@@ -43,10 +45,13 @@ static void test_msm_bit_utils(void);
 static void test_lock_time_decoding(void);
 static void test_logging(void);
 
+bool payload_equals(const uint8_t lhs[], const uint8_t rhs[], uint8_t len);
 bool msgobs_equals(const rtcm_obs_message *msg_in,
                    const rtcm_obs_message *msg_out);
 bool msgobs_glo_equals(const rtcm_obs_message *msg_in,
                        const rtcm_obs_message *msg_out);
+bool msg999stgsv_equals(const rtcm_msg_999_stgsv *lhs,
+                        const rtcm_msg_999_stgsv *rhs);
 bool msg1005_equals(const rtcm_msg_1005 *lhs, const rtcm_msg_1005 *rhs);
 bool msg1006_equals(const rtcm_msg_1006 *lhs, const rtcm_msg_1006 *rhs);
 bool msg1007_equals(const rtcm_msg_1007 *lhs, const rtcm_msg_1007 *rhs);

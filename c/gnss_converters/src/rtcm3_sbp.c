@@ -69,6 +69,9 @@
 
 #define RTCM3_PREAMBLE 0xD3
 
+static void handle_rtcm3_999_subframe(const rtcm_msg_999 *msg_999,
+                                      struct rtcm3_sbp_state *state);
+
 static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
                                      const gps_time_t *obs_time,
                                      const gps_time_t *rover_time);
@@ -128,6 +131,11 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   sbp_state_set_io_context(&state->sbp_state, context);
 
   fifo_init(&(state->fifo), state->fifo_buf, RTCM3_FIFO_SIZE);
+
+  state->tow_ms_azel = 0;
+  state->tow_ms_meas = 0;
+  memset(&state->msg_azel_full, 0, sizeof(state->msg_azel_full));
+  memset(&state->msg_meas_full, 0, sizeof(state->msg_meas_full));
 }
 
 void rtcm2sbp_decode_payload(const uint8_t *payload,
@@ -153,6 +161,7 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
         state->time_truth, &time_truth_state, &state->time_from_input_data);
   }
   switch (message_type) {
+    case 999:
     /** msg_base_pos_ecef_t messages */
     case 1005:
     case 1006:
@@ -210,6 +219,13 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
   }
 
   switch (message_type) {
+    case 999: {
+      rtcm_msg_999 msg_999;
+      if (RC_OK == rtcm3_decode_999_bitstream(&bitstream, &msg_999)) {
+        handle_rtcm3_999_subframe(&msg_999, state);
+      }
+      break;
+    }
     case 1001:
     case 1003:
       break;
@@ -1762,4 +1778,265 @@ static bool verify_crc(uint8_t *buf, uint16_t buf_len) {
              computed_crc);
   }
   return (frame_crc == computed_crc);
+}
+
+/* Update satellite prn in SBP following the GNSS ID from RTCM3 DF06P */
+static bool sat_rtcm2sbp(uint8_t rtcm_constellation,
+                         uint8_t rtcm_sat_id,
+                         constellation_t *sbp_constellation,
+                         uint8_t *sbp_sat) {
+  switch (rtcm_constellation) {
+    case RTCM_TESEOV_GPS:
+      *sbp_constellation = CONSTELLATION_GPS;
+      *sbp_sat = rtcm_sat_id + GPS_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_GLO:
+      *sbp_constellation = CONSTELLATION_GLO;
+      *sbp_sat = rtcm_sat_id + GLO_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_QZS:
+      *sbp_constellation = CONSTELLATION_QZS;
+      *sbp_sat = rtcm_sat_id + QZS_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_GAL:
+      *sbp_constellation = CONSTELLATION_GAL;
+      *sbp_sat = rtcm_sat_id + GAL_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_SBAS:
+      *sbp_constellation = CONSTELLATION_SBAS;
+      *sbp_sat = rtcm_sat_id + SBAS_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_BDS7:
+      *sbp_constellation = CONSTELLATION_BDS;
+      *sbp_sat = rtcm_sat_id + BDS_FIRST_PRN;
+      break;
+    case RTCM_TESEOV_BDS13:
+      // special case of BDS, according to DF07P and DF06P
+      *sbp_constellation = CONSTELLATION_BDS;
+      *sbp_sat = rtcm_sat_id + BDS_FIRST_PRN + 40;
+      break;
+    default:
+      return false;
+  }
+  return true;
+}
+
+void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                             sbp_msg_sv_az_el_t *sbp_sv_az_el) {
+  assert(sbp_sv_az_el);
+
+  const uint8_t field_mask =
+      (RTCM_STGSV_FIELDMASK_EL | RTCM_STGSV_FIELDMASK_AZ);
+  if ((rtcm_999_stgsv->field_mask & field_mask) != field_mask) {
+    return;
+  }
+
+  constellation_t sbp_constellation = 0;
+  uint8_t sbp_n_sat = 0;
+
+  for (size_t i = 0; i < rtcm_999_stgsv->n_sat; i++) {
+    uint8_t sbp_sat_id = 0;
+
+    if ((rtcm_999_stgsv->field_value[i].el == RTCM_STGSV_INT8_NOT_VALID) ||
+        (rtcm_999_stgsv->field_value[i].az == RTCM_STGSV_UINT9_NOT_VALID)) {
+      continue;
+    }
+
+    if (!sat_rtcm2sbp(rtcm_999_stgsv->constellation,
+                      rtcm_999_stgsv->field_value[i].sat_id,
+                      &sbp_constellation,
+                      &sbp_sat_id)) {
+      continue;
+    }
+
+    sbp_sv_az_el->azel[sbp_n_sat].sid.sat = sbp_sat_id;
+    sbp_sv_az_el->azel[sbp_n_sat].sid.code =
+        (uint8_t)(constellation_to_l1_code(sbp_constellation));
+
+    sbp_sv_az_el->azel[sbp_n_sat].az =
+        (uint8_t)(rtcm_999_stgsv->field_value[i].az / 2);
+    sbp_sv_az_el->azel[sbp_n_sat].el = rtcm_999_stgsv->field_value[i].el;
+    sbp_n_sat++;
+  }
+
+  sbp_sv_az_el->n_azel = sbp_n_sat;
+}
+
+void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                             sbp_msg_measurement_state_t *sbp_meas_state) {
+  assert(sbp_meas_state);
+
+  const uint8_t field_mask =
+      (RTCM_STGSV_FIELDMASK_CN0_B1 | RTCM_STGSV_FIELDMASK_CN0_B2 |
+       RTCM_STGSV_FIELDMASK_CN0_B3);
+  if (!(rtcm_999_stgsv->field_mask & field_mask)) {
+    return;
+  }
+
+  constellation_t sbp_constellation = 0;
+  uint8_t sbp_n_sat = 0;
+
+  for (size_t i = 0; i < rtcm_999_stgsv->n_sat; i++) {
+    uint8_t sbp_sat_id = 0;
+
+    if (!sat_rtcm2sbp(rtcm_999_stgsv->constellation,
+                      rtcm_999_stgsv->field_value[i].sat_id,
+                      &sbp_constellation,
+                      &sbp_sat_id)) {
+      continue;
+    }
+
+    uint16_t sbp_cn0 = 0;
+    if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B1) &&
+        (rtcm_999_stgsv->field_value[i].cn0_b1 != RTCM_STGSV_UINT8_NOT_VALID)) {
+      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b1 * 4;
+    } else if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B2) &&
+               (rtcm_999_stgsv->field_value[i].cn0_b2 !=
+                RTCM_STGSV_UINT8_NOT_VALID)) {
+      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b2 * 4;
+    } else if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B3) &&
+               (rtcm_999_stgsv->field_value[i].cn0_b3 !=
+                RTCM_STGSV_UINT8_NOT_VALID)) {
+      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b3 * 4;
+    }
+
+    // Check <1. cn0 within uint8_t> & <2. cn0 != 0 (invalid value) pg 158>
+    if ((sbp_cn0 > 255) || (sbp_cn0 == 0)) {
+      continue;
+    }
+
+    sbp_meas_state->states[sbp_n_sat].cn0 = (uint8_t)sbp_cn0;
+    sbp_meas_state->states[sbp_n_sat].mesid.sat = sbp_sat_id;
+    sbp_meas_state->states[sbp_n_sat].mesid.code =
+        (uint8_t)(constellation_to_l1_code(sbp_constellation));
+
+    sbp_n_sat++;
+  }
+
+  sbp_meas_state->n_states = sbp_n_sat;
+}
+
+/* Dealing with multiple_msg_indicator of STGSV msg
+ * Merge all on a single msg */
+static bool expand_multi_msg(sbp_msg_t *msg_full,
+                             const sbp_msg_t *msg,
+                             sbp_msg_type_t msg_type) {
+  if (msg_type == SbpMsgSvAzEl) {
+    uint8_t n_sat_pre = msg_full->sv_az_el.n_azel;
+    uint8_t n_sat_stack =
+        MIN((SBP_MSG_SV_AZ_EL_AZEL_MAX - n_sat_pre), msg->sv_az_el.n_azel);
+
+    for (uint8_t i = 0; i < n_sat_stack; i++) {
+      msg_full->sv_az_el.azel[n_sat_pre + i].el = msg->sv_az_el.azel[i].el;
+      msg_full->sv_az_el.azel[n_sat_pre + i].az = msg->sv_az_el.azel[i].az;
+      msg_full->sv_az_el.azel[n_sat_pre + i].sid.sat =
+          msg->sv_az_el.azel[i].sid.sat;
+      msg_full->sv_az_el.azel[n_sat_pre + i].sid.code =
+          msg->sv_az_el.azel[i].sid.code;
+    }
+    msg_full->sv_az_el.n_azel = (uint8_t)(n_sat_pre + n_sat_stack);
+
+    return true;
+  }
+
+  if (msg_type == SbpMsgMeasurementState) {
+    uint8_t n_sat_pre = msg_full->measurement_state.n_states;
+    uint8_t n_sat_stack =
+        MIN((SBP_MSG_MEASUREMENT_STATE_STATES_MAX - n_sat_pre),
+            msg->measurement_state.n_states);
+
+    for (uint8_t i = 0; i < n_sat_stack; i++) {
+      msg_full->measurement_state.states[n_sat_pre + i].cn0 =
+          msg->measurement_state.states[i].cn0;
+      msg_full->measurement_state.states[n_sat_pre + i].mesid.sat =
+          msg->measurement_state.states[i].mesid.sat;
+      msg_full->measurement_state.states[n_sat_pre + i].mesid.code =
+          msg->measurement_state.states[i].mesid.code;
+    }
+    msg_full->measurement_state.n_states = (uint8_t)(n_sat_pre + n_sat_stack);
+
+    return true;
+  }
+
+  return false;
+}
+
+static void state_callback_update(struct rtcm3_sbp_state *state,
+                                  sbp_msg_type_t msg_type) {
+  if (msg_type == SbpMsgSvAzEl) {
+    state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
+                          SbpMsgSvAzEl,
+                          &state->msg_azel_full,
+                          state->context);
+    state->msg_azel_full.sv_az_el.n_azel = 0;
+    return;
+  }
+  if (msg_type == SbpMsgMeasurementState) {
+    state->cb_rtcm_to_sbp(rtcm_stn_to_sbp_sender_id(0),
+                          SbpMsgMeasurementState,
+                          &state->msg_meas_full,
+                          state->context);
+    state->msg_meas_full.measurement_state.n_states = 0;
+    return;
+  }
+}
+
+static void rtcm3_stgsv_azel_to_sbp_update(const rtcm_msg_999 *msg_999,
+                                           struct rtcm3_sbp_state *state) {
+  // when the previous final msg was missing and full msg was not sent
+  if ((state->msg_azel_full.sv_az_el.n_azel != 0) &&
+      (state->tow_ms_azel != msg_999->data.stgsv.tow_ms)) {
+    state_callback_update(state, SbpMsgSvAzEl);
+  }
+
+  sbp_msg_t msg;
+  sbp_msg_sv_az_el_t sbp_az_el;
+  rtcm3_stgsv_azel_to_sbp(&msg_999->data.stgsv, &sbp_az_el);
+  msg.sv_az_el = sbp_az_el;
+
+  if (state->msg_azel_full.sv_az_el.n_azel < SBP_MSG_SV_AZ_EL_AZEL_MAX) {
+    expand_multi_msg(&state->msg_azel_full, &msg, SbpMsgSvAzEl);
+    state->tow_ms_azel = msg_999->data.stgsv.tow_ms;
+  }
+
+  if (!msg_999->data.stgsv.mul_msg_ind) {
+    state_callback_update(state, SbpMsgSvAzEl);
+  }
+}
+
+static void rtcm3_stgsv_meas_to_sbp_update(const rtcm_msg_999 *msg_999,
+                                           struct rtcm3_sbp_state *state) {
+  // when the previous final msg was missing and full msg was not sent
+  if ((state->msg_meas_full.measurement_state.n_states != 0) &&
+      (state->tow_ms_meas != msg_999->data.stgsv.tow_ms)) {
+    state_callback_update(state, SbpMsgMeasurementState);
+  }
+
+  sbp_msg_t msg;
+  sbp_msg_measurement_state_t sbp_meas_state;
+  rtcm3_stgsv_meas_to_sbp(&msg_999->data.stgsv, &sbp_meas_state);
+  msg.measurement_state = sbp_meas_state;
+
+  if (state->msg_meas_full.measurement_state.n_states <
+      SBP_MSG_MEASUREMENT_STATE_STATES_MAX) {
+    expand_multi_msg(&state->msg_meas_full, &msg, SbpMsgMeasurementState);
+    state->tow_ms_meas = msg_999->data.stgsv.tow_ms;
+  }
+
+  if (!msg_999->data.stgsv.mul_msg_ind) {
+    state_callback_update(state, SbpMsgMeasurementState);
+  }
+}
+
+static void handle_rtcm3_999_subframe(const rtcm_msg_999 *msg_999,
+                                      struct rtcm3_sbp_state *state) {
+  switch (msg_999->sub_type_id) {
+    case RTCM_TESEOV_STGSV: {
+      rtcm3_stgsv_azel_to_sbp_update(msg_999, state);
+      rtcm3_stgsv_meas_to_sbp_update(msg_999, state);
+      break;
+    }
+    default:
+      break;
+  }
 }

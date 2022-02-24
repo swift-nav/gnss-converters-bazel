@@ -4,6 +4,7 @@
 #include <string.h>
 #include <swiftnav/bits.h>
 #include <swiftnav/edc.h>
+
 #include "make_afl_testcases.h"
 
 #define RTCM3_PREAMBLE 0xD3
@@ -63,6 +64,42 @@ static void add_msm_to_output(const rtcm_msm_message *msg,
 static void write_output(const char *name) {
   write_file(name, output_buf, output_buf_len);
   reset_output_buf();
+}
+
+static void make_999_stgsv_cn0_b12(void) {
+  reset_output_buf();
+
+  rtcm_msg_999 msg_999;
+
+  msg_999.sub_type_id = 28;
+  msg_999.data.stgsv.tow_ms = 91743000;  // (0x15DF8C6<<2 | 0)
+  msg_999.data.stgsv.constellation = 0;  // 0x0
+  msg_999.data.stgsv.field_mask = 15;    // 0b0F
+  msg_999.data.stgsv.mul_msg_ind = false;
+  msg_999.data.stgsv.n_sat = 9;
+
+  int16_t field_value[9][5] = {{9, 47, 305, 23, 255},
+                               {12, 16, 134, 26, 255},
+                               {14, 38, 110, 255, 255},
+                               {15, 29, 254, 255, 255},
+                               {17, 62, 136, 20, 255},
+                               {22, 82, 265, 16, 255},
+                               {25, 25, 296, 255, 255},
+                               {26, 21, 224, 255, 255},
+                               {28, 31, 38, 47, 255}};
+
+  for (uint8_t i = 0; i < msg_999.data.stgsv.n_sat; i++) {
+    msg_999.data.stgsv.field_value[i].sat_id = (uint8_t)field_value[i][0];
+    msg_999.data.stgsv.field_value[i].el = (int8_t)field_value[i][1];
+    msg_999.data.stgsv.field_value[i].az = (uint16_t)field_value[i][2];
+    msg_999.data.stgsv.field_value[i].cn0_b1 = (uint8_t)field_value[i][3];
+    msg_999.data.stgsv.field_value[i].cn0_b2 = (uint8_t)field_value[i][4];
+  }
+
+  uint8_t payload[4096];
+  uint8_t payload_len = rtcm3_encode_999(&msg_999, payload);
+  add_payload_to_output(payload, payload_len);
+  write_output("make_999_stgsv_cn0_b12.rtcm");
 }
 
 static void make_1002_single_gps(void) {
@@ -759,6 +796,7 @@ void make_4062(void) {
 }
 
 void make_rtcm_testcases(void) {
+  make_999_stgsv_cn0_b12();
   make_1002_single_gps();
   make_1002_multi_gps();
   make_1004_single_gps();

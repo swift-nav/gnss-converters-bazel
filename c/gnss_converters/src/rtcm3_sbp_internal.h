@@ -19,6 +19,7 @@
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
+
 #include "common.h"
 #include "gnss-converters/rtcm3_sbp.h"
 
@@ -211,5 +212,11 @@ static inline u16 rtcm_stn_to_sbp_sender_id(u16 rtcm_id) {
 
 void handle_ndf_frame(const rtcm_msg_ndf *msg_ndf,
                       struct rtcm3_sbp_state *state);
+
+void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                             sbp_msg_sv_az_el_t *sbp_sv_az_el);
+
+void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                             sbp_msg_measurement_state_t *sbp_meas_state);
 
 #endif /* GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H */
