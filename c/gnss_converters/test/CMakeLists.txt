@@ -10,16 +10,31 @@ set(TEST_SOURCE_FILES
   check_nmea_gpths.c
   check_options.c
   check_time_truth.c
+  check_rtcm_time.c
+  time_truth.cc
   )
 
 swift_add_test(test-gnss-converters
   UNIT_TEST
   SRCS ${TEST_SOURCE_FILES}
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK gnss_converters check Threads::Threads
+  LINK gnss_converters gnss_converters_extra check Threads::Threads
   )
 
 swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)
 if(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
   target_compile_definitions(test-gnss-converters PRIVATE GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
 endif()
+
+swift_add_test(test-gnss-converters-cpp
+  UNIT_TEST
+  SRCS
+    static_vector.cc
+    time_truth_v2.cc
+  INCLUDE
+    $<TARGET_PROPERTY:gnss_converters,INCLUDE_DIRECTORIES>
+  LINK
+    gnss_converters
+    gtest
+    gtest_main
+)

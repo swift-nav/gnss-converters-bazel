@@ -109,6 +109,9 @@ void rtcm3_1005_to_sbp(const rtcm_msg_1005 *rtcm_1005,
 void rtcm3_1006_to_sbp(const rtcm_msg_1006 *rtcm_1006,
                        sbp_msg_base_pos_ecef_t *sbp_base_pos);
 
+void rtcm3_1013_handle(const rtcm_msg_1013 *rtcm_1013,
+                       struct rtcm3_sbp_state *state);
+
 void rtcm3_1033_to_sbp(const rtcm_msg_1033 *rtcm_1033,
                        sbp_msg_glo_biases_t *sbp_glo_bias);
 
@@ -177,6 +180,54 @@ static inline bool gps_time_sec_valid(const sbp_gps_time_sec_t *t) {
   return (t->wn != INVALID_TIME) && (t->wn < MAX_WN) && (t->tow < WEEK_SECS);
 }
 
+/**
+ * Function takes a point in time represented in a constellation's time frame
+ * with a limited week number resolution and converts it to the most appropriate
+ * absolute GPS time representation.
+ *
+ * For example, if BeiDou reports a time of WN: 0 and TOW: 0 (this is the week
+ * number rollover) and we know that the GPS time is at least WN: 2190 and TOW:
+ * 341562, this function will return the most likely GPS time represented by the
+ * constellation, which in this case would be WN: 9548 and TOW: 14. BeiDou's
+ * WN resolution is capped at 13 bits and has a GPS offset of WN: 1356 and
+ * TOW: 14, therefore to use this function, one can use the following code:
+ *
+ * @code
+ *  const gps_time_t bds_time = {.wn = 0, .tow = 0};
+ *  const gps_time_t absolute_gps_reference_time = {.wn = 2190, .tow = 341562};
+ *  const uint8_t bds_wn_resolution = 13;
+ *  const gps_time_t gps_bds_offset = {.wn = BDS_WEEK_TO_GPS_WEEK,
+ *                                     .tow = BDS_SECOND_TO_GPS_SECOND};
+ *
+ *  gps_time_t gps_time = week_rollover_adjustment(
+ *    bds_time, absolute_gps_reference_time, bds_wn_resolution, gps_bds_offset);
+ *
+ *  assert(gps_time.wn == 9548);
+ *  assert(gps_time.tow == 14);
+ * @endcode
+ *
+ * The function will work for Galileo as well, its WN resolution is 12 with a
+ * GPS offset of WN: 1024 and TOW: 0. For GPS constellations, the WN resolution
+ * is 10 and a GPS offset of WN: 0 and TOW: 0.
+ *
+ * This function is meant to replace the crude implementation of
+ * gps_adjust_week_cycle.
+ *
+ * @param constellation_time time represented in the constellation's time frame
+ * @param absolute_gps_reference_time a known absolute GPS time in the recent
+ * past
+ * @param constellation_wn_resolution maximum number of bits that the
+ * constellation can represent its WN value from constellation_time
+ * @param gps_constellation_offset time offset between the GPS time and the
+ * constellations time
+ * @return most likely absolute time presented by the constellation represent as
+ * GPS time
+ */
+gps_time_t week_rollover_adjustment(gps_time_t constellation_time,
+                                    gps_time_t absolute_gps_reference_time,
+                                    uint8_t constellation_wn_resolution,
+                                    gps_time_t gps_constellation_offset);
+
 bool rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           struct rtcm3_sbp_state *state);
@@ -212,6 +263,9 @@ static inline u16 rtcm_stn_to_sbp_sender_id(u16 rtcm_id) {
 
 void handle_ndf_frame(const rtcm_msg_ndf *msg_ndf,
                       struct rtcm3_sbp_state *state);
+
+bool rtcm_get_gps_time(gps_time_t *gps_time, struct rtcm3_sbp_state *state);
+bool rtcm_get_leap_seconds(int8_t *leap_seconds, struct rtcm3_sbp_state *state);
 
 void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
                              sbp_msg_sv_az_el_t *sbp_sv_az_el);

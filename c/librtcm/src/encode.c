@@ -812,6 +812,51 @@ uint16_t rtcm3_encode_1012(const rtcm_obs_message *msg_1012, uint8_t buff[]) {
   return (bit + 7) / 8;
 }
 
+uint16_t rtcm3_encode_1013(const rtcm_msg_1013 *msg_1013, uint8_t buffer[]) {
+  assert(msg_1013);
+  uint16_t bit = 0;
+
+  if (msg_1013->message_count > RTCM_1013_MAX_MESSAGES) {
+    return 0;
+  }
+
+  rtcm_setbitu(buffer, bit, 12, 1013);
+  bit += 12;
+
+  rtcm_setbitu(buffer, bit, 12, msg_1013->reference_station_id);
+  bit += 12;
+
+  rtcm_setbitu(buffer, bit, 16, msg_1013->mjd);
+  bit += 16;
+
+  rtcm_setbitu(buffer, bit, 17, msg_1013->utc);
+  bit += 17;
+
+  if (msg_1013->message_count >= 32) {
+    rtcm_setbitu(buffer, bit, 5, 0);
+  } else {
+    rtcm_setbitu(buffer, bit, 5, msg_1013->message_count);
+  }
+  bit += 5;
+
+  rtcm_setbitu(buffer, bit, 8, msg_1013->leap_second);
+  bit += 8;
+
+  for (size_t i = 0; i < msg_1013->message_count; ++i) {
+    rtcm_setbitu(buffer, bit, 12, msg_1013->messages[i].id);
+    bit += 12;
+
+    rtcm_setbitu(buffer, bit, 1, msg_1013->messages[i].sync_flag);
+    bit += 1;
+
+    rtcm_setbitu(buffer, bit, 16, msg_1013->messages[i].transmission_interval);
+    bit += 16;
+  }
+
+  /* Round number of bits up to nearest whole byte. */
+  return (bit + 7) / 8;
+}
+
 uint16_t rtcm3_encode_1029(const rtcm_msg_1029 *msg_1029, uint8_t buff[]) {
   assert(msg_1029);
   uint16_t bit = 0;

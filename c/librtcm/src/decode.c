@@ -13,6 +13,7 @@
 #include "rtcm3/decode.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -20,6 +21,8 @@
 #include "rtcm3/bits.h"
 #include "rtcm3/eph_decode.h"
 #include "rtcm3/msm_utils.h"
+
+#define RTCM3_MAX_MSG_LEN (1023)
 
 static void init_sat_data(rtcm_sat_data *sat_data) {
   for (uint8_t freq = 0; freq < NUM_FREQS; ++freq) {
@@ -825,6 +828,59 @@ rtcm3_rc rtcm3_decode_1012_bitstream(swiftnav_bitstream_t *buff,
                            phr_pr_diff,
                            GLO_L2_HZ + glo_fcn * GLO_L2_DELTA_HZ);
     l2_freq_data->flags.fields.valid_lock = l2_freq_data->flags.fields.valid_cp;
+  }
+
+  return RC_OK;
+}
+
+/**
+ * Decode a RTCMv3 message type 1013 (System Parameters)
+ *
+ * @param buffer input data buffer
+ * @param msg_1013 message struct
+ * @param message_length length of the RTCM message (not the RTCM frame) in
+ * bytes (valid range is [9, 1023])
+ * @return - RC_OK : Success
+ *         - RC_MESSAGE_TYPE_MISMATCH : Message type mismatched
+ *         - RC_INVALID_MESSAGE : Buffer overflow would have taken place
+ */
+rtcm3_rc rtcm3_decode_1013_bitstream(swiftnav_bitstream_t *buffer,
+                                     rtcm_msg_1013 *msg_1013,
+                                     size_t message_length) {
+  assert(msg_1013);
+  uint16_t message_number;
+
+  if (message_length > RTCM3_MAX_MSG_LEN ||
+      8 * message_length < RTCM_1013_MIN_MSG_LEN_BITS) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  BITSTREAM_DECODE_U16(buffer, message_number, 12);
+  if (message_number != 1013) {
+    return RC_MESSAGE_TYPE_MISMATCH;
+  }
+
+  BITSTREAM_DECODE_U16(buffer, msg_1013->reference_station_id, 12);
+  BITSTREAM_DECODE_U16(buffer, msg_1013->mjd, 16);
+  BITSTREAM_DECODE_U32(buffer, msg_1013->utc, 17);
+  BITSTREAM_DECODE_U16(buffer, msg_1013->message_count, 5);
+
+  // based on the specs for DF053, if the number of message IDs is zero, it can
+  // mean that either there are zero messages provided OR there are more than
+  // 31 messages (limit of the field can hold) at which point the actual size is
+  // based on the RTCM message length
+  if (msg_1013->message_count == 0) {
+    msg_1013->message_count =
+        (8 * message_length - RTCM_1013_MIN_MSG_LEN_BITS) /
+        RTCM_1013_MESSAGE_SIZE_BITS;
+  }
+
+  BITSTREAM_DECODE_U8(buffer, msg_1013->leap_second, 8);
+  for (size_t i = 0; i < msg_1013->message_count; ++i) {
+    BITSTREAM_DECODE_U16(buffer, msg_1013->messages[i].id, 12);
+    BITSTREAM_DECODE_U8(buffer, msg_1013->messages[i].sync_flag, 1);
+    BITSTREAM_DECODE_U16(
+        buffer, msg_1013->messages[i].transmission_interval, 16);
   }
 
   return RC_OK;

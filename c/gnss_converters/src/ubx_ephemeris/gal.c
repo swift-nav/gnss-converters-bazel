@@ -178,6 +178,16 @@ void gal_decode_page(struct ubx_sbp_state *data,
      u-blox8 / u-blox M8 Receiver Description Manual */
   pack_ephemeris_gal(&e, msg, /*src=*/0);
 
+  if (data->ephemeris_time_estimator != NULL) {
+    const gnss_signal_t gnss_signal = {.sat = msg->common.sid.sat,
+                                       .code = msg->common.sid.code};
+    const gps_time_t gps_time = {.wn = (int16_t)msg->common.toe.wn,
+                                 .tow = msg->common.toe.tow};
+
+    time_truth_ephemeris_estimator_push(
+        data->ephemeris_time_estimator, gnss_signal, gps_time);
+  }
+
   assert(data->cb_ubx_to_sbp);
   data->cb_ubx_to_sbp(
       data->sender_id, SbpMsgEphemerisGal, &sbp_msg, data->context);

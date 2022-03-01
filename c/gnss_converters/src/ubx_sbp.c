@@ -1230,6 +1230,13 @@ static void update_utc_params(struct ubx_sbp_state *state,
      * be equal and the polynomial corrections are all zeros */
     state->utc_params.tot.wn = rxm_rawx->rcv_wn;
     state->utc_params.t_lse.wn = rxm_rawx->rcv_wn;
+
+    if (state->ubx_leap_time_estimator != NULL) {
+      time_truth_ubx_leap_estimator_push(
+          state->ubx_leap_time_estimator,
+          (gps_time_t){.wn = rxm_rawx->rcv_wn, .tow = rxm_rawx->rcv_tow},
+          rxm_rawx->leap_second);
+    }
   } else {
     state->leap_second_known = false;
   }
@@ -1263,6 +1270,11 @@ static void handle_rxm_rawx(struct ubx_sbp_state *state,
     sbp_msg_t msg;
     sbp_msg_obs_t *sbp_obs_to_send = &msg.obs;
     sbp_obs_to_send->header.t = obs_time;
+
+    if (state->observation_time_estimator != NULL) {
+      time_truth_observation_estimator_push(state->observation_time_estimator,
+                                            obs_time.tow);
+    }
 
     u8 obs_index;
     for (u8 msg_num = 0; msg_num < total_messages; msg_num++) {
@@ -1438,6 +1450,10 @@ void ubx_sbp_init(struct ubx_sbp_state *state,
   reset_esf_state(&state->esf_state);
 
   state->leap_second_known = false;
+
+  state->observation_time_estimator = NULL;
+  state->ephemeris_time_estimator = NULL;
+  state->ubx_leap_time_estimator = NULL;
 }
 
 void ubx_set_sender_id(struct ubx_sbp_state *state, u16 sender_id) {
@@ -1480,6 +1496,16 @@ int ubx_sbp_process(struct ubx_sbp_state *state,
   ubx_handle_frame(&bytestream, state);
 
   return ret;
+}
+
+void ubx_sbp_set_time_truth_estimators(
+    struct ubx_sbp_state *state,
+    ObservationTimeEstimator *observation_time_estimator,
+    EphemerisTimeEstimator *ephemeris_time_estimator,
+    UbxLeapTimeEstimator *ubx_leap_time_estimator) {
+  state->observation_time_estimator = observation_time_estimator;
+  state->ephemeris_time_estimator = ephemeris_time_estimator;
+  state->ubx_leap_time_estimator = ubx_leap_time_estimator;
 }
 
 void invalidate_subframes(struct sat_data *sat, unsigned mask) {

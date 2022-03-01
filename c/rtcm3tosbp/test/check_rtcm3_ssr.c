@@ -610,6 +610,99 @@ START_TEST(test_ssr_gps_separate_orbit_clock) {
 }
 END_TEST
 
+typedef struct {
+  FILE *fd;
+  sbp_msg_type_t message_type;
+  size_t invocations;
+} test_ssr_context;
+
+static void test_ssr_message_callback(uint16_t sender_id,
+                                      sbp_msg_type_t msg_type,
+                                      const sbp_msg_t *msg,
+                                      void *context) {
+  (void)sender_id;
+  (void)msg;
+
+  ck_assert_ptr_ne(context, NULL);
+  test_ssr_context *ssr_context = (test_ssr_context *)context;
+
+  if (ssr_context->message_type == msg_type) {
+    ++(ssr_context->invocations);
+  }
+}
+
+static int test_ssr_file_read_callback(uint8_t *buffer,
+                                       size_t length,
+                                       void *context) {
+  ck_assert_ptr_ne(context, NULL);
+  test_ssr_context *ssr_context = (test_ssr_context *)context;
+  return fread(buffer, 1, length, ssr_context->fd);
+}
+
+/**
+ * Test validated that all SSR Orbit clock messages are dropped if they don't
+ * know the current time. Once it knows the current time, the messages will
+ * start being converted over.
+ */
+START_TEST(test_ssr_gps_orbit_clock_unknown_time) {
+  static const gps_time_t gps_time = {.wn = 2013, .tow = 211190};
+  test_ssr_context ssr_context;
+  struct rtcm3_sbp_state state;
+
+  FILE *fd = fopen(RELATIVE_PATH_PREFIX "/data/clk.rtcm", "r");
+  ck_assert_ptr_ne(fd, NULL);
+
+  ssr_context = (test_ssr_context){
+      .fd = fd, .message_type = SbpMsgSsrPhaseBiases, .invocations = 0};
+  rtcm2sbp_init(&state, NULL, test_ssr_message_callback, NULL, &ssr_context);
+  while (rtcm2sbp_process(&state, test_ssr_file_read_callback) > 0) {
+  }
+  ck_assert_int_eq(ssr_context.invocations, 0);
+
+  rewind(fd);
+
+  ssr_context = (test_ssr_context){
+      .fd = fd, .message_type = SbpMsgSsrPhaseBiases, .invocations = 0};
+  rtcm2sbp_init(&state, NULL, test_ssr_message_callback, NULL, &ssr_context);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+  while (rtcm2sbp_process(&state, test_ssr_file_read_callback) > 0) {
+  }
+  ck_assert_int_eq(ssr_context.invocations, 2704);
+}
+END_TEST
+
+/**
+ * Test validated that all SSR Orbit clock messages are dropped if they don't
+ * know the current time. Once it knows the current time, the messages will
+ * start being converted over.
+ */
+START_TEST(test_ssr_gps_separate_orbit_clock_unknown_time) {
+  static const gps_time_t gps_time = {.wn = 2013, .tow = 211190};
+  test_ssr_context ssr_context;
+  struct rtcm3_sbp_state state;
+
+  FILE *fd = fopen(RELATIVE_PATH_PREFIX "/data/separate_clk_orbit.rtcm", "r");
+  ck_assert_ptr_ne(fd, NULL);
+
+  ssr_context = (test_ssr_context){
+      .fd = fd, .message_type = SbpMsgSsrOrbitClock, .invocations = 0};
+  rtcm2sbp_init(&state, NULL, test_ssr_message_callback, NULL, &ssr_context);
+  while (rtcm2sbp_process(&state, test_ssr_file_read_callback) > 0) {
+  }
+  ck_assert_int_eq(ssr_context.invocations, 0);
+
+  rewind(fd);
+
+  ssr_context = (test_ssr_context){
+      .fd = fd, .message_type = SbpMsgSsrOrbitClock, .invocations = 0};
+  rtcm2sbp_init(&state, NULL, test_ssr_message_callback, NULL, &ssr_context);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+  while (rtcm2sbp_process(&state, test_ssr_file_read_callback) > 0) {
+  }
+  ck_assert_int_eq(ssr_context.invocations, 1694);
+}
+END_TEST
+
 START_TEST(test_ssr_gps_code_bias) {
   current_time.wn = 2013;
   test_RTCM3(RELATIVE_PATH_PREFIX "/data/clk.rtcm",
@@ -753,14 +846,9 @@ START_TEST(test_ssr_phase_bias) {
 
   struct rtcm3_sbp_state state;
   test_ssr_phase_bias_context_t context;
-  time_truth_t time_truth;
 
-  time_truth_init(&time_truth);
-  time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, local_current_time);
-
-  rtcm2sbp_init(
-      &state, &time_truth, test_ssr_phase_bias_callback, NULL, &context);
-  state.time_from_input_data = local_current_time;
+  rtcm2sbp_init(&state, NULL, test_ssr_phase_bias_callback, NULL, &context);
+  rtcm2sbp_set_time(&local_current_time, NULL, &state);
 
   rtcm_msg_phase_bias rtcm_msg = {
       .header.message_num = 1270,
@@ -835,6 +923,8 @@ Suite *rtcm3_ssr_suite(void) {
   tcase_add_checked_fixture(tc_ssr, rtcm3_setup_basic, NULL);
   tcase_add_test(tc_ssr, test_ssr_gps_orbit_clock);
   tcase_add_test(tc_ssr, test_ssr_gps_separate_orbit_clock);
+  tcase_add_test(tc_ssr, test_ssr_gps_orbit_clock_unknown_time);
+  tcase_add_test(tc_ssr, test_ssr_gps_separate_orbit_clock_unknown_time);
   tcase_add_test(tc_ssr, test_ssr_gps_code_bias);
   tcase_add_test(tc_ssr, test_ssr_gps_phase_bias);
   tcase_add_test(tc_ssr, test_ssr_glo_orbit_clock);

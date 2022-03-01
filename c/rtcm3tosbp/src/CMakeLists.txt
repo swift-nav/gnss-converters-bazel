@@ -1,6 +1,7 @@
 swift_add_tool_library(rtcm3tosbp_main
   SOURCES
     rtcm3tosbp.c
+    time_truth.cc
   REMOVE_COMPILE_OPTIONS
     -Wconversion
 )

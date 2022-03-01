@@ -42,7 +42,6 @@ static sbp_v4_gps_time_t previous_obs_time = {.tow = 0, .wn = INVALID_TIME};
 static u8 previous_n_meas = 0;
 static u8 previous_num_obs = 0;
 
-static time_truth_t time_truth;
 static struct rtcm3_sbp_state state;
 static struct rtcm3_out_state out_state;
 
@@ -206,8 +205,7 @@ static double sbp_time_diff(const sbp_v4_gps_time_t *end,
 void update_obs_time(const sbp_msg_obs_t *msg) {
   gps_time_t obs_time = {.tow = (double)msg[0].header.t.tow / SECS_MS,
                          .wn = msg[0].header.t.wn};
-  state.time_from_input_data = obs_time;
-  time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, obs_time);
+  rtcm2sbp_set_time(&obs_time, NULL, &state);
 }
 
 void sbp_callback_gps(uint16_t sender_id,
@@ -798,13 +796,10 @@ void test_RTCM3(const char *filename,
                                        const sbp_msg_t *msg,
                                        void *context),
                 gps_time_t current_time_) {
-  time_truth_init(&time_truth);
-  time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time_);
+  const int8_t leap_seconds = 18;
 
-  rtcm2sbp_init(&state, &time_truth, cb_rtcm_to_sbp, NULL, NULL);
-  state.time_from_input_data = current_time_;
-  state.leap_seconds = 18;
-  state.leap_second_known = true;
+  rtcm2sbp_init(&state, NULL, cb_rtcm_to_sbp, NULL, NULL);
+  rtcm2sbp_set_time(&current_time_, &leap_seconds, &state);
 
   previous_obs_time.wn = INVALID_TIME;
   previous_n_meas = 0;
@@ -1156,9 +1151,10 @@ void set_expected_bias(double L1CA_bias,
 /* fixture globals and functions */
 
 void rtcm3_setup_basic(void) {
-  memset(&current_time, 0, sizeof(current_time));
   current_time.wn = 1945;
   current_time.tow = 211190;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&current_time, NULL, &state);
 }
 
 /* end fixtures */
@@ -1197,37 +1193,41 @@ START_TEST(test_glo_5hz) {
 END_TEST
 
 START_TEST(test_glonass_computer_time_invalid_input) {
+  const gps_time_t gps_time = (gps_time_t){.wn = 2165, .tow = 237600.0};
+  const int8_t leap_seconds = 18;
+
   gps_time_t obs_time;
 
   /**
    * Valid test case setup.
    */
   rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
-  state.leap_second_known = true;
-  state.leap_seconds = 18;
-  state.time_from_input_data = (gps_time_t){.wn = 2165, .tow = 237600.0};
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  compute_glo_time(69300000, &obs_time, &state.time_from_input_data, &state);
+  compute_glo_time(69300000, &obs_time, &gps_time, &state);
   ck_assert_int_eq(obs_time.wn, 2165);
   ck_assert_double_eq_tol(obs_time.tow, 231318.0, GPS_TOW_TOLERANCE);
 
   /**
-   * Valid test case now has an invalid leap second, therefore it should now
-   * return an invalid time.
+   * Valid test case now has an invalid leap second, regardless, it should now
+   * return an valid time since the GPS time specified is less than the expiry
+   * date.
    */
-  state.leap_second_known = false;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
 
-  compute_glo_time(69300000, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, WN_UNKNOWN);
-  ck_assert(!gps_time_valid(&obs_time));
+  compute_glo_time(69300000, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 2165);
+  ck_assert_double_eq_tol(obs_time.tow, 231318.0, GPS_TOW_TOLERANCE);
 
   /**
    * Valid test case now pushes a GLONASS TOD value that is too large, therefore
    * it should now return an invalid time.
    */
-  state.leap_second_known = true;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  compute_glo_time(86401000, &obs_time, &state.time_from_input_data, &state);
+  compute_glo_time(86401000, &obs_time, &gps_time, &state);
   ck_assert_int_eq(obs_time.wn, WN_UNKNOWN);
   ck_assert(!gps_time_valid(&obs_time));
 }
@@ -1246,11 +1246,10 @@ START_TEST(test_glonass_tod_rollover) {
    * threshold of half a day when dealing with GLONASS time of day rollover.
    */
 
+  const int8_t leap_seconds = 18;
   gps_time_t obs_time;
 
   rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
-  state.leap_second_known = true;
-  state.leap_seconds = 18;
 
   const double rover_inaccuracy_seconds = 36000.0;
   const size_t increments = 100;
@@ -1258,14 +1257,17 @@ START_TEST(test_glonass_tod_rollover) {
 
   for (size_t i = 0; i <= increments; ++i) {
     double offset_seconds = (double)i * increment_seconds;
+    gps_time_t gps_time;
 
     /**
      * Observation is still at 1ms before midnight, rover is some time before
      * midnight
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 334818.0};
-    add_secs(&state.time_from_input_data, -offset_seconds);
-    compute_glo_time(86399999, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 334818.0};
+    add_secs(&gps_time, -offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(86399999, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 334817.999, GPS_TOW_TOLERANCE);
 
@@ -1273,9 +1275,11 @@ START_TEST(test_glonass_tod_rollover) {
      * Observation has rolled over to the next day, rover is some time before
      * midnight
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 334817.999};
-    add_secs(&state.time_from_input_data, -offset_seconds);
-    compute_glo_time(0, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 334817.999};
+    add_secs(&gps_time, -offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(0, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 334818.0, GPS_TOW_TOLERANCE);
 
@@ -1283,9 +1287,11 @@ START_TEST(test_glonass_tod_rollover) {
      * Observation is still at 1ms before midnight, rover is some time after
      * midnight
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 334818.0};
-    add_secs(&state.time_from_input_data, offset_seconds);
-    compute_glo_time(86399999, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 334818.0};
+    add_secs(&gps_time, offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(86399999, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 334817.999, GPS_TOW_TOLERANCE);
 
@@ -1293,9 +1299,11 @@ START_TEST(test_glonass_tod_rollover) {
      * Observation has rolled over to the next day, rover is some time after
      * midnight
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 334817.999};
-    add_secs(&state.time_from_input_data, offset_seconds);
-    compute_glo_time(0, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 334817.999};
+    add_secs(&gps_time, offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(0, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 334818.0, GPS_TOW_TOLERANCE);
   }
@@ -1315,26 +1323,28 @@ START_TEST(test_glonass_wn_rollover) {
    * threshold of half a day when dealing with GLONASS time of day rollover.
    */
 
+  const int8_t leap_seconds = 18;
   gps_time_t obs_time;
 
   rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
-  state.leap_second_known = true;
-  state.leap_seconds = 18;
 
   const double rover_inaccuracy_seconds = 36000.0;
   const size_t increments = 100;
   const double increment_seconds = rover_inaccuracy_seconds / increments;
 
   for (size_t i = 0; i <= increments; ++i) {
+    gps_time_t gps_time;
     double offset_seconds = (double)i * increment_seconds;
 
     /**
      * Observation is still at 1ms before GPS WN roll over, rover is some time
      * before WN roll over
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2162, .tow = 604799.999};
-    add_secs(&state.time_from_input_data, -offset_seconds);
-    compute_glo_time(10781999, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2162, .tow = 604799.999};
+    add_secs(&gps_time, -offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(10781999, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2162);
     ck_assert_double_eq_tol(obs_time.tow, 604799.999, GPS_TOW_TOLERANCE);
 
@@ -1342,9 +1352,11 @@ START_TEST(test_glonass_wn_rollover) {
      * Observation has rolled over to the next GPS WN, rover is some time
      * before WN roll over
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2162, .tow = 604799.999};
-    add_secs(&state.time_from_input_data, -offset_seconds);
-    compute_glo_time(10782000, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2162, .tow = 604799.999};
+    add_secs(&gps_time, -offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(10782000, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 0, GPS_TOW_TOLERANCE);
 
@@ -1352,9 +1364,11 @@ START_TEST(test_glonass_wn_rollover) {
      * Observation is still at 1ms before GPS WN roll over, rover is some time
      * after WN roll over
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 0};
-    add_secs(&state.time_from_input_data, offset_seconds);
-    compute_glo_time(10781999, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 0};
+    add_secs(&gps_time, offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(10781999, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2162);
     ck_assert_double_eq_tol(obs_time.tow, 604799.999, GPS_TOW_TOLERANCE);
 
@@ -1362,9 +1376,11 @@ START_TEST(test_glonass_wn_rollover) {
      * Observation has rolled over to the next GPS WN, rover is some time
      * after WN roll over
      */
-    state.time_from_input_data = (gps_time_t){.wn = 2163, .tow = 0};
-    add_secs(&state.time_from_input_data, offset_seconds);
-    compute_glo_time(10782000, &obs_time, &state.time_from_input_data, &state);
+    gps_time = (gps_time_t){.wn = 2163, .tow = 0};
+    add_secs(&gps_time, offset_seconds);
+    rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
+    compute_glo_time(10782000, &obs_time, &gps_time, &state);
     ck_assert_int_eq(obs_time.wn, 2163);
     ck_assert_double_eq_tol(obs_time.tow, 0, GPS_TOW_TOLERANCE);
   }
@@ -1372,89 +1388,108 @@ START_TEST(test_glonass_wn_rollover) {
 
 START_TEST(test_glonass_leap_second_event_ideal) {
   /**
-   * Time: UTC(SU): Dec 31, 2017 @ 23:59:59.999
-   *       UTC: Dec 31, 2016 @ 20:59:59.999
-   *       GPS: Dec 31, 2017 @ 21:00:16.999
+   * Time: UTC(SU): Jan 1, 2017 @ 02:59:59.999
+   *       UTC: Dec 31, 2016 @ 23:59:59.999
+   *       GPS: Jan 1, 2017 @ 00:00:16.999
    *
-   * GLONNAS time: TOD: 86399999 ms
-   * GPS time: WN 1929 TOW: 594016.999 s
+   * GLONNAS time: TOD: 10799999 ms
+   * GPS time: WN 1930 TOW: 16.999 s
+   *
+   * NOTE: because of the way that RTCM to SBP converter is written, leap
+   * seconds is expressed as the offset from UTC->GPS rather than UTC(SU)->GPS
+   * (for historical reasons), therefore this test case assumes this. In
+   * reality, this means that the GLONASS conversion will be off 1 second for 3
+   * hours until the UTC->GPS leap second matches up with the UTC(SU)->GPS leap
+   * second. To give you context, the UTC->GPS leap second takes place after
+   * Dec 31, 2016 @ 23:59:59 UTC where as the leap second for the GLONASS
+   * constellation take place after place at Dec 31, 2016 @ 20:59:59 UTC.
    */
 
+  gps_time_t gps_time;
   gps_time_t obs_time;
-
-  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
-  state.leap_second_known = true;
 
   /**
    * Both observation and rover are set to 1ms before leap second event
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594016.999};
-  state.leap_seconds = 17;
-  compute_glo_time(86399999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594016.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 16.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10799999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_eq_tol(obs_time.tow, 16.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s and is at the end of the leap second
    * event, rover is still at 1ms before leap second event
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594016.999};
-  state.leap_seconds = 17;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594017.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 16.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10800999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_eq_tol(obs_time.tow, 17.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s + 1ms and has past the leap second
    * event, rover is still at 1ms before leap second event.
    *
    * NOTE: Because the leap seconds hasn't been updated, we might have a 1
-   * second error between the observation's real time of 594018.0 and the one
-   * generated, this is the reasoning behind the assertion of tow = [594017.0,
-   * 594018.0].
+   * second error between the observation's real time of 18.0 and the one
+   * generated, this is the reasoning behind the assertion of tow =
+   * [17.0, 18.0].
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594016.999};
-  state.leap_seconds = 17;
-  compute_glo_time(0, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_ge_tol(obs_time.tow, 594017.0, GPS_TOW_TOLERANCE);
-  ck_assert_double_le_tol(obs_time.tow, 594018.0, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 16.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10801000, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_ge_tol(obs_time.tow, 17.0, GPS_TOW_TOLERANCE);
+  ck_assert_double_le_tol(obs_time.tow, 18.0, GPS_TOW_TOLERANCE);
 
   /**
    * Observation is set to 1ms before leap second event and rover is at the end
    * of the leap second event
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594017.999};
-  state.leap_seconds = 17;
-  compute_glo_time(86399999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594016.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 17.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10799999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_eq_tol(obs_time.tow, 16.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s and is at the end of the leap second
    * event and rover has moved forward by 1s
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594017.999};
-  state.leap_seconds = 17;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594017.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 17.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10800999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_eq_tol(obs_time.tow, 17.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s + 1ms and has past the leap second
    * event and rover has moved forward by 1s
    *
    * NOTE: Because the leap seconds hasn't been updated, we might have a 1
-   * second error between the observation's real time of 594018.0 and the one
-   * generated, this is the reasoning behind the assertion of tow = [594017.0,
-   * 594018.0].
+   * second error between the observation's real time of 18.0 and the one
+   * generated, this is the reasoning behind the assertion of tow =
+   * [17.0, 18.0].
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594017.999};
-  state.leap_seconds = 17;
-  compute_glo_time(0, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_ge_tol(obs_time.tow, 594017.0, GPS_TOW_TOLERANCE);
-  ck_assert_double_le_tol(obs_time.tow, 594018.0, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 17.999};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10801000, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_ge_tol(obs_time.tow, 17.0, GPS_TOW_TOLERANCE);
+  ck_assert_double_le_tol(obs_time.tow, 18.0, GPS_TOW_TOLERANCE);
 
   /**
    * Observation is set to 1ms before leap second event and rover has moved
@@ -1466,12 +1501,14 @@ START_TEST(test_glonass_leap_second_event_ideal) {
    * this is the reasoning behind the assertion of tow = [594016.999,
    * 594017.999].
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594018.0};
-  state.leap_seconds = 18;
-  compute_glo_time(86399999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_ge_tol(obs_time.tow, 594016.999, GPS_TOW_TOLERANCE);
-  ck_assert_double_le_tol(obs_time.tow, 594017.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 18.0};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10799999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_ge_tol(obs_time.tow, 16.999, GPS_TOW_TOLERANCE);
+  ck_assert_double_le_tol(obs_time.tow, 17.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s and is at the end of the leap second
@@ -1483,71 +1520,26 @@ START_TEST(test_glonass_leap_second_event_ideal) {
    * this is the reasoning behind the assertion of tow = [594017.999,
    * 594018.999].
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594018.0};
-  state.leap_seconds = 18;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_ge_tol(obs_time.tow, 594017.999, GPS_TOW_TOLERANCE);
-  ck_assert_double_le_tol(obs_time.tow, 594018.999, GPS_TOW_TOLERANCE);
+  gps_time = (gps_time_t){.wn = 1930, .tow = 18.0};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
+
+  compute_glo_time(10800999, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_ge_tol(obs_time.tow, 17.999, GPS_TOW_TOLERANCE);
+  ck_assert_double_le_tol(obs_time.tow, 18.999, GPS_TOW_TOLERANCE);
 
   /**
    * Observation has moved forward by 1s + 1ms and has past the leap second
    * event and rover has moved forward by 1s + 1ms (leap second has occurred)
    */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594018.0};
-  state.leap_seconds = 18;
-  compute_glo_time(0, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594018.0, GPS_TOW_TOLERANCE);
-}
-
-START_TEST(test_glonass_leap_second_event_non_ideal) {
-  /**
-   * Time: UTC(SU): Dec 31, 2017 @ 23:59:59.999
-   *       UTC: Dec 31, 2016 @ 20:59:59.999
-   *       GPS: Dec 31, 2017 @ 21:00:16.999
-   *
-   * GLONNAS time: TOD: 86399999 ms
-   * GPS time: WN 1929 TOW: 594016.999 s
-   */
-
-  gps_time_t obs_time;
-
+  gps_time = (gps_time_t){.wn = 1930, .tow = 18.0};
   rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
-  state.leap_second_known = true;
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
 
-  /**
-   * Observation has moved forward by 1s and is at the end of the leap second
-   * event, known leap second data is incremented earlier than expected, rover
-   * is still at 1ms before leap second event
-   */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594016.999};
-  state.leap_seconds = 18;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594017.999, 1.0 + GPS_TOW_TOLERANCE);
-
-  /**
-   * Observation has moved forward by 1s and is at the end of the leap second
-   * event, known leap second data is incremented earlier than expected and
-   * rover has moved forward by 1s
-   */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594017.999};
-  state.leap_seconds = 18;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594017.999, 1.0 + GPS_TOW_TOLERANCE);
-
-  /**
-   * Observation has moved forward by 1s and is at the end of the leap second
-   * event, known leap second data is incremented later than expected and
-   * rover has moved forward by 1s + 1ms
-   */
-  state.time_from_input_data = (gps_time_t){.wn = 1929, .tow = 594018.0};
-  state.leap_seconds = 17;
-  compute_glo_time(86400999, &obs_time, &state.time_from_input_data, &state);
-  ck_assert_int_eq(obs_time.wn, 1929);
-  ck_assert_double_eq_tol(obs_time.tow, 594017.999, 1.0 + GPS_TOW_TOLERANCE);
+  compute_glo_time(10801000, &obs_time, &gps_time, &state);
+  ck_assert_int_eq(obs_time.wn, 1930);
+  ck_assert_double_eq_tol(obs_time.tow, 19.0, GPS_TOW_TOLERANCE);
 }
 
 /* Test parsing of raw file with MSM5 obs */
@@ -1906,7 +1898,6 @@ END_TEST
 START_TEST(tc_rtcm_eph_wn_rollover2) {
   current_time.wn = 2050;
   current_time.tow = 208800;
-  state.time_from_input_data = current_time;
   /* short RTCM3 capture from a RTCM3EPH stream */
   test_RTCM3(RELATIVE_PATH_PREFIX "/data/wn-rollover2.rtcm",
              sbp_callback_eph_wn_rollover2,
@@ -1917,13 +1908,8 @@ END_TEST
 START_TEST(tc_rtcm_eph_invalid_gal_time) {
   current_time = (gps_time_t){.wn = 3198, .tow = 733440};
 
-  time_truth_init(&time_truth);
-  time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time);
-
-  rtcm2sbp_init(&state, &time_truth, NULL, NULL, NULL);
-  state.time_from_input_data = current_time;
-  state.leap_seconds = 18;
-  state.leap_second_known = true;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&current_time, NULL, &state);
 
   rtcm_msg_eph rtcm_ephemeris;
   const rtcm_msg_eph template_rtcm_ephemeris = {
@@ -2075,13 +2061,13 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   current_time.tow = 210853;
 
   struct glo_known_fcn_info known_fcn = {0};
+  const int8_t leap_seconds = (int8_t)get_gps_utc_offset(&current_time, NULL);
 
   sbp2rtcm_init(&out_state, rtcm_roundtrip_cb, NULL);
-  rtcm2sbp_init(&state, &time_truth, sbp_roundtrip_cb, NULL, &known_fcn);
   sbp2rtcm_set_leap_second(18, &out_state);
-  state.leap_seconds = 18;
-  state.leap_second_known = true;
-  state.time_from_input_data = current_time;
+
+  rtcm2sbp_init(&state, NULL, sbp_roundtrip_cb, NULL, &known_fcn);
+  rtcm2sbp_set_time(&current_time, &leap_seconds, &state);
 
   /* set the FCNs for couple of GLO satellites */
   sbp_gnss_signal_t sid = {2, CODE_GLO_L1OF};
@@ -2101,7 +2087,7 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   known_fcn.known_fcn_sat_id[known_fcn.num_known_fcn] = sid.sat;
   known_fcn.num_known_fcn++;
 
-  state.time_from_input_data = current_time;
+  rtcm2sbp_set_time(&current_time, NULL, &state);
 
   memcpy(
       out_state.sbp_obs_buffer, sbp_test_data_old, sizeof(sbp_test_data_old));
@@ -2371,7 +2357,7 @@ static void compare_gal_ephs(const msg_ephemeris_gal_t *first,
   (void)second;
   assert(first->common.sid.sat == second->common.sid.sat);
   assert(first->common.sid.code == second->common.sid.code);
-  assert(first->common.toe.wn == second->common.toe.wn);
+  ck_assert_uint_eq(first->common.toe.wn, second->common.toe.wn);
   assert(first->common.toe.tow == second->common.toe.tow);
   assert(fabs(first->common.ura - second->common.ura) < 1e-12);
   assert(first->common.fit_interval == second->common.fit_interval);
@@ -2403,6 +2389,78 @@ static void compare_gal_ephs(const msg_ephemeris_gal_t *first,
   assert(first->iode == second->iode);
   assert(first->iodc == second->iodc);
 }
+
+START_TEST(test_rtcm_1013) {
+  static const uint8_t rtcm_1013_payload[] = {
+      0x3f, 0x50, 0x01, 0xe8, 0xba, 0x25, 0xbf, 0x80, 0x48};
+
+  gps_time_t gps_time;
+  int8_t leap_seconds;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_decode_payload(rtcm_1013_payload, sizeof(rtcm_1013_payload), &state);
+  ck_assert(rtcm_get_gps_time(&gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&leap_seconds, &state));
+  ck_assert_int_eq(gps_time.wn, 2190);
+  ck_assert_double_eq_tol(gps_time.tow, 364945, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(leap_seconds, 18);
+}
+END_TEST
+
+START_TEST(test_rtcm_1013_handle) {
+  gps_time_t gps_time;
+  int8_t leap_seconds;
+  rtcm_msg_1013 msg;
+
+  // VALIDATE WORKS JUST BEFORE MJD ROLLOVER AT 23/04/2038
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_gps_week_reference(GPS_WEEK_REFERENCE, &state);
+
+  msg = (rtcm_msg_1013){0};
+  msg.mjd = UINT16_MAX;
+  msg.leap_second = 0;
+  msg.utc = DAY_SECS - 1;
+
+  rtcm3_1013_handle(&msg, &state);
+  ck_assert(rtcm_get_gps_time(&gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&leap_seconds, &state));
+  ck_assert_int_eq(gps_time.wn, 3041);
+  ck_assert_double_eq_tol(gps_time.tow, 431999, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(leap_seconds, 0);
+
+  // VALIDATE WORKS JUST BEFORE MJD ROLLOVER AT 23/04/2038
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_gps_week_reference(GPS_WEEK_REFERENCE, &state);
+
+  msg = (rtcm_msg_1013){0};
+  msg.mjd = 0;
+  msg.leap_second = 0;
+  msg.utc = 0;
+
+  rtcm3_1013_handle(&msg, &state);
+  ck_assert(rtcm_get_gps_time(&gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&leap_seconds, &state));
+  ck_assert_int_eq(gps_time.wn, 3041);
+  ck_assert_double_eq_tol(gps_time.tow, 432000, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(leap_seconds, 0);
+
+  // VALIDATE WORKS JUST BEFORE 2^16 DAYS FROM GPS_WEEK_REFERENCE WHICH IS
+  // 31/10/2374
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_gps_week_reference(GPS_WEEK_REFERENCE, &state);
+
+  msg = (rtcm_msg_1013){0};
+  msg.mjd = 57375;
+  msg.leap_second = 0;
+  msg.utc = DAY_SECS - 1;
+
+  rtcm3_1013_handle(&msg, &state);
+  ck_assert(rtcm_get_gps_time(&gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&leap_seconds, &state));
+  ck_assert_int_eq(gps_time.wn, 11238);
+  ck_assert_double_eq_tol(gps_time.tow, 172799, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(leap_seconds, 0);
+}
+END_TEST
 
 START_TEST(test_sbp_to_rtcm_1019_validity_decoding) {
   // Test out the four cases which should return a valid ephemeris - when the
@@ -2452,9 +2510,8 @@ START_TEST(test_sbp_to_rtcm_1019_validity_decoding) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
-  state.time_from_input_data = (gps_time_t){.wn = 2022, .tow = 210853};
-  state.leap_second_known = true;
-  state.leap_seconds = 18;
+  gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
+  rtcm2sbp_set_time(&gps_time, NULL, &state);
 
   msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
   rtcm_msg_eph rtcm_msg_1019;
@@ -2466,9 +2523,9 @@ START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1020_roundtrip) {
-  state.time_from_input_data = (gps_time_t){.wn = 2022, .tow = 210853};
-  state.leap_second_known = true;
-  state.leap_seconds = 18;
+  gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
+  int8_t leap_seconds = 18;
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
   msg_ephemeris_glo_t msg_1020_in = get_example_glo_eph();
   rtcm_msg_eph rtcm_msg_1020;
@@ -2480,6 +2537,10 @@ START_TEST(test_sbp_to_rtcm_1020_roundtrip) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1042_roundtrip) {
+  gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
+  int8_t leap_seconds = 18;
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
   msg_ephemeris_bds_t msg_1042_in = get_example_bds_eph();
   rtcm_msg_eph rtcm_msg_1042;
   sbp_to_rtcm3_bds_eph(&msg_1042_in, &rtcm_msg_1042, &out_state);
@@ -2490,6 +2551,10 @@ START_TEST(test_sbp_to_rtcm_1042_roundtrip) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1045_roundtrip) {
+  gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
+  int8_t leap_seconds = 18;
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
   msg_ephemeris_gal_t msg_1045_in = get_example_gal_eph();
   rtcm_msg_eph rtcm_msg_1045;
   sbp_to_rtcm3_gal_eph(&msg_1045_in, &rtcm_msg_1045, &out_state);
@@ -2501,6 +2566,10 @@ START_TEST(test_sbp_to_rtcm_1045_roundtrip) {
 END_TEST
 
 START_TEST(test_sbp_to_rtcm_1046_roundtrip) {
+  gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
+  int8_t leap_seconds = 18;
+  rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
+
   msg_ephemeris_gal_t msg_1046_in = get_example_gal_eph();
   rtcm_msg_eph rtcm_msg_1046;
   sbp_to_rtcm3_gal_eph(&msg_1046_in, &rtcm_msg_1046, &out_state);
@@ -2661,8 +2730,7 @@ START_TEST(test_rtcm_999_stgsv_to_sbp_single_msg) {
     assert(false);
   }
 
-  time_truth_init(&time_truth);
-  rtcm2sbp_init(&state, &time_truth, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
+  rtcm2sbp_init(&state, NULL, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
   rtcm2sbp_decode_payload(rtcm_999_stgsv_payload_msg2, payload_len, &state);
 }
 END_TEST
@@ -2679,8 +2747,7 @@ START_TEST(test_rtcm_999_stgsv_to_sbp_multi_msg) {
     assert(false);
   }
 
-  time_truth_init(&time_truth);
-  rtcm2sbp_init(&state, &time_truth, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
+  rtcm2sbp_init(&state, NULL, cb_test_rtcm_999_stgsv_to_sbp, NULL, &ev);
   rtcm2sbp_decode_payload(
       rtcm_999_stgsv_payload_msg1, payload_len_msg1, &state);
   rtcm2sbp_decode_payload(
@@ -2743,12 +2810,8 @@ START_TEST(test_rtcm_999_stgsv_to_sbp_multi_msg_missing_final_msg) {
   }
 
   rtcm_999_stgsv_test ev[2] = {ev1, ev2};
-  time_truth_init(&time_truth);
-  rtcm2sbp_init(&state,
-                &time_truth,
-                cb_test_rtcm_999_stgsv_to_sbp_missing_msg,
-                NULL,
-                &ev);
+  rtcm2sbp_init(
+      &state, NULL, cb_test_rtcm_999_stgsv_to_sbp_missing_msg, NULL, &ev);
 
   rtcm2sbp_decode_payload(
       rtcm_999_stgsv_payload_msg0, payload_len_msg0, &state);
@@ -2772,7 +2835,6 @@ Suite *rtcm3_suite(void) {
   tcase_add_test(tc_core, test_glonass_tod_rollover);
   tcase_add_test(tc_core, test_glonass_wn_rollover);
   tcase_add_test(tc_core, test_glonass_leap_second_event_ideal);
-  tcase_add_test(tc_core, test_glonass_leap_second_event_non_ideal);
   suite_add_tcase(s, tc_core);
 
   TCase *tc_biases = tcase_create("Biases");
@@ -2833,6 +2895,8 @@ Suite *rtcm3_suite(void) {
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_gps_eph);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_gal_fnav_eph);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_gal_inav_eph);
+  tcase_add_test(tc_sbp_to_rtcm, test_rtcm_1013);
+  tcase_add_test(tc_sbp_to_rtcm, test_rtcm_1013_handle);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_1019_validity_decoding);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_1019_roundtrip);
   tcase_add_test(tc_sbp_to_rtcm, test_sbp_to_rtcm_1020_roundtrip);

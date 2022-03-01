@@ -41,6 +41,5 @@ typedef struct Suite Suite;
 
 Suite *rtcm3_suite(void);
 Suite *rtcm3_ssr_suite(void);
-Suite *rtcm3_time_suite(void);
 
 #endif /* CHECK_RTCM3_H */

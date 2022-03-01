@@ -44,6 +44,9 @@ rtcm3_rc rtcm3_decode_1010_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_obs_message *msg_1010);
 rtcm3_rc rtcm3_decode_1012_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_obs_message *msg_1012);
+rtcm3_rc rtcm3_decode_1013_bitstream(swiftnav_bitstream_t *buffer,
+                                     rtcm_msg_1013 *msg_1013,
+                                     size_t message_length);
 rtcm3_rc rtcm3_decode_1029_bitstream(swiftnav_bitstream_t *buff,
                                      rtcm_msg_1029 *msg_1029);
 rtcm3_rc rtcm3_decode_1033_bitstream(swiftnav_bitstream_t *buff,

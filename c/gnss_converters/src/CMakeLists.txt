@@ -39,6 +39,7 @@ swift_add_library(gnss_converters
     rtcm3_sbp_ssr.c
     rtcm3_utils.c
     sbp_nmea.c
+    time_truth_v2.cc
     ubx_ephemeris/bds.c
     ubx_ephemeris/gal.c
     ubx_ephemeris/glo.c
@@ -61,6 +62,7 @@ target_link_libraries(gnss_converters PUBLIC m swiftnav sbp rtcm ubx ixcom)
 target_include_directories(gnss_converters PUBLIC ${PROJECT_SOURCE_DIR}/gnss_converters/include)
 target_include_directories(gnss_converters PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(gnss_converters PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ubx_ephemeris)
+target_include_directories(gnss_converters PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 install(TARGETS gnss_converters DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(

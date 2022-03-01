@@ -11,9 +11,9 @@ include(CompileOptions)
 include(SwiftTargets)
 
 swift_create_project_options(
-    HAS_TESTS
-    TEST_PACKAGES "Check"
-    )
+  HAS_TESTS
+  TEST_PACKAGES Check Googletest
+)
 
 option(gnss-converters_BUILD_BINARIES "" true)
 
@@ -65,4 +65,3 @@ endif()
 
 swift_validate_targets()
 swift_create_clang_tidy_targets()
-

@@ -15,6 +15,7 @@
 #include <math.h>
 #include <rtcm3/msm_utils.h>
 #include <string.h>
+
 #include "rtcm3_sbp_internal.h"
 
 #define SSR_MESSAGE_LENGTH 256
@@ -45,10 +46,13 @@ static bool rtcm_ssr_header_to_sbp_orbit_clock(
     const rtcm_msg_ssr_orbit_corr *orbit,
     sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock,
     struct rtcm3_sbp_state *state) {
-  sbp_orbit_clock->time = compute_ssr_message_time(header->constellation,
-                                                   header->epoch_time * SECS_MS,
-                                                   &state->time_from_input_data,
-                                                   state);
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return false;
+  }
+
+  sbp_orbit_clock->time = compute_ssr_message_time(
+      header->constellation, header->epoch_time * SECS_MS, &rover_time, state);
 
   if (!gps_time_sec_valid(&sbp_orbit_clock->time)) {
     /* Invalid time */
@@ -160,6 +164,11 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
       [(SBP_MSG_SSR_CODE_BIASES_BIASES_MAX >= MAX_SSR_SATELLITES) ? 1 : -1];
   (void)__static_assert;
 
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return;
+  }
+
   sbp_msg_t msg;
   sbp_msg_ssr_code_biases_t *sbp_code_bias = &msg.ssr_code_biases;
   for (int sat_count = 0; sat_count < msg_code_biases->header.num_sats;
@@ -168,7 +177,7 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
     sbp_code_bias->time =
         compute_ssr_message_time(msg_code_biases->header.constellation,
                                  msg_code_biases->header.epoch_time * SECS_MS,
-                                 &state->time_from_input_data,
+                                 &rover_time,
                                  state);
 
     if (!gps_time_sec_valid(&sbp_code_bias->time)) {
@@ -200,6 +209,11 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
 
 void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state) {
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return;
+  }
+
   sbp_msg_t msg;
   sbp_msg_ssr_phase_biases_t *sbp_phase_bias = &msg.ssr_phase_biases;
 
@@ -209,7 +223,7 @@ void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
     sbp_phase_bias->time =
         compute_ssr_message_time(msg_phase_biases->header.constellation,
                                  msg_phase_biases->header.epoch_time * SECS_MS,
-                                 &state->time_from_input_data,
+                                 &rover_time,
                                  state);
 
     if (!gps_time_sec_valid(&sbp_phase_bias->time)) {

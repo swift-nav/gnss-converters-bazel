@@ -8,7 +8,6 @@ set(TEST_SOURCE_FILES
   check_rtcm3_main.c
   check_rtcm3.c
   check_rtcm3_ssr.c
-  check_rtcm3_time.c
   )
 
 swift_add_test(test-rtcm3tosbp

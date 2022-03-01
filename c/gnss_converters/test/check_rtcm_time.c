@@ -11,6 +11,8 @@
  */
 
 #include <check.h>
+#include <gnss-converters-extra/sbp_rtcm3.h>
+#include <gnss-converters/rtcm3_sbp.h>
 #include <libsbp/sbp.h>
 #include <libsbp/v4/observation.h>
 #include <math.h>
@@ -18,18 +20,24 @@
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/eph_encode.h>
+#include <rtcm3/msm_utils.h>
 #include <rtcm3_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <swiftnav/bits.h>
+#include <swiftnav/bytestream.h>
 #include <swiftnav/edc.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/sid_set.h>
 
-#include "check_rtcm3.h"
 #include "config.h"
+#include "rtcm3_sbp_internal.h"
+#include "time_truth.h"
+
+#define GPS_TOW_TOLERANCE 1e-4
+#define RTCM3_PREAMBLE 0xD3
 
 static uint8_t iobuf[4096];
 static size_t iobuf_read_idx = 0;
@@ -41,7 +49,6 @@ static struct {
   sbp_msg_t msg;
 } sbp_out_msgs[SBP_MSG_OBS_OBS_MAX];
 static size_t n_sbp_out = 0;
-time_truth_t time_truth;
 static struct rtcm3_sbp_state rtcm2sbp_state;
 static struct rtcm3_out_state sbp2rtcm_state;
 
@@ -80,17 +87,70 @@ static void reset_test_fixture() {
   iobuf_write_idx = 0;
   iobuf_len = 0;
   n_sbp_out = 0;
-  time_truth_init(&time_truth);
-  rtcm2sbp_init(&rtcm2sbp_state, &time_truth, save_sbp_out_cb, NULL, NULL);
+  time_truth_reset(time_truth);
+  rtcm2sbp_init(&rtcm2sbp_state, time_truth, save_sbp_out_cb, NULL, NULL);
   sbp2rtcm_init(&sbp2rtcm_state, save_rtcm_to_iobuf, NULL);
 }
 
 static void reset_test_fixture_unknown(void) { reset_test_fixture(); }
 
-static void reset_test_fixture_solved(uint16_t wn, double tow) {
+static void reset_test_fixture_solved(uint16_t wn,
+                                      double tow,
+                                      const int8_t *leap_seconds) {
   reset_test_fixture();
-  ck_assert(time_truth_update(
-      &time_truth, TIME_TRUTH_EPH_GAL, (gps_time_t){.wn = wn, .tow = tow}));
+
+  ObservationTimeEstimator *observation_estimator;
+  EphemerisTimeEstimator *ephemeris_estimator;
+
+  ck_assert(time_truth_request_observation_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &observation_estimator));
+  ck_assert(time_truth_request_ephemeris_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ephemeris_estimator));
+
+  const gps_time_t gps_time = {.tow = tow, .wn = wn};
+
+  time_truth_observation_estimator_push(observation_estimator,
+                                        gps_time.tow * SECS_MS);
+
+  for (uint16_t i = 0; i < 100; ++i) {
+    const gnss_signal_t gnss_signal = {i, CODE_GPS_L1CA};
+    time_truth_ephemeris_estimator_push(
+        ephemeris_estimator, gnss_signal, gps_time);
+  }
+
+  if (leap_seconds != NULL) {
+    Rtcm1013TimeEstimator *rtcm_1013_estimator;
+    ck_assert(time_truth_request_rtcm_1013_time_estimator(
+        time_truth, TIME_TRUTH_SOURCE_LOCAL, &rtcm_1013_estimator));
+    time_truth_rtcm_1013_estimator_push(
+        rtcm_1013_estimator, gps_time, *leap_seconds);
+  }
+
+  uint16_t time_truth_wn;
+  TimeTruthState time_truth_wn_state;
+  uint32_t time_truth_tow;
+  TimeTruthState time_truth_tow_state;
+  int8_t time_truth_leap_seconds;
+  TimeTruthState time_truth_leap_seconds_state;
+  time_truth_get_latest_time(time_truth,
+                             &time_truth_wn,
+                             &time_truth_wn_state,
+                             &time_truth_tow,
+                             &time_truth_tow_state,
+                             &time_truth_leap_seconds,
+                             &time_truth_leap_seconds_state,
+                             NULL);
+
+  ck_assert_int_ne(time_truth_wn_state, TIME_TRUTH_STATE_NONE);
+  ck_assert_int_ne(time_truth_tow_state, TIME_TRUTH_STATE_NONE);
+
+  ck_assert_uint_eq(time_truth_wn, wn);
+  ck_assert_uint_eq(time_truth_tow, tow * SECS_MS);
+
+  if (leap_seconds != NULL) {
+    ck_assert_int_ne(time_truth_leap_seconds_state, TIME_TRUTH_STATE_NONE);
+    ck_assert_int_eq(time_truth_leap_seconds, *leap_seconds);
+  }
 }
 
 static uint32_t gps_tow_to_gps_tow_ms(uint32_t tow) { return tow * SECS_MS; }
@@ -102,10 +162,27 @@ static uint32_t gps_tow_to_bds_tow_ms(uint32_t tow) {
 }
 
 static uint32_t gps_tow_to_glo_tow_ms(uint32_t tow) {
-  gps_time_t time;
-  time_truth_get(&time_truth, NULL, &time);
+  uint16_t wn = 0;
+  uint32_t tow_ms = 0;
+  int8_t unused_leap_seconds = 0;
 
-  double leap_seconds = get_gps_utc_offset(&time, NULL);
+  TimeTruthState wn_state;
+  TimeTruthState tow_ms_state;
+  TimeTruthState unused_leap_seconds_state;
+
+  time_truth_get_latest_time(time_truth,
+                             &wn,
+                             &wn_state,
+                             &tow_ms,
+                             &tow_ms_state,
+                             &unused_leap_seconds,
+                             &unused_leap_seconds_state,
+                             NULL);
+
+  gps_time_t gps_time =
+      (gps_time_t){.wn = wn, .tow = ((double)tow_ms) / SECS_MS};
+
+  double leap_seconds = get_gps_utc_offset(&gps_time, NULL);
 
   return tow * SECS_MS + UTC_SU_OFFSET * HOUR_SECS * SECS_MS -
          ((int)leap_seconds) * SECS_MS;
@@ -485,7 +562,9 @@ static void setup_example_gps_obs(struct rtcm3_out_state *state,
   obs->obs[0].sid.code = 0;
 
   iobuf_write_idx = 0;
-  sbp2rtcm_sbp_obs_cb(0x1000, message_length, (const uint8_t *)obs, state);
+  state->sender_id = 0x1000;
+  sbp2rtcm_sbp_obs_cb(
+      state->sender_id, message_length, (const uint8_t *)obs, state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
@@ -514,8 +593,10 @@ static void setup_example_glo_obs(struct rtcm3_out_state *state,
   obs->obs[0].sid.code = 3;
 
   iobuf_write_idx = 0;
+  state->sender_id = 0x1000;
   sbp2rtcm_set_glo_fcn(obs->obs[0].sid, 4, state);
-  sbp2rtcm_sbp_obs_cb(0x1000, message_length, (const uint8_t *)obs, state);
+  sbp2rtcm_sbp_obs_cb(
+      state->sender_id, message_length, (const uint8_t *)obs, state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
@@ -536,6 +617,168 @@ static const struct eph_example_pair EPH_EXAMPLES[] = {
     {setup_example_gal_eph, SbpMsgEphemerisGal},
     {setup_example_glo_eph, SbpMsgEphemerisGlo},
     {setup_example_gps_eph, SbpMsgEphemerisGps}};
+
+START_TEST(test_week_rollover_adjustment) {
+  static const uint16_t GPS_WN_RESOLUTION = 10;
+  static const gps_time_t GPS_GPS_OFFSET = {.wn = 0, .tow = 0};
+
+  static const uint16_t GAL_WN_RESOLUTION = 12;
+  static const gps_time_t GPS_GAL_OFFSET = {.wn = GAL_WEEK_TO_GPS_WEEK,
+                                            .tow = 0};
+
+  static const uint16_t BDS_WN_RESOLUTION = 13;
+  static const gps_time_t GPS_BDS_OFFSET = {.wn = BDS_WEEK_TO_GPS_WEEK,
+                                            .tow = BDS_SECOND_TO_GPS_SECOND};
+
+  struct {
+    gps_time_t constellation_time;
+    gps_time_t gps_reference_time;
+    uint8_t wn_resolution;
+    gps_time_t gps_constellation_offset;
+    gps_time_t expected_result;
+  } const test_cases[] = {
+      // GPS EPOCH
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = GPS_GPS_OFFSET,
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = GPS_GPS_OFFSET},
+      // GPS JUST BEFORE THIRD WEEK ROLLOVER
+      {.constellation_time = {.wn = 1023, .tow = 604799},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 3071, .tow = 604799}},
+      // GPS JUST ON THIRD WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 3072, .tow = 0}},
+      // GPS JUST AFTER THIRD WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 1},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 3072, .tow = 1}},
+      // GPS JUST BEFORE REFERENCE TIME
+      {.constellation_time = {.wn = 142, .tow = 41863},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 3214, .tow = 41863}},
+      // GPS JUST ON REFERENCE TIME
+      {.constellation_time = {.wn = 142, .tow = 41864},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41864}},
+      // GPS JUST AFTER REFERENCE TIME
+      {.constellation_time = {.wn = 142, .tow = 41865},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GPS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GPS_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41865}},
+
+      // GAL EPOCH
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = GPS_GAL_OFFSET,
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = GPS_GAL_OFFSET},
+      // GAL JUST BEFORE FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 4095, .tow = 604799},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 5119, .tow = 604799}},
+      // GAL JUST ON FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 5120, .tow = 0}},
+      // GAL JUST AFTER FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 1},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 5120, .tow = 1}},
+      // GAL JUST BEFORE REFERENCE TIME
+      {.constellation_time = {.wn = 1166, .tow = 41863},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 6286, .tow = 41863}},
+      // GAL JUST ON REFERENCE TIME
+      {.constellation_time = {.wn = 1166, .tow = 41864},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41864}},
+      // GAL JUST AFTER REFERENCE TIME
+      {.constellation_time = {.wn = 1166, .tow = 41865},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = GAL_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_GAL_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41865}},
+
+      // BDS EPOCH
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = GPS_BDS_OFFSET,
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = GPS_BDS_OFFSET},
+      // BDS JUST BEFORE FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 8191, .tow = 604799},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 9548, .tow = 13}},
+      // BDS JUST ON FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 0},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 9548, .tow = 14}},
+      // BDS JUST AFTER FIRST WEEK ROLLOVER
+      {.constellation_time = {.wn = 0, .tow = 1},
+       .gps_reference_time = {.wn = 2190, .tow = 341562},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 9548, .tow = 15}},
+      // BDS JUST BEFORE REFERENCE TIME
+      {.constellation_time = {.wn = 834, .tow = 41849},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 10382, .tow = 41863}},
+      // BDS JUST ON REFERENCE TIME
+      {.constellation_time = {.wn = 834, .tow = 41850},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41864}},
+      // BDS JUST AFTER REFERENCE TIME
+      {.constellation_time = {.wn = 834, .tow = 41851},
+       .gps_reference_time = {.wn = 2190, .tow = 41864},
+       .wn_resolution = BDS_WN_RESOLUTION,
+       .gps_constellation_offset = GPS_BDS_OFFSET,
+       .expected_result = {.wn = 2190, .tow = 41865}},
+  };
+
+  for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); ++i) {
+    gps_time_t gps_time =
+        week_rollover_adjustment(test_cases[i].constellation_time,
+                                 test_cases[i].gps_reference_time,
+                                 test_cases[i].wn_resolution,
+                                 test_cases[i].gps_constellation_offset);
+
+    ck_assert_int_eq(gps_time.wn, test_cases[i].expected_result.wn);
+    ck_assert_double_eq(gps_time.tow, test_cases[i].expected_result.tow);
+  }
+}
+END_TEST
 
 /*
  * Setup: The following tests cases apply to the RTCM to SBP converter which has
@@ -729,7 +972,7 @@ START_TEST(test_strs_6) {
 
   for (size_t i = 0; i < sizeof(GPS_OBS_EXAMPLES) / sizeof(GPS_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GPS_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -746,7 +989,7 @@ START_TEST(test_strs_6) {
 
   for (size_t i = 0; i < sizeof(GLO_OBS_EXAMPLES) / sizeof(GLO_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GLO_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -763,7 +1006,7 @@ START_TEST(test_strs_6) {
 
   for (size_t i = 0; i < sizeof(MSG4_MSG_NUMS) / sizeof(MSG4_MSG_NUMS[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm4(MSG4_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -780,7 +1023,7 @@ START_TEST(test_strs_6) {
 
   for (size_t i = 0; i < sizeof(MSG5_MSG_NUMS) / sizeof(MSG5_MSG_NUMS[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm5(MSG5_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -823,7 +1066,7 @@ START_TEST(test_strs_7) {
 
   for (size_t i = 0; i < sizeof(GPS_OBS_EXAMPLES) / sizeof(GPS_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GPS_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -840,7 +1083,7 @@ START_TEST(test_strs_7) {
 
   for (size_t i = 0; i < sizeof(GLO_OBS_EXAMPLES) / sizeof(GLO_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GLO_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -857,7 +1100,7 @@ START_TEST(test_strs_7) {
 
   for (size_t i = 0; i < sizeof(MSG4_MSG_NUMS) / sizeof(MSG4_MSG_NUMS[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm4(MSG4_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -874,7 +1117,7 @@ START_TEST(test_strs_7) {
 
   for (size_t i = 0; i < sizeof(MSG5_MSG_NUMS) / sizeof(MSG5_MSG_NUMS[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm5(MSG5_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -918,7 +1161,7 @@ START_TEST(test_strs_8) {
 
   for (size_t i = 0; i < sizeof(GPS_OBS_EXAMPLES) / sizeof(GPS_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GPS_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -939,7 +1182,7 @@ START_TEST(test_strs_8) {
       continue;
     }
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm4(MSG4_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -960,7 +1203,7 @@ START_TEST(test_strs_8) {
       continue;
     }
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm5(MSG5_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1003,7 +1246,7 @@ START_TEST(test_strs_9) {
 
   for (size_t i = 0; i < sizeof(GPS_OBS_EXAMPLES) / sizeof(GPS_OBS_EXAMPLES[0]);
        ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     GPS_OBS_EXAMPLES[i](tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1024,7 +1267,7 @@ START_TEST(test_strs_9) {
       continue;
     }
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm4(MSG4_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1045,7 +1288,7 @@ START_TEST(test_strs_9) {
       continue;
     }
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     setup_example_msm5(MSG5_MSG_NUMS[i], tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1093,7 +1336,7 @@ START_TEST(test_strs_12) {
   const uint32_t tow_in = 501;
 
   for (size_t i = 0; i < sizeof(EPH_EXAMPLES) / sizeof(EPH_EXAMPLES[0]); ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     EPH_EXAMPLES[i].function(wn_in, tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1161,7 +1404,7 @@ START_TEST(test_strs_13) {
   const uint32_t tow_in = 499;
 
   for (size_t i = 0; i < sizeof(EPH_EXAMPLES) / sizeof(EPH_EXAMPLES[0]); ++i) {
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, NULL);
     EPH_EXAMPLES[i].function(wn_in, tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1222,7 +1465,7 @@ START_TEST(test_strs_14) {
   const uint16_t wn_out = 2048;
   const uint32_t tow_out = 0;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, NULL);
   setup_example_gps_eph(wn_in, tow_in);  // Will be encoded as WN == 0, TOW == 0
 
   ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1259,7 +1502,7 @@ START_TEST(test_strs_15) {
   const uint16_t wn_out = 2047;
   const uint32_t tow_out = 604784;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, NULL);
   setup_example_gps_eph(
       wn_in, tow_in);  // Will be encoded as WN == 1023, TOW == 604799
 
@@ -1297,7 +1540,7 @@ START_TEST(test_strs_16) {
   const uint16_t wn_out = 5120;
   const uint32_t tow_out = 0;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, NULL);
   setup_example_gal_eph(wn_in, tow_in);  // Will be encoded as WN == 0, TOW == 0
 
   ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1334,7 +1577,7 @@ START_TEST(test_strs_17) {
   const uint16_t wn_out = 5119;
   const uint32_t tow_out = 604740;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, NULL);
   setup_example_gal_eph(
       wn_in, tow_in);  // Will be encoded as WN == 4095, TOW == 604799
 
@@ -1372,7 +1615,7 @@ START_TEST(test_strs_19) {
   const uint16_t wn_out = 9548;
   const uint32_t tow_out = 14;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, NULL);
   setup_example_bds_eph(wn_in, tow_in);
 
   ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1409,7 +1652,7 @@ START_TEST(test_strs_20) {
   const uint32_t tow_out = 108917;
   const s8 leap_seconds = 17;
 
-  reset_test_fixture_solved(init_wn, init_tow);
+  reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
   setup_example_glo_eph(wn_in, tow_in);
 
   ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1420,8 +1663,6 @@ START_TEST(test_strs_20) {
   const sbp_msg_ephemeris_glo_t *sbp_msg = &sbp_out_msgs[0].msg.ephemeris_glo;
   ck_assert_uint_eq(sbp_msg->common.toe.wn, wn_out);
   ck_assert_uint_eq(sbp_msg->common.toe.tow, tow_out);
-  ck_assert(rtcm2sbp_state.leap_second_known);
-  ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
 }
 END_TEST
 
@@ -1455,7 +1696,7 @@ START_TEST(test_strs_21) {
     sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
     setup_example_glo_obs(&state, wn_in, tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1466,8 +1707,6 @@ START_TEST(test_strs_21) {
     sbp_msg_obs_t *sbp_msg = &sbp_out_msgs[0].msg.obs;
     ck_assert_uint_eq(sbp_msg->header.t.wn, wn_in);
     ck_assert_uint_eq(sbp_msg->header.t.tow, tow_in * SECS_MS);
-    ck_assert(rtcm2sbp_state.leap_second_known);
-    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
   }
 }
 END_TEST
@@ -1501,18 +1740,11 @@ START_TEST(test_strs_22) {
     sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
     setup_example_glo_obs(&state, wn_in, tow_in);
 
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
-
-    if (legacy_options[i]) {
-      ck_assert_uint_eq(n_sbp_out, 0);
-    } else {
-      ck_assert_uint_eq(n_sbp_out, 1);
-      ck_assert_uint_eq(sbp_out_msgs[0].msg.obs.n_obs, 0);
-    }
-    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
+    ck_assert_uint_eq(n_sbp_out, 0);
   }
 }
 END_TEST
@@ -1550,7 +1782,7 @@ START_TEST(test_strs_23) {
     sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
 
     setup_example_gps_obs(&state, gps_wn_in, gps_tow_in);
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1559,8 +1791,6 @@ START_TEST(test_strs_23) {
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
 
     ck_assert_uint_eq(n_sbp_out, 2);
-    ck_assert(rtcm2sbp_state.leap_second_known);
-    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
 
     ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
     ck_assert(sbp_out_msgs[1].msg_type == SbpMsgObs);
@@ -1610,7 +1840,7 @@ START_TEST(test_strs_24) {
     sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
-    reset_test_fixture_solved(init_wn, init_tow);
+    reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
 
     setup_example_gps_obs(&state, gps_wn_in, gps_tow_in);
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
@@ -1618,17 +1848,8 @@ START_TEST(test_strs_24) {
     setup_example_glo_obs(&state, glo_wn_in, glo_tow_in);
     ck_assert(rtcm2sbp_process(&rtcm2sbp_state, read_iobuf) == (int)iobuf_len);
 
-    if (legacy_options[i]) {
-      ck_assert_uint_eq(n_sbp_out, 1);
-    } else {
-      ck_assert_uint_eq(n_sbp_out, 2);
-      ck_assert_uint_eq(sbp_out_msgs[0].msg.obs.n_obs, 1);
-      ck_assert_uint_eq(sbp_out_msgs[1].msg.obs.n_obs, 0);
-    }
-
-    ck_assert(rtcm2sbp_state.leap_second_known);
-    ck_assert_int_eq(rtcm2sbp_state.leap_seconds, leap_seconds);
-
+    ck_assert_uint_eq(n_sbp_out, 1);
+    ck_assert_uint_eq(sbp_out_msgs[0].msg.obs.n_obs, 1);
     ck_assert(sbp_out_msgs[0].msg_type == SbpMsgObs);
 
     sbp_msg_obs_t *obs_message = &sbp_out_msgs[0].msg.obs;
@@ -1639,11 +1860,356 @@ START_TEST(test_strs_24) {
 }
 END_TEST
 
-Suite *rtcm3_time_suite(void) {
+int test_internal_get_time_reader_func(uint8_t *buffer,
+                                       size_t length,
+                                       void *context) {
+  swiftnav_bytestream_t *stream = (swiftnav_bytestream_t *)context;
+
+  size_t count = MIN(length, swiftnav_bytestream_remaining(stream));
+  swiftnav_bytestream_get_bytes(stream, 0, count, buffer);
+  swiftnav_bytestream_remove(stream, count);
+
+  return count;
+}
+
+static bool test_internal_get_time_has_unix_time;
+static int64_t test_internal_get_time_unix_time;
+
+bool test_internal_get_time_unix_time_callback_function(int64_t *unix_time) {
+  if (!test_internal_get_time_has_unix_time) {
+    return false;
+  }
+
+  *unix_time = test_internal_get_time_unix_time;
+  return true;
+}
+
+START_TEST(test_internal_get_time) {
+  gps_time_t in_gps_time = {0};
+  int8_t in_leap_seconds = 0;
+  gps_time_t out_gps_time = {0};
+  int8_t out_leap_seconds = 0;
+  gps_time_t tmp_gps_time;
+  int8_t tmp_leap_seconds;
+  struct rtcm3_sbp_state state;
+
+  ObservationTimeEstimator *observation_estimator;
+  EphemerisTimeEstimator *ephemeris_estimator;
+  UbxLeapTimeEstimator *ubx_leap_estimator;
+
+  /**
+   * Check to make sure that it works without a time truth instance. Still able
+   * to grab the GPS time and leap seconds, but reports that there is no known
+   * time.
+   */
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  ck_assert(!rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(!rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, WN_UNKNOWN);
+  ck_assert_double_eq_tol(out_gps_time.tow, TOW_UNKNOWN, GPS_TOW_TOLERANCE);
+
+  /**
+   * Check to make sure that it works without a time truth instance. User can
+   * specify a time with no leap seconds and the function will be able to
+   * return a correct leap second since the passed in time is within the known
+   * leap second table.
+   */
+  in_gps_time = (gps_time_t){.wn = 2194, .tow = 366915};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, NULL, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, 18);
+
+  /**
+   * Check to make sure that it works without a time truth instance. User can
+   * specify a time with no leap seconds and the function won't be able to
+   * return a correct leap second since the passed in time is outside the known
+   * leap second table.
+   */
+  in_gps_time = (gps_time_t){.wn = 5000, .tow = 0};
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, NULL, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(!rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+
+  /**
+   * Check to make sure that it works without a time truth instance. User can
+   * specify a time with an incorrect leap seconds and the function will be able
+   * to return a correct leap second since the passed in time is within the
+   * known leap second table.
+   */
+  in_gps_time = (gps_time_t){.wn = 2194, .tow = 366915};
+  in_leap_seconds = 20;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, 18);
+
+  /**
+   * Check to make sure that it works without a time truth instance. User can
+   * specify a time outside the known leap second range with a leap seconds
+   * value the function will be able to return a passed in leap second and GPS
+   * time.
+   */
+  in_gps_time = (gps_time_t){.wn = 5194, .tow = 367426};
+  in_leap_seconds = 20;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  /**
+   * Check to make sure that it works without a time truth instance. User can
+   * specify a time outside the known leap second range with a leap seconds
+   * value the function will be able to return a passed in leap second and GPS
+   * time.
+   */
+  in_gps_time = (gps_time_t){.wn = 5194, .tow = 367426};
+  in_leap_seconds = 20;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  /**
+   * Check to make sure that it works with time truth instance.
+   */
+  in_gps_time = (gps_time_t){.wn = 2000, .tow = 0};
+  in_leap_seconds = 18;
+
+  time_truth_reset(time_truth);
+  ck_assert(time_truth_request_observation_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &observation_estimator));
+  ck_assert(time_truth_request_ephemeris_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ephemeris_estimator));
+  ck_assert(time_truth_request_ubx_leap_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ubx_leap_estimator));
+  time_truth_observation_estimator_push(observation_estimator,
+                                        in_gps_time.tow * SECS_MS);
+  for (uint16_t i = 0; i < NUM_SATS; ++i) {
+    time_truth_ephemeris_estimator_push(
+        ephemeris_estimator, (gnss_signal_t){i, CODE_GPS_L1CA}, in_gps_time);
+  }
+  time_truth_ubx_leap_estimator_push(
+      ubx_leap_estimator, in_gps_time, in_leap_seconds);
+
+  rtcm2sbp_init(&state, time_truth, NULL, NULL, NULL);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  /**
+   * Make sure that if a user specifies a time truth instance and specifies a
+   * time explicitly, it uses the specified time over the time truth.
+   */
+  in_gps_time = (gps_time_t){.wn = 2000, .tow = 0};
+  in_leap_seconds = 18;
+
+  time_truth_reset(time_truth);
+  ck_assert(time_truth_request_observation_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &observation_estimator));
+  ck_assert(time_truth_request_ephemeris_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ephemeris_estimator));
+  ck_assert(time_truth_request_ubx_leap_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ubx_leap_estimator));
+  time_truth_observation_estimator_push(observation_estimator,
+                                        in_gps_time.tow * SECS_MS);
+  for (uint16_t i = 0; i < NUM_SATS; ++i) {
+    time_truth_ephemeris_estimator_push(
+        ephemeris_estimator, (gnss_signal_t){i, CODE_GPS_L1CA}, in_gps_time);
+  }
+  time_truth_ubx_leap_estimator_push(
+      ubx_leap_estimator, in_gps_time, in_leap_seconds);
+
+  in_gps_time = (gps_time_t){.wn = 2000, .tow = 500};
+  in_leap_seconds = 18;
+
+  rtcm2sbp_init(&state, time_truth, NULL, NULL, NULL);
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  /**
+   * Check to make sure that timing information is cached, even if the time
+   * changes mid way. This idea is done by by design, that means that within a
+   * single instance of processing a frame, the same time values should be
+   * returned and only after processing a new frame should the time be
+   * recalculate.
+   *
+   * In this test we will follow the following steps:
+   *
+   *  - set a GPS time to WN: 5000, TOW: 100, leap seconds: 20. the time
+   *    internally recognizes this as the current time
+   *  - try and set a new GPS time to WN: 2000, TOW: 0, leap seconds: 18. this
+   *    time the passed in time will be ignored and use the old time.
+   *  - push in an RTCM 1013 frame, this will force the system to clear off
+   *    the cached time and recalculate it, the latest user specified time will
+   *    be used as the current time, RTCM 1013 value will be ignored.
+   *  - clear the user specified time, again push in the same RTCM 1013 frame,
+   *    this time the converter will use the RTCM 1013 values since user has
+   *    cleared its knowledge of time
+   */
+  // clang-format off
+  static const uint8_t rtcm_1013_frame[] = {
+      0xd3, 0x00, 0x09, 0x3f, 0x50, 0x01, 0xe8, 0xd6,
+      0xa1, 0x09, 0x80, 0x48, 0x36, 0x24, 0x76
+  };
+  // clang-format on
+  static const gps_time_t rtcm_1013_gps_time = {.wn = 2194, .tow = 428069};
+  static const int8_t rtcm_1013_leap_seconds = 18;
+
+  swiftnav_bytestream_t stream;
+  rtcm2sbp_init(&state, NULL, NULL, NULL, &stream);
+
+  in_gps_time = (gps_time_t){.wn = 5000, .tow = 100};
+  in_leap_seconds = 20;
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  in_gps_time = (gps_time_t){.wn = 2000, .tow = 0};
+  in_leap_seconds = 18;
+  rtcm2sbp_set_time(&in_gps_time, &in_leap_seconds, &state);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_ne(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_ne_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_ne(out_leap_seconds, in_leap_seconds);
+
+  swiftnav_bytestream_init(
+      &stream, rtcm_1013_frame, ARRAY_SIZE(rtcm_1013_frame));
+  rtcm2sbp_process(&state, &test_internal_get_time_reader_func);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  swiftnav_bytestream_init(
+      &stream, rtcm_1013_frame, ARRAY_SIZE(rtcm_1013_frame));
+  rtcm2sbp_set_time(NULL, NULL, &state);
+  rtcm2sbp_process(&state, &test_internal_get_time_reader_func);
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, rtcm_1013_gps_time.wn);
+  ck_assert_double_eq_tol(
+      out_gps_time.tow, rtcm_1013_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, rtcm_1013_leap_seconds);
+
+  /**
+   * Check that users can pass a unix time callback function and it will
+   * correctly return the proper result. In this test we want to make sure that
+   * it is successfully return the passed in time. Also show that the unix time
+   * takes precedence over time truth.
+   */
+  test_internal_get_time_has_unix_time = true;
+  test_internal_get_time_unix_time = 1645078316;
+
+  in_gps_time = (gps_time_t){.wn = 2197, .tow = 367934};
+  in_leap_seconds = 18;
+
+  tmp_gps_time = in_gps_time;
+  add_secs(&tmp_gps_time, WEEK_SECS);
+  tmp_leap_seconds = in_leap_seconds;
+  tmp_leap_seconds += 1;
+
+  time_truth_reset(time_truth);
+  ck_assert(time_truth_request_observation_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &observation_estimator));
+  ck_assert(time_truth_request_ephemeris_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ephemeris_estimator));
+  ck_assert(time_truth_request_ubx_leap_time_estimator(
+      time_truth, TIME_TRUTH_SOURCE_LOCAL, &ubx_leap_estimator));
+  time_truth_observation_estimator_push(observation_estimator,
+                                        tmp_gps_time.tow * SECS_MS);
+  for (uint16_t i = 0; i < NUM_SATS; ++i) {
+    time_truth_ephemeris_estimator_push(
+        ephemeris_estimator, (gnss_signal_t){i, CODE_GPS_L1CA}, tmp_gps_time);
+  }
+  time_truth_ubx_leap_estimator_push(
+      ubx_leap_estimator, tmp_gps_time, tmp_leap_seconds);
+
+  rtcm2sbp_init(&state, time_truth, NULL, NULL, NULL);
+  rtcm2sbp_set_unix_time_callback_function(
+      test_internal_get_time_unix_time_callback_function, &state);
+
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+
+  /**
+   * Check that users can pass a unix time callback function and it will
+   * ignore it if the time is either invalid or not available. Than accept when
+   * the time is the GPS epoch.
+   */
+  test_internal_get_time_has_unix_time = false;
+  test_internal_get_time_unix_time = 0;
+
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_unix_time_callback_function(
+      test_internal_get_time_unix_time_callback_function, &state);
+
+  ck_assert(!rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(!rtcm_get_leap_seconds(&out_leap_seconds, &state));
+
+  test_internal_get_time_has_unix_time = true;
+  test_internal_get_time_unix_time = GPS_EPOCH - 1;
+
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_unix_time_callback_function(
+      test_internal_get_time_unix_time_callback_function, &state);
+
+  ck_assert(!rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(!rtcm_get_leap_seconds(&out_leap_seconds, &state));
+
+  test_internal_get_time_has_unix_time = true;
+  test_internal_get_time_unix_time = GPS_EPOCH;
+
+  in_gps_time = (gps_time_t){.wn = 0, .tow = 0};
+  in_leap_seconds = 0;
+
+  rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
+  rtcm2sbp_set_unix_time_callback_function(
+      test_internal_get_time_unix_time_callback_function, &state);
+
+  ck_assert(rtcm_get_gps_time(&out_gps_time, &state));
+  ck_assert(rtcm_get_leap_seconds(&out_leap_seconds, &state));
+  ck_assert_int_eq(out_gps_time.wn, in_gps_time.wn);
+  ck_assert_double_eq_tol(out_gps_time.tow, in_gps_time.tow, GPS_TOW_TOLERANCE);
+  ck_assert_int_eq(out_leap_seconds, in_leap_seconds);
+}
+END_TEST
+
+Suite *rtcm_time_suite(void) {
   Suite *s = suite_create("RTCMv3 time");
 
   TCase *tc_rtcm3_time = tcase_create("time truth");
   tcase_add_checked_fixture(tc_rtcm3_time, reset_test_fixture_unknown, NULL);
+  tcase_add_test(tc_rtcm3_time, test_week_rollover_adjustment);
   tcase_add_test(tc_rtcm3_time, test_strs_1);
   tcase_add_test(tc_rtcm3_time, test_strs_2);
   tcase_add_test(tc_rtcm3_time, test_strs_3);
@@ -1665,6 +2231,7 @@ Suite *rtcm3_time_suite(void) {
   tcase_add_test(tc_rtcm3_time, test_strs_22);
   tcase_add_test(tc_rtcm3_time, test_strs_23);
   tcase_add_test(tc_rtcm3_time, test_strs_24);
+  tcase_add_test(tc_rtcm3_time, test_internal_get_time);
   suite_add_tcase(s, tc_rtcm3_time);
 
   return s;

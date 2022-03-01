@@ -16,6 +16,8 @@
 #include <string.h>
 
 #include <gnss-converters/ubx_sbp.h>
+
+#include "time_truth.h"
 #include "ubx2sbp_main.h"
 
 static sbp_state_t sbp_state;
@@ -43,6 +45,10 @@ static void help(char *arg, const char *additional_opts_help) {
   fprintf(stderr,
           "  --hnr output POS_LLH (522) on HNR-PVT instead of NAV-PVT. NAV-PVT "
           "messages are still necessary.\n");
+  fprintf(stderr,
+          "  --time_truth requests that the converter upload any timing "
+          "information to the time truth module. Option has no practical "
+          "purposes other than to run fuzz testing on it.\n");
 }
 
 int ubx2sbp_main(int argc,
@@ -66,6 +72,7 @@ int ubx2sbp_main(int argc,
   static struct option long_options[] = {
       {"hnr", no_argument, 0, 0},
       {"sender_id", required_argument, 0, 's'},
+      {"time_truth", no_argument, 0, 't'},
       {0, 0, 0, 0}};
 
   while ((opt = getopt_long(argc, argv, "hs:", long_options, &option_index)) !=
@@ -84,6 +91,32 @@ int ubx2sbp_main(int argc,
       case 'h':
         help(argv[0], additional_opts_help);
         return 0;
+
+      case 't':
+        if (strcmp("time_truth", long_options[option_index].name) == 0) {
+          ObservationTimeEstimator *observation_time_estimator = NULL;
+          EphemerisTimeEstimator *ephemeris_time_estimator = NULL;
+          UbxLeapTimeEstimator *ubx_leap_time_estimator = NULL;
+
+          time_truth_reset(ubx_time_truth);
+          time_truth_request_observation_time_estimator(
+              ubx_time_truth,
+              TIME_TRUTH_SOURCE_LOCAL,
+              &observation_time_estimator);
+          time_truth_request_ephemeris_time_estimator(
+              ubx_time_truth,
+              TIME_TRUTH_SOURCE_LOCAL,
+              &ephemeris_time_estimator);
+          time_truth_request_ubx_leap_time_estimator(ubx_time_truth,
+                                                     TIME_TRUTH_SOURCE_LOCAL,
+                                                     &ubx_leap_time_estimator);
+
+          ubx_sbp_set_time_truth_estimators(&state,
+                                            observation_time_estimator,
+                                            ephemeris_time_estimator,
+                                            ubx_leap_time_estimator);
+        }
+        break;
 
       default:
         break;

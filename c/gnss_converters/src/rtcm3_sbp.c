@@ -69,6 +69,21 @@
 
 #define RTCM3_PREAMBLE 0xD3
 
+#define TIME_TRUTH_GPS_TIME_SEC_ALERT (1 * MINUTE_SECS)
+#define TIME_TRUTH_LEAP_SECOND_SEC_ALERT 1
+
+/**
+ * Appropriate string length that can hold either:
+ *
+ *  - any week number [0, 65536]
+ *  - any time of week [0, 604800]
+ *  - any leap seconds [-128, 127]
+ *  - "UNKNOWN" keyword
+ *
+ * Along with an extra character for the terminating character.
+ */
+#define TIME_TRUTH_STRING_LENGTH 10
+
 static void handle_rtcm3_999_subframe(const rtcm_msg_999 *msg_999,
                                       struct rtcm3_sbp_state *state);
 
@@ -79,7 +94,7 @@ static uint16_t extract_msg_len(const uint8_t *buf);
 static bool verify_crc(uint8_t *buf, uint16_t buf_len);
 
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
-                   time_truth_t *time_truth,
+                   TimeTruth *time_truth,
                    void (*cb_rtcm_to_sbp)(uint16_t sender_id,
                                           sbp_msg_type_t msg_type,
                                           const sbp_msg_t *msg,
@@ -90,18 +105,42 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   assert(RTCM3_FIFO_SIZE > (RTCM3_MSG_OVERHEAD + RTCM3_MAX_MSG_LEN));
 
   state->time_truth = time_truth;
+  state->time_truth_cache = NULL;
+  state->gps_week_reference = GPS_WEEK_REFERENCE;
+  state->has_cached_time = false;
 
-  state->use_time_from_input_obs = false;
-  state->time_from_input_data.wn = WN_UNKNOWN;
-  state->time_from_input_data.tow = 0;
+  state->cached_gps_time_known = false;
+  state->cached_gps_time = (gps_time_t){0, 0};
+  state->cached_leap_seconds_known = false;
+  state->cached_leap_seconds = 0;
 
-  state->leap_seconds = 0;
-  state->leap_second_known = false;
+  state->user_gps_time_known = false;
+  state->user_gps_time = (gps_time_t){0, 0};
+  state->user_leap_seconds_known = false;
+  state->user_leap_seconds = 0;
+
+  state->unix_time_callback = NULL;
+
+  state->rtcm_1013_time_known = false;
+  state->rtcm_1013_gps_time = (gps_time_t){0, 0};
+  state->rtcm_1013_leap_seconds = 0;
+
+  state->name = NULL;
+  state->time_truth_last_wn = 0;
+  state->time_truth_last_wn_state = TIME_TRUTH_STATE_NONE;
+  state->time_truth_last_tow_ms = 0;
+  state->time_truth_last_tow_ms_state = TIME_TRUTH_STATE_NONE;
+  state->time_truth_last_leap_seconds = 0;
+  state->time_truth_last_leap_seconds_state = TIME_TRUTH_STATE_NONE;
 
   state->sender_id = 0;
   state->cb_rtcm_to_sbp = cb_rtcm_to_sbp;
   state->cb_base_obs_invalid = cb_base_obs_invalid;
   state->context = context;
+
+  state->observation_time_estimator = NULL;
+  state->ephemeris_time_estimator = NULL;
+  state->rtcm_1013_time_estimator = NULL;
 
   state->last_gps_time.wn = WN_UNKNOWN;
   state->last_gps_time.tow = 0;
@@ -141,7 +180,6 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
 void rtcm2sbp_decode_payload(const uint8_t *payload,
                              uint32_t payload_length,
                              struct rtcm3_sbp_state *state) {
-  (void)payload_length;
   swiftnav_bitstream_t bitstream;
   swiftnav_bitstream_init(&bitstream, payload, payload_length * 8);
 
@@ -153,70 +191,11 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
   uint16_t message_type =
       (payload[byte] << 4) | ((payload[byte + 1] >> 4) & 0xf);
 
-  enum time_truth_state time_truth_state;
-  if (state->use_time_from_input_obs) {
-    time_truth_state = TIME_TRUTH_SOLVED;
-  } else {
-    time_truth_get(
-        state->time_truth, &time_truth_state, &state->time_from_input_data);
-  }
-  switch (message_type) {
-    case 999:
-    /** msg_base_pos_ecef_t messages */
-    case 1005:
-    case 1006:
-
-    /** log messages */
-    case 1029:
-
-    /** MSM warning messages */
-    case 1071:
-    case 1072:
-    case 1073:
-    case 1081:
-    case 1082:
-    case 1083:
-    case 1091:
-    case 1092:
-    case 1093:
-    case 1101:
-    case 1102:
-    case 1103:
-    case 1111:
-    case 1112:
-    case 1113:
-    case 1121:
-    case 1122:
-    case 1123:
-
-    /** Swift proprietary message */
-    case 4062:
-
-    /** NDF */
-    case 4075:
-
-    /** RTCM ephemerid messages for constellations GPS/BDS/GAL. GLO/QZSS is left
-     * out for the moment */
-    case 1019:
-    case 1042:
-    case 1045:
-    case 1046:
-      break;
-    default:
-      if (time_truth_state != TIME_TRUTH_SOLVED) {
-        return;
-      }
-  }
-
-  if (time_truth_state == TIME_TRUTH_SOLVED) {
-    state->leap_seconds =
-        get_gps_utc_offset(&state->time_from_input_data, NULL);
-    state->leap_second_known = true;
-  }
-
   if (verbosity_level > VERB_HIGH) {
     log_info("MID: %5u", message_type);
   }
+
+  state->has_cached_time = false;
 
   switch (message_type) {
     case 999: {
@@ -279,17 +258,23 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
       break;
     case 1010: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1010_bitstream(&bitstream, &new_rtcm_obs) &&
-          state->leap_second_known) {
+      if (RC_OK == rtcm3_decode_1010_bitstream(&bitstream, &new_rtcm_obs)) {
         add_glo_obs_to_buffer(&new_rtcm_obs, state);
       }
       break;
     }
     case 1012: {
       rtcm_obs_message new_rtcm_obs;
-      if (RC_OK == rtcm3_decode_1012_bitstream(&bitstream, &new_rtcm_obs) &&
-          state->leap_second_known) {
+      if (RC_OK == rtcm3_decode_1012_bitstream(&bitstream, &new_rtcm_obs)) {
         add_glo_obs_to_buffer(&new_rtcm_obs, state);
+      }
+      break;
+    }
+    case 1013: {
+      rtcm_msg_1013 rtcm_message;
+      if (RC_OK == rtcm3_decode_1013_bitstream(
+                       &bitstream, &rtcm_message, payload_length)) {
+        rtcm3_1013_handle(&rtcm_message, state);
       }
       break;
     }
@@ -414,7 +399,11 @@ void rtcm2sbp_decode_payload(const uint8_t *payload,
                               SbpMsgGloBiases,
                               &msg,
                               state->context);
-        state->last_1230_received = state->time_from_input_data;
+
+        gps_time_t rover_time;
+        if (rtcm_get_gps_time(&rover_time, state)) {
+          state->last_1230_received = rover_time;
+        }
       }
       break;
     }
@@ -678,11 +667,19 @@ static bool is_msm_active(const gps_time_t *current_time,
 
 void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return;
+  }
+
+  int8_t leap_seconds;
+  if (!rtcm_get_leap_seconds(&leap_seconds, state)) {
+    return;
+  }
+
   gps_time_t obs_time = GPS_TIME_UNKNOWN;
-  if (!compute_glo_time(new_rtcm_obs->header.tow_ms,
-                        &obs_time,
-                        &state->time_from_input_data,
-                        state)) {
+  if (!compute_glo_time(
+          new_rtcm_obs->header.tow_ms, &obs_time, &rover_time, state)) {
     return;
   }
 
@@ -691,13 +688,13 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
   }
 
   const bool within_input_data_time =
-      fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
-           state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+      fabs(gpsdifftime(&obs_time, &rover_time) - leap_seconds) <=
+      GLO_SANITY_THRESHOLD_S;
 
   const bool within_last_gps_time =
       gps_time_valid(&state->last_gps_time) &&
-      fabs(gpsdifftime(&obs_time, &state->last_gps_time) -
-           state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+      fabs(gpsdifftime(&obs_time, &state->last_gps_time) - leap_seconds) <=
+          GLO_SANITY_THRESHOLD_S;
 
   if (!within_input_data_time && !within_last_gps_time) {
     return;
@@ -718,11 +715,18 @@ void add_glo_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
 
 void add_gps_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                            struct rtcm3_sbp_state *state) {
+  if (state->observation_time_estimator != NULL) {
+    time_truth_observation_estimator_push(state->observation_time_estimator,
+                                          new_rtcm_obs->header.tow_ms);
+  }
+
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return;
+  }
+
   gps_time_t obs_time = GPS_TIME_UNKNOWN;
-  compute_gps_time(new_rtcm_obs->header.tow_ms,
-                   &obs_time,
-                   &state->time_from_input_data,
-                   state);
+  compute_gps_time(new_rtcm_obs->header.tow_ms, &obs_time, &rover_time, state);
 
   if (!gps_time_valid(&obs_time)) {
     return;
@@ -930,6 +934,8 @@ void add_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
  * Split the observation buffer into SBP messages and send them
  */
 void send_observations(struct rtcm3_sbp_state *state) {
+  static const sbp_v4_gps_time_t kUnknownObsTime = {0};
+
   /* We want the ceiling of n_obs divided by max obs in a single message to get
    * total number of messages needed */
   const u8 total_messages =
@@ -939,6 +945,10 @@ void send_observations(struct rtcm3_sbp_state *state) {
 
   assert(state->obs_to_send <= MAX_OBS_PER_EPOCH);
   assert(total_messages <= SBP_MAX_OBS_SEQ);
+
+  if (sbp_v4_gps_time_cmp(&state->obs_time, &kUnknownObsTime) == 0) {
+    return;
+  }
 
   /* Write the SBP observation messages */
   u8 buffer_obs_index = 0;
@@ -984,6 +994,45 @@ void rtcm3_1006_to_sbp(const rtcm_msg_1006 *rtcm_1006,
   sbp_base_pos->x = rtcm_1006->msg_1005.arp_x;
   sbp_base_pos->y = rtcm_1006->msg_1005.arp_y;
   sbp_base_pos->z = rtcm_1006->msg_1005.arp_z;
+}
+
+void rtcm3_1013_handle(const rtcm_msg_1013 *rtcm_1013,
+                       struct rtcm3_sbp_state *state) {
+  if (rtcm_1013->leap_second == RTCM_1013_UNKNOWN_LEAP_SECONDS) {
+    return;
+  }
+
+  static const uint16_t MJD_BITS = 16;
+  const uint32_t ABSOLUTE_MJD_REFERENCE =
+      (WEEK_DAYS * ((uint32_t)state->gps_week_reference) + MJD_JAN_6_1980);
+  const uint32_t ABSOLUTE_MJD_REFERENCE_ROLLOVERS =
+      ABSOLUTE_MJD_REFERENCE / (UINT32_C(1) << MJD_BITS);
+  const uint32_t ABSOLUTE_MJD_REFERENCE_OFFSET =
+      ABSOLUTE_MJD_REFERENCE % (UINT32_C(1) << MJD_BITS);
+
+  uint32_t rollovers = ABSOLUTE_MJD_REFERENCE_ROLLOVERS;
+  if (rtcm_1013->mjd < ABSOLUTE_MJD_REFERENCE_OFFSET) {
+    ++rollovers;
+  }
+
+  uint32_t utc_tod = rtcm_1013->utc;
+  double gps_days =
+      rtcm_1013->mjd - MJD_JAN_6_1980 + rollovers * (UINT32_C(1) << MJD_BITS);
+
+  gps_time_t gps_time;
+  gps_time.wn = (s16)(gps_days / WEEK_DAYS);
+  gps_time.tow = (gps_days - gps_time.wn * WEEK_DAYS) * (double)DAY_SECS;
+  add_secs(&gps_time, utc_tod);
+  add_secs(&gps_time, rtcm_1013->leap_second);
+
+  state->rtcm_1013_time_known = true;
+  state->rtcm_1013_gps_time = gps_time;
+  state->rtcm_1013_leap_seconds = (int8_t)rtcm_1013->leap_second;
+
+  if (state->rtcm_1013_time_estimator != NULL) {
+    time_truth_rtcm_1013_estimator_push(
+        state->rtcm_1013_time_estimator, gps_time, rtcm_1013->leap_second);
+  }
 }
 
 void rtcm3_1033_to_sbp(const rtcm_msg_1033 *rtcm_1033,
@@ -1198,6 +1247,57 @@ void rtcm2sbp_set_glo_fcn(sbp_v4_gnss_signal_t sid,
   state->glo_sv_id_fcn_map[sid.sat] = sbp_fcn_to_rtcm(sbp_fcn);
 }
 
+bool rtcm2sbp_is_using_user_provided_time(struct rtcm3_sbp_state *state) {
+  return state->user_gps_time_known;
+}
+
+void rtcm2sbp_set_name(const char *name, struct rtcm3_sbp_state *state) {
+  state->name = name;
+}
+
+void rtcm2sbp_set_time(const gps_time_t *gps_time,
+                       const int8_t *leap_seconds,
+                       struct rtcm3_sbp_state *state) {
+  if (gps_time != NULL && gps_time_valid(gps_time)) {
+    state->user_gps_time_known = true;
+    state->user_gps_time = *gps_time;
+  } else {
+    state->user_gps_time_known = false;
+  }
+
+  if (leap_seconds != NULL) {
+    state->user_leap_seconds_known = true;
+    state->user_leap_seconds = *leap_seconds;
+  } else {
+    state->user_leap_seconds_known = false;
+  }
+}
+
+void rtcm2sbp_set_unix_time_callback_function(
+    rtcm_sbp_unix_time_callback_t callback, struct rtcm3_sbp_state *state) {
+  state->unix_time_callback = callback;
+}
+
+void rtcm2sbp_set_time_truth_cache(TimeTruthCache *time_truth_cache,
+                                   struct rtcm3_sbp_state *state) {
+  state->time_truth_cache = time_truth_cache;
+}
+
+void rtcm2sbp_set_gps_week_reference(uint16_t gps_week_reference,
+                                     struct rtcm3_sbp_state *state) {
+  state->gps_week_reference = gps_week_reference;
+}
+
+void rtcm2sbp_set_time_truth_estimators(
+    ObservationTimeEstimator *observation_time_estimator,
+    EphemerisTimeEstimator *ephemeris_time_estimator,
+    Rtcm1013TimeEstimator *rtcm_1013_time_estimator,
+    struct rtcm3_sbp_state *state) {
+  state->observation_time_estimator = observation_time_estimator;
+  state->ephemeris_time_estimator = ephemeris_time_estimator;
+  state->rtcm_1013_time_estimator = rtcm_1013_time_estimator;
+}
+
 void compute_gps_message_time(u32 tow_ms,
                               gps_time_t *obs_time,
                               const gps_time_t *rover_time) {
@@ -1243,7 +1343,8 @@ bool compute_glo_time(u32 tod_ms,
                       gps_time_t *obs_time,
                       const gps_time_t *rover_time,
                       struct rtcm3_sbp_state *state) {
-  if (!state->leap_second_known) {
+  int8_t leap_seconds;
+  if (!rtcm_get_leap_seconds(&leap_seconds, state)) {
     obs_time->wn = WN_UNKNOWN;
     return false;
   }
@@ -1262,7 +1363,7 @@ bool compute_glo_time(u32 tod_ms,
 
   obs_time->wn = rover_time->wn;
   s32 tow_ms =
-      glo_dow * DAY_SECS * SECS_MS + glo_tod_ms + state->leap_seconds * SECS_MS;
+      glo_dow * DAY_SECS * SECS_MS + glo_tod_ms + leap_seconds * SECS_MS;
   while (tow_ms < 0) {
     tow_ms += WEEK_SECS * SECS_MS;
     obs_time->wn -= 1;
@@ -1300,8 +1401,13 @@ static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
 }
 
 bool no_1230_received(struct rtcm3_sbp_state *state) {
+  gps_time_t rover_time;
+  if (!rtcm_get_gps_time(&rover_time, state)) {
+    return false;
+  }
+
   if (!gps_time_valid(&state->last_1230_received) ||
-      gpsdifftime(&state->time_from_input_data, &state->last_1230_received) >
+      gpsdifftime(&rover_time, &state->last_1230_received) >
           MSG_1230_TIMEOUT_SEC) {
     return true;
   }
@@ -1478,22 +1584,30 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
 
   gps_time_t obs_time = GPS_TIME_UNKNOWN;
   if (RTCM_CONSTELLATION_GLO == cons) {
-    compute_glo_time(new_rtcm_obs->header.tow_ms,
-                     &obs_time,
-                     &state->time_from_input_data,
-                     state);
+    gps_time_t rover_time;
+    if (!rtcm_get_gps_time(&rover_time, state)) {
+      return;
+    }
+
+    int8_t leap_seconds;
+    if (!rtcm_get_leap_seconds(&leap_seconds, state)) {
+      return;
+    }
+
+    compute_glo_time(
+        new_rtcm_obs->header.tow_ms, &obs_time, &rover_time, state);
     if (!gps_time_valid(&obs_time)) {
       return;
     }
 
     const bool within_input_data_time =
-        fabs(gpsdifftime(&obs_time, &state->time_from_input_data) -
-             state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+        fabs(gpsdifftime(&obs_time, &rover_time) - leap_seconds) <=
+        GLO_SANITY_THRESHOLD_S;
 
     const bool within_last_gps_time =
         gps_time_valid(&state->last_gps_time) &&
-        fabs(gpsdifftime(&obs_time, &state->last_gps_time) -
-             state->leap_seconds) <= GLO_SANITY_THRESHOLD_S;
+        fabs(gpsdifftime(&obs_time, &state->last_gps_time) - leap_seconds) <=
+            GLO_SANITY_THRESHOLD_S;
 
     if (!within_input_data_time && !within_last_gps_time) {
       return;
@@ -1506,7 +1620,17 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
       beidou_tow_to_gps_tow(&tow_ms);
     }
 
-    compute_gps_time(tow_ms, &obs_time, &state->time_from_input_data, state);
+    if (state->observation_time_estimator != NULL) {
+      time_truth_observation_estimator_push(state->observation_time_estimator,
+                                            tow_ms);
+    }
+
+    gps_time_t rover_time;
+    if (!rtcm_get_gps_time(&rover_time, state)) {
+      return;
+    }
+
+    compute_gps_time(tow_ms, &obs_time, &rover_time, state);
 
     if (!gps_time_valid(&obs_time)) {
       return;
@@ -1778,6 +1902,204 @@ static bool verify_crc(uint8_t *buf, uint16_t buf_len) {
              computed_crc);
   }
   return (frame_crc == computed_crc);
+}
+
+/**
+ * Function looks through all the timing options available to the converter and
+ * calculates the most appropriate time. The converter has a number of possible
+ * way available in which it can obtain the current time, the list below will
+ * show the priority given to them and how users can set these options:
+ *
+ *  - User specified time -> rtcm2sbp_set_time
+ *  - Unix time callback function -> rtcm2sbp_set_unix_time_callback_function
+ *  - Time truth -> specified through rtcm2sbp_init
+ *  - RTCM 1013 -> by processing a RTCM 1013 message, this option is used as a
+ *                 last resort and should not be relied on for production use
+ *
+ * If at any point any of the options is able to provide some notion of time,
+ * the function will return true, otherwise it will return false.
+ *
+ * @param state pointer to the converter
+ * @return true if it was able to calculate time, otherwise false if all
+ * attempts at obtaining a time has failed.
+ */
+static bool rtcm_calculate_cache_time(struct rtcm3_sbp_state *state) {
+  int64_t unix_time;
+
+  if (state->user_gps_time_known) {
+    state->cached_gps_time_known = true;
+    state->cached_gps_time = state->user_gps_time;
+
+    const gps_time_t leap_second_expiry_time = {
+        (double)(gps_time_utc_leaps_expiry[1]),
+        (int16_t)(gps_time_utc_leaps_expiry[0])};
+
+    if (gpsdifftime(&leap_second_expiry_time, &state->user_gps_time) > 0) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds =
+          (int8_t)(get_gps_utc_offset(&state->user_gps_time, NULL));
+    } else if (state->user_leap_seconds_known) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds = state->user_leap_seconds;
+    } else {
+      state->cached_leap_seconds_known = state->rtcm_1013_time_known;
+      state->cached_leap_seconds = state->rtcm_1013_leap_seconds;
+    }
+  } else if (state->unix_time_callback != NULL &&
+             state->unix_time_callback(&unix_time) && unix_time >= GPS_EPOCH) {
+    /**
+     * for this section, the GPS time is not entirely 100% accurate, but for all
+     * intents and purposes its accurate enough for the use case within the RTCM
+     * to SBP converter. the reason why its not accurate is because we are
+     * stating that the GPS time is known when we've derived the GPS time using
+     * an accurate unix time and a potentially invalid/inaccurate leap second
+     * value (because the internal leap second table is out of date).
+     */
+
+    gps_time_t utc_time;
+    utc_time.wn = (int16_t)((unix_time - GPS_EPOCH) / WEEK_SECS);
+    utc_time.tow =
+        (double)(unix_time - GPS_EPOCH) - (double)(utc_time.wn) * WEEK_SECS;
+
+    int8_t leap_seconds = (int8_t)(-get_utc_gps_offset(&utc_time, NULL));
+
+    gps_time_t gps_time = utc_time;
+    add_secs(&gps_time, leap_seconds);
+
+    state->cached_gps_time_known = true;
+    state->cached_gps_time = gps_time;
+
+    if (unix_time < unix_time_utc_leaps_expiry) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds = leap_seconds;
+    } else {
+      state->cached_leap_seconds_known = state->rtcm_1013_time_known;
+      state->cached_leap_seconds = state->rtcm_1013_leap_seconds;
+    }
+  } else if (state->time_truth != NULL) {
+    uint16_t wn = 0;
+    uint32_t tow_ms = 0;
+    int8_t leap_seconds = 0;
+    TimeTruthState wn_state;
+    TimeTruthState tow_ms_state;
+    TimeTruthState leap_seconds_state;
+
+    time_truth_get_latest_time(state->time_truth,
+                               &wn,
+                               &wn_state,
+                               &tow_ms,
+                               &tow_ms_state,
+                               &leap_seconds,
+                               &leap_seconds_state,
+                               state->time_truth_cache);
+
+    if (wn_state != TIME_TRUTH_STATE_NONE &&
+        tow_ms_state != TIME_TRUTH_STATE_NONE) {
+      state->cached_gps_time_known = true;
+      state->cached_gps_time.tow = ((double)tow_ms) / SECS_MS;
+      state->cached_gps_time.wn = (int16_t)wn;
+    } else {
+      state->cached_gps_time_known = false;
+    }
+
+    if (leap_seconds_state != TIME_TRUTH_STATE_NONE) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds = leap_seconds;
+    } else {
+      state->cached_leap_seconds_known = false;
+    }
+
+    const gps_time_t gps_time = {.wn = wn, .tow = tow_ms / SECS_MS};
+    const gps_time_t last_gps_time = {
+        .wn = state->time_truth_last_wn,
+        .tow = state->time_truth_last_tow_ms / SECS_MS};
+
+    if (wn_state != state->time_truth_last_wn_state ||
+        tow_ms_state != state->time_truth_last_tow_ms_state ||
+        leap_seconds_state != state->time_truth_last_leap_seconds_state ||
+        fabs(gpsdifftime(&gps_time, &last_gps_time)) >=
+            TIME_TRUTH_GPS_TIME_SEC_ALERT ||
+        abs(leap_seconds - state->time_truth_last_leap_seconds) >=
+            TIME_TRUTH_LEAP_SECOND_SEC_ALERT) {
+      char wn_string[TIME_TRUTH_STRING_LENGTH];
+      char tow_string[TIME_TRUTH_STRING_LENGTH];
+      char leap_seconds_string[TIME_TRUTH_STRING_LENGTH];
+
+      if (wn_state != TIME_TRUTH_STATE_NONE) {
+        snprintf(wn_string, sizeof(wn_string), "%" PRIu16, wn);
+      } else {
+        snprintf(wn_string, sizeof(wn_string), "UNKNOWN");
+      }
+
+      if (tow_ms_state != TIME_TRUTH_STATE_NONE) {
+        snprintf(tow_string, sizeof(tow_string), "%" PRIu32, tow_ms / SECS_MS);
+      } else {
+        snprintf(tow_string, sizeof(tow_string), "UNKNOWN");
+      }
+
+      if (leap_seconds_state != TIME_TRUTH_STATE_NONE) {
+        snprintf(leap_seconds_string,
+                 sizeof(leap_seconds_string),
+                 "%" PRIi8,
+                 leap_seconds);
+      } else {
+        snprintf(leap_seconds_string, sizeof(leap_seconds_string), "UNKNOWN");
+      }
+
+      log_notice("%s: WN - %s, TOW - %s, Leap Seconds - %s",
+                 state->name != NULL ? state->name : "RTCM->SBP",
+                 wn_string,
+                 tow_string,
+                 leap_seconds_string);
+    }
+
+    state->time_truth_last_wn = wn;
+    state->time_truth_last_wn_state = wn_state;
+    state->time_truth_last_tow_ms = tow_ms;
+    state->time_truth_last_tow_ms_state = tow_ms_state;
+    state->time_truth_last_leap_seconds = leap_seconds;
+    state->time_truth_last_leap_seconds_state = leap_seconds_state;
+  } else if (state->rtcm_1013_time_known) {
+    state->cached_gps_time_known = true;
+    state->cached_gps_time = state->rtcm_1013_gps_time;
+    state->cached_leap_seconds_known = true;
+    state->cached_leap_seconds = state->rtcm_1013_leap_seconds;
+  } else {
+    state->has_cached_time = false;
+    return false;
+  }
+
+  state->has_cached_time = true;
+  return true;
+}
+
+bool rtcm_get_gps_time(gps_time_t *gps_time, struct rtcm3_sbp_state *state) {
+  if (!state->has_cached_time && !rtcm_calculate_cache_time(state)) {
+    *gps_time = (gps_time_t){.tow = TOW_UNKNOWN, .wn = WN_UNKNOWN};
+    return false;
+  }
+
+  if (state->cached_gps_time_known) {
+    *gps_time = state->cached_gps_time;
+    return true;
+  }
+
+  *gps_time = (gps_time_t){.tow = TOW_UNKNOWN, .wn = WN_UNKNOWN};
+  return false;
+}
+
+bool rtcm_get_leap_seconds(int8_t *leap_seconds,
+                           struct rtcm3_sbp_state *state) {
+  if (!state->has_cached_time && !rtcm_calculate_cache_time(state)) {
+    return false;
+  }
+
+  if (state->cached_leap_seconds_known) {
+    *leap_seconds = state->cached_leap_seconds;
+    return true;
+  }
+
+  return false;
 }
 
 /* Update satellite prn in SBP following the GNSS ID from RTCM3 DF06P */

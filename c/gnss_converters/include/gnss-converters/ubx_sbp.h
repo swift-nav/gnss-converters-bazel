@@ -21,6 +21,7 @@
 #include <unistd.h>
 
 #include <gnss-converters/eph_sat_data.h>
+#include <gnss-converters/time_truth_v2.h>
 #include <swiftnav/bytestream.h>
 #include "swiftnav/gnss_time.h"
 #include "swiftnav/signal.h"
@@ -82,6 +83,10 @@ struct ubx_sbp_state {
 
   bool leap_second_known;
   utc_params_t utc_params;
+
+  ObservationTimeEstimator *observation_time_estimator;
+  EphemerisTimeEstimator *ephemeris_time_estimator;
+  UbxLeapTimeEstimator *ubx_leap_time_estimator;
 };
 
 int16_t ubx_convert_temperature_to_bmi160(double temperature_degrees);
@@ -98,6 +103,21 @@ void ubx_set_sender_id(struct ubx_sbp_state *state, u16 sender_id);
 void ubx_set_hnr_flag(struct ubx_sbp_state *state, bool use_hnr);
 int ubx_sbp_process(struct ubx_sbp_state *state,
                     int (*read_stream_func)(u8 *buff, size_t len, void *ctx));
+
+/**
+ * Offers the means for users to enlist time estimator instance which the
+ * converter will call upon when timing information is available.
+ *
+ * @param state pointer to converter object
+ * @param observation_time_estimator pointer to the observation time estimator
+ * @param ephemeris_time_estimator pointer to the ephemeris time estimator
+ * @param ubx_leap_time_estimator pointer to the UBX leap time estimator
+ */
+void ubx_sbp_set_time_truth_estimators(
+    struct ubx_sbp_state *state,
+    ObservationTimeEstimator *observation_time_estimator,
+    EphemerisTimeEstimator *ephemeris_time_estimator,
+    UbxLeapTimeEstimator *ubx_leap_time_estimator);
 
 void invalidate_subframes(struct sat_data *sat, unsigned mask);
 

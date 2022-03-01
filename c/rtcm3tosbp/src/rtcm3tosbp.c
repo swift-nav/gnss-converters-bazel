@@ -32,10 +32,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "time_truth.h"
+
 #define SBP_PREAMBLE 0x55
 #define STRCMP_EQ 0
-
-static time_truth_t time_truth;
 
 typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
 
@@ -53,8 +53,7 @@ static void update_obs_time(const sbp_msg_obs_t *msg) {
   /* Some receivers output a TOW 0 whenever it's in a denied environment
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
-    // TODO(SSTM-28) -  update time truth with observations
-    state.time_from_input_data = obs_time;
+    rtcm2sbp_set_time(&obs_time, NULL, &state);
   }
 }
 
@@ -63,12 +62,10 @@ static void cb_rtcm_to_sbp(uint16_t sender_id,
                            sbp_msg_type_t msg_type,
                            const sbp_msg_t *msg,
                            void *context) {
-  if (state.use_time_from_input_obs) {
+  if (rtcm2sbp_is_using_user_provided_time(&state)) {
     if (msg_type == SbpMsgObs) {
       update_obs_time((const sbp_msg_obs_t *)msg);
     }
-  } else {
-    time_truth_update_from_sbp(&time_truth, msg_type, msg);
   }
 
   (void)(context); /* squash warning */
@@ -79,13 +76,6 @@ static void cb_rtcm_to_sbp(uint16_t sender_id,
     fprintf(stderr, "Write failure at %d, %s. Aborting!\n", __LINE__, __FILE__);
     exit(EXIT_FAILURE);
   }
-}
-
-static void cb_base_obs_invalid(const double timediff, void *context) {
-  (void)timediff;
-  (void)context; /* squash warning */
-  // TODO(SSTM-30) reintroduce this message, also downgrade level to warning
-  // fprintf(stderr, "Invalid base observation! timediff: %lf\n", timediff);
 }
 
 static void help(char *arg, const char *additional_opts_help) {
@@ -239,15 +229,19 @@ int rtcm3tosbp_main(int argc,
     }
   }
 
-  time_truth_init(&time_truth);
+  ObservationTimeEstimator *observation_estimator;
+  EphemerisTimeEstimator *ephemeris_estimator;
+  Rtcm1013TimeEstimator *rtcm_1013_estimator;
 
-  if (ct_utc_unix > 0) {
-    gps_time_t current_time = time2gps_apply_offset(ct_utc_unix);
-    time_truth_update(&time_truth, TIME_TRUTH_EPH_GAL, current_time);
-  }
+  time_truth_request_observation_time_estimator(
+      rtcm_time_truth, TIME_TRUTH_SOURCE_LOCAL, &observation_estimator);
+  time_truth_request_ephemeris_time_estimator(
+      rtcm_time_truth, TIME_TRUTH_SOURCE_LOCAL, &ephemeris_estimator);
+  time_truth_request_rtcm_1013_time_estimator(
+      rtcm_time_truth, TIME_TRUTH_SOURCE_LOCAL, &rtcm_1013_estimator);
 
-  rtcm2sbp_init(
-      &state, &time_truth, cb_rtcm_to_sbp, cb_base_obs_invalid, context);
+  rtcm2sbp_init(&state, rtcm_time_truth, cb_rtcm_to_sbp, NULL, context);
+  rtcm2sbp_set_gps_week_reference(GPS_WEEK_REFERENCE, &state);
 
   if (use_obs_time) {
     if (ct_utc_unix == 0) {
@@ -257,8 +251,18 @@ int rtcm3tosbp_main(int argc,
       help(argv[0], additional_opts_help);
       return -1;
     }
-    state.use_time_from_input_obs = true;
-    time_truth_get(&time_truth, NULL, &state.time_from_input_data);
+
+    gps_time_t unix_time = time2gps_t(ct_utc_unix);
+    int8_t leap_seconds = get_gps_utc_offset(&unix_time, NULL);
+    gps_time_t gps_time = time2gps_t(ct_utc_unix + leap_seconds);
+
+    rtcm2sbp_set_time(&gps_time, NULL, &state);
+  } else {
+    rtcm2sbp_set_time_truth_cache(rtcm_time_truth_cache, &state);
+    rtcm2sbp_set_time_truth_estimators(observation_estimator,
+                                       ephemeris_estimator,
+                                       rtcm_1013_estimator,
+                                       &state);
   }
 
   /* todo: Do we want to return a non-zero value on an error? */

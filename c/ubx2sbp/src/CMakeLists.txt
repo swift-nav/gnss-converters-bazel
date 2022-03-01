@@ -1,5 +1,6 @@
 swift_add_tool_library(ubx2sbp_main
   SOURCES
+    time_truth.cc
     ubx2sbp.c
   REMOVE_COMPILE_OPTIONS
     -Wconversion

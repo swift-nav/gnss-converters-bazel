@@ -137,6 +137,16 @@ void gps_decode_subframe(struct ubx_sbp_state *data,
   memset(msg, 0, sizeof(*msg));
   pack_ephemeris_gps(&e, msg);
 
+  if (data->ephemeris_time_estimator != NULL) {
+    const gnss_signal_t gnss_signal = {.sat = msg->common.sid.sat,
+                                       .code = msg->common.sid.code};
+    const gps_time_t gps_time = {.wn = (int16_t)msg->common.toe.wn,
+                                 .tow = msg->common.toe.tow};
+
+    time_truth_ephemeris_estimator_push(
+        data->ephemeris_time_estimator, gnss_signal, gps_time);
+  }
+
   assert(data->cb_ubx_to_sbp);
   data->cb_ubx_to_sbp(
       data->sender_id, SbpMsgEphemerisGps, &sbp_msg, data->context);

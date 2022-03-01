@@ -216,6 +216,23 @@ typedef struct {
                                                  char8(M) 8*M M <= 31*/
 } rtcm_msg_1008;
 
+#define RTCM_1013_MAX_MESSAGES (279)
+#define RTCM_1013_MESSAGE_SIZE_BITS (29)
+#define RTCM_1013_UNKNOWN_LEAP_SECONDS (255)
+#define RTCM_1013_MIN_MSG_LEN_BITS (70)
+typedef struct {
+  uint16_t reference_station_id;
+  uint16_t mjd;
+  uint32_t utc;
+  uint8_t leap_second;
+  uint16_t message_count;
+  struct {
+    uint16_t id;
+    uint8_t sync_flag;
+    uint16_t transmission_interval;
+  } messages[RTCM_1013_MAX_MESSAGES];
+} rtcm_msg_1013;
+
 #define RTCM_1029_MAX_CODE_UNITS (255u)
 typedef struct {
   uint16_t stn_id;

@@ -45,6 +45,11 @@ int main(void) {
   test_rtcm_1008();
   test_rtcm_1010();
   test_rtcm_1012();
+  test_rtcm_1013_ok();
+  test_rtcm_1013_ok_zero_messages();
+  test_rtcm_1013_ok_max_messages();
+  test_rtcm_1013_message_type_mismatch();
+  test_rtcm_1013_invalid_message();
   test_rtcm_1019();
   test_rtcm_1020();
   test_rtcm_1029();
@@ -625,6 +630,165 @@ void test_rtcm_1012(void) {
   int8_t ret = rtcm3_decode_1012(buff, &msg1012_out);
 
   assert(RC_OK == ret && msgobs_glo_equals(&msg1012, &msg1012_out));
+}
+
+static const uint8_t sample_1013_raw[] = {
+    0x3f, 0x50, 0x00, 0xe8, 0xa8, 0xa2, 0x16, 0x30, 0x49, 0x0d, 0x60,
+    0x01, 0x48, 0x7f, 0x00, 0x0a, 0x44, 0x98, 0x00, 0x52, 0x2e, 0xc0,
+    0x02, 0x91, 0x9e, 0x00, 0x14, 0x7d, 0xd0, 0x06, 0x43, 0xf0, 0x80,
+    0x32, 0x1f, 0xac, 0x01, 0x90, 0xfe, 0xe0, 0x4b, 0x07, 0xf9, 0x02,
+    0x58, 0x40, 0x98, 0x03, 0x22, 0x67, 0x40, 0x19, 0x00};
+static const uint16_t sample_1013_raw_size_bits = 418;
+static const rtcm_msg_1013 sample_1013_struct = {
+    .reference_station_id = 0,
+    .mjd = 59560,
+    .utc = 82988,
+    .leap_second = 18,
+    .message_count = 12,
+    .messages[0] = {.id = 1077, .sync_flag = 1, .transmission_interval = 10},
+    .messages[1] = {.id = 1087, .sync_flag = 1, .transmission_interval = 10},
+    .messages[2] = {.id = 1097, .sync_flag = 1, .transmission_interval = 10},
+    .messages[3] = {.id = 1117, .sync_flag = 1, .transmission_interval = 10},
+    .messages[4] = {.id = 1127, .sync_flag = 1, .transmission_interval = 10},
+    .messages[5] = {.id = 1006, .sync_flag = 1, .transmission_interval = 100},
+    .messages[6] = {.id = 1008, .sync_flag = 1, .transmission_interval = 100},
+    .messages[7] = {.id = 1013, .sync_flag = 1, .transmission_interval = 100},
+    .messages[8] = {.id = 1019, .sync_flag = 1, .transmission_interval = 600},
+    .messages[9] = {.id = 1020, .sync_flag = 1, .transmission_interval = 600},
+    .messages[10] = {.id = 1033, .sync_flag = 1, .transmission_interval = 100},
+    .messages[11] = {.id = 1230, .sync_flag = 1, .transmission_interval = 100},
+};
+
+static const uint8_t sample_1013_zero_messages_raw[] = {
+    0x3f, 0x50, 0x00, 0xe8, 0xa8, 0xa2, 0x16, 0x00, 0x48};
+static const uint16_t sample_1013_zero_messages_raw_size_bits =
+    RTCM_1013_MIN_MSG_LEN_BITS;
+static const rtcm_msg_1013 sample_1013_zero_messages_struct = {
+    .reference_station_id = 0,
+    .mjd = 59560,
+    .utc = 82988,
+    .leap_second = 18,
+    .message_count = 0,
+};
+
+void test_rtcm_1013_ok(void) {
+  rtcm_msg_1013 msg_1013;
+  rtcm3_rc decode_status;
+
+  memset(&msg_1013, 0, sizeof(msg_1013));
+  swiftnav_bitstream_t decode_bitstream;
+  swiftnav_bitstream_init(
+      &decode_bitstream, sample_1013_raw, 8 * sizeof(sample_1013_raw));
+  decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(sample_1013_raw));
+  assert(decode_status == RC_OK);
+  assert(decode_bitstream.offset == sample_1013_raw_size_bits);
+  assert(memcmp(&msg_1013, &sample_1013_struct, sizeof(rtcm_msg_1013)) == 0);
+
+  uint8_t buffer[1024] = {0};
+  uint16_t encode_size = rtcm3_encode_1013(&sample_1013_struct, buffer);
+  assert(encode_size == sizeof(sample_1013_raw));
+  assert(memcmp(sample_1013_raw, buffer, sizeof(sample_1013_raw)) == 0);
+}
+
+void test_rtcm_1013_ok_zero_messages(void) {
+  rtcm_msg_1013 msg_1013;
+  rtcm3_rc decode_status;
+
+  memset(&msg_1013, 0, sizeof(msg_1013));
+  swiftnav_bitstream_t decode_bitstream;
+  swiftnav_bitstream_init(&decode_bitstream,
+                          sample_1013_zero_messages_raw,
+                          8 * sizeof(sample_1013_zero_messages_raw));
+  decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(sample_1013_zero_messages_raw));
+  assert(decode_status == RC_OK);
+  assert(decode_bitstream.offset == sample_1013_zero_messages_raw_size_bits);
+  assert(memcmp(&msg_1013,
+                &sample_1013_zero_messages_struct,
+                sizeof(rtcm_msg_1013)) == 0);
+
+  uint8_t buffer[1024] = {0};
+  uint16_t encode_size =
+      rtcm3_encode_1013(&sample_1013_zero_messages_struct, buffer);
+  assert(encode_size == sizeof(sample_1013_zero_messages_raw));
+  assert(memcmp(sample_1013_zero_messages_raw,
+                buffer,
+                sizeof(sample_1013_zero_messages_raw)) == 0);
+}
+
+void test_rtcm_1013_ok_max_messages(void) {
+  const size_t sample_1013_max_messages_raw_size_bits =
+      RTCM_1013_MIN_MSG_LEN_BITS +
+      RTCM_1013_MAX_MESSAGES * RTCM_1013_MESSAGE_SIZE_BITS;
+
+  uint8_t sample_1013_max_messages_raw[1021] = {0};
+  memcpy(sample_1013_max_messages_raw,
+         sample_1013_zero_messages_raw,
+         sizeof(sample_1013_zero_messages_raw));
+
+  rtcm_msg_1013 sample_1013_max_messages_struct =
+      sample_1013_zero_messages_struct;
+  sample_1013_max_messages_struct.message_count = RTCM_1013_MAX_MESSAGES;
+
+  rtcm_msg_1013 msg_1013;
+  rtcm3_rc decode_status;
+
+  memset(&msg_1013, 0, sizeof(msg_1013));
+  swiftnav_bitstream_t decode_bitstream;
+  swiftnav_bitstream_init(&decode_bitstream,
+                          sample_1013_max_messages_raw,
+                          8 * sizeof(sample_1013_max_messages_raw));
+  decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(sample_1013_max_messages_raw));
+  assert(decode_status == RC_OK);
+  assert(decode_bitstream.offset == sample_1013_max_messages_raw_size_bits);
+  assert(memcmp(&msg_1013,
+                &sample_1013_max_messages_struct,
+                sizeof(rtcm_msg_1013)) == 0);
+
+  uint8_t buffer[1024] = {0};
+  uint16_t encode_size =
+      rtcm3_encode_1013(&sample_1013_max_messages_struct, buffer);
+  assert(encode_size == sizeof(sample_1013_max_messages_raw));
+  assert(memcmp(sample_1013_max_messages_raw,
+                buffer,
+                sizeof(sample_1013_max_messages_raw)) == 0);
+}
+
+void test_rtcm_1013_message_type_mismatch(void) {
+  const uint8_t zero_message[1023] = {0};
+
+  rtcm_msg_1013 msg_1013 = {0};
+  swiftnav_bitstream_t decode_bitstream;
+  swiftnav_bitstream_init(
+      &decode_bitstream, zero_message, 8 * sizeof(zero_message));
+
+  rtcm3_rc decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(zero_message));
+  assert(decode_status == RC_MESSAGE_TYPE_MISMATCH);
+}
+
+void test_rtcm_1013_invalid_message(void) {
+  const uint8_t zero_message[1] = {0};
+  const uint8_t oversize_rtcm_message[1024] = {};
+
+  rtcm_msg_1013 msg_1013;
+  swiftnav_bitstream_t decode_bitstream;
+  rtcm3_rc decode_status;
+
+  swiftnav_bitstream_init(
+      &decode_bitstream, zero_message, 8 * sizeof(zero_message));
+  decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(zero_message));
+  assert(decode_status == RC_INVALID_MESSAGE);
+
+  swiftnav_bitstream_init(&decode_bitstream,
+                          oversize_rtcm_message,
+                          8 * sizeof(oversize_rtcm_message));
+  decode_status = rtcm3_decode_1013_bitstream(
+      &decode_bitstream, &msg_1013, sizeof(oversize_rtcm_message));
+  assert(decode_status == RC_INVALID_MESSAGE);
 }
 
 /* from the RTCM3 Spec Section 3.5.10 */
