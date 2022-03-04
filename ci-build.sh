@@ -9,10 +9,7 @@ set -o pipefail
 
 function build_haskell () {
     cd haskell/rtcm
-    stack build --test
-
-    cd ../gnss_converters
-    stack build --test
+    stack install --test
     cd ../..
 }
 
@@ -93,44 +90,39 @@ function build_codecov() {
       "${SONAR_ORGANIZATION_CMD_ARG}"
 }
 
+# Assumes that we've already run cargo and stack!
+function package () {
+  if [[ "$OS_NAME" == "windows" ]]; then
+    cp "$APPDATA/local/bin/rtcm32json.exe" "$APPDATA/local/bin/json2rtcm3.exe" ./target/release/
+    cd ./target/release
+    strip.exe rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm32json.exe json2rtcm3.exe;
+    7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm32json.exe json2rtcm3.exe;
+    cd ../..;
+    VERSION="$(git describe --always --tags)";
+    BUILD_TRIPLET="$($CC -dumpmachine)";
+    mv gnss_converters_windows.zip "gnss_converters-${VERSION}-windows-${BUILD_TRIPLET}.zip";
+    echo "gnss_converters-${VERSION}-windows-${BUILD_TRIPLET}.zip" >release-archive.filename;
+    ls -l;
+  else
+    cp "$HOME"/.local/bin/{rtcm32json,json2rtcm3} ./target/release/
+    (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm32json json2rtcm3);
+    tar -C "target/release" -czf gnss_converters.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm32json json2rtcm3;
+    VERSION="$(git describe --always --tags --dirty)";
+    BUILD_TRIPLET="$($CC -dumpmachine)";
+    mv gnss_converters.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
+    echo "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz" >release-archive.filename;
+    ls -l;
+  fi
+}
+
 if [ "$TESTENV" == "stack" ]; then
   build_haskell
 elif [ "$TESTENV" == "codecov" ]; then
   build_codecov
 elif [ "$TESTENV" == "rust" ]; then
   build_rust
+elif [ "$TESTENV" == "package" ]; then
+  package
 else
   build_c
-fi
-
-if [[ "$TESTENV" == "rust" ]] && [[ "$OS_NAME" == "windows" ]]; then
-  cd target/release;
-  strip.exe rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe;
-  7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe;
-  cd ../..;
-  VERSION="$(git describe --always --tags)";
-  BUILD_TRIPLET="$($CC -dumpmachine)";
-  mv gnss_converters_windows.zip "gnss_converters-${VERSION}-windows-${BUILD_TRIPLET}.zip";
-  echo "gnss_converters-${VERSION}-windows-${BUILD_TRIPLET}.zip" >release-archive.filename;
-  ls -l;
-fi
-
-if [[ "$TESTENV" == "rust" ]] && [[ "$OS_NAME" == "osx" ]]; then
-  (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp);
-  tar -C "target/release" -czf gnss_converters_osx.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp;
-  VERSION="$(git describe --always --tags --dirty)";
-  BUILD_TRIPLET="$($CC -dumpmachine)";
-  mv gnss_converters_osx.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
-  echo "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz" >release-archive.filename;
-  ls -l;
-fi
-
-if [[ "$TESTENV" == "rust" ]] && [[ "$OS_NAME" == "linux" ]]; then
-  (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp);
-  tar -C "target/release" -czf gnss_converters_linux.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp;
-  VERSION="$(git describe --always --tags --dirty)";
-  BUILD_TRIPLET="$($CC -dumpmachine)";
-  mv gnss_converters_linux.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
-  echo "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz" >release-archive.filename;
-  ls -l;
 fi

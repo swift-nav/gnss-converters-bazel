@@ -46,7 +46,7 @@ jobs:
       - name: Download Ubuntu artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
-          name: ubuntu-rust-artifacts
+          name: linux-artifacts
           workflow: CI
           run_id: ${{ github.event.inputs.run_id }}
 
@@ -66,7 +66,7 @@ jobs:
       - name: Download macOS artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
-          name: macos-rust-artifacts
+          name: macos-artifacts
           workflow: CI
           run_id: ${{ github.event.inputs.run_id }}
 
@@ -86,7 +86,7 @@ jobs:
       - name: Download Windows artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
-          name: windows-rust-artifacts
+          name: windows-artifacts
           workflow: CI
           run_id: ${{ github.event.inputs.run_id }}
 
