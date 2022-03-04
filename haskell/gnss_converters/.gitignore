@@ -1,0 +1,14 @@
+*.o
+*.hi
+*.chi
+*.chs.h
+*~
+*.*~
+.hsenv
+.stack-work/
+.build/
+test/golden/to_*.json
+test/golden/to_*.yaml
+
+
+
