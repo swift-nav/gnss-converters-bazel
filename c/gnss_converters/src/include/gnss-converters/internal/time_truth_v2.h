@@ -53,7 +53,7 @@ constexpr size_t kTotalWeekNumberEstimationPerSource = 3;
  * @see kObservationEstimatorMaximumTowMsTimeMismatchCount
  */
 constexpr uint32_t kObservationEstimatorMaximumTowMsTimeDifference =
-    5 * SECS_MS;
+    30 * SECS_MS;
 
 /**
  * Number of times that an estimator will accept a mismatch in TOW before it
@@ -99,7 +99,7 @@ constexpr double kUbxLeapEstimatorGpsTimeTowMsTolerance =
  * Maximum range which is acceptable from a list of best guesses for TOW
  * (millisecond) estimates
  */
-constexpr uint32_t kGetLatestTimeMaximumTowMsRange = 10 * SECS_MS;
+constexpr uint32_t kGetLatestTimeMaximumTowMsRange = 60 * SECS_MS;
 
 /**
  * Maximum range which is acceptable from a list of best guesses for ephemeris

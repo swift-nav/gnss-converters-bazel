@@ -209,6 +209,12 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
 
 void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state) {
+  if (state->observation_time_estimator != NULL) {
+    time_truth_observation_estimator_push(
+        state->observation_time_estimator,
+        msg_phase_biases->header.epoch_time * SECS_MS);
+  }
+
   gps_time_t rover_time;
   if (!rtcm_get_gps_time(&rover_time, state)) {
     return;
