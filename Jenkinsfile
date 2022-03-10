@@ -23,8 +23,8 @@ pipeline {
     // Override agent in each stage to make sure we don't share containers among stages.
     agent any
     options {
-        // Make sure job aborts after 2 hours if hanging.
-        timeout(time: 2, unit: 'HOURS')
+        // Make sure job aborts after 7 hours if hanging (fuzz testing goes for 6 hours).
+        timeout(time: 7, unit: 'HOURS')
         timestamps()
         // Keep builds for 7 days.
         buildDiscarder(logRotator(daysToKeepStr: '3'))
@@ -109,6 +109,40 @@ pipeline {
                             builder.cmake(workDir: 'c', cmakeAddArgs: '-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION=true')
                             builder.make(workDir: 'c/build', target: 'rerun-known-failures-ubx2sbp')
                             builder.make(workDir: 'c/build', target: 'rerun-known-failures-rtcm3tosbp')
+                        }
+                    }
+                }
+                stage('Start Fuzz Testing AFL pipeline') {
+                    steps {
+                        script {
+                            if (context.isBranchPush(branches: ['master', 'v.*-release', '.*-v.*-release'])) {
+                                sh("echo 'Calling gnss-converters-afl-pipeline for ${env.BRANCH_NAME}'")
+                                build(
+                                    job: "standalone/gnss-converters-afl-pipeline/${env.BRANCH_NAME}",
+                                    propagate: true,
+                                    wait: true,
+                                    parameters: [
+                                        string(name: 'FUZZ_TIMEOUT', value: '6h'),
+                                        booleanParam(name: 'SLACK_NOTIFICATION', value: true)
+                                    ]
+                                )
+                            }
+                            else if (context.isTagPush()) {
+                                String tag = context.pipe.env.TAG_NAME
+                                sh("echo 'Calling gnss-converters-afl-pipeline for tag: ${tag}'")
+                                build(
+                                    job: "standalone/gnss-converters-afl-pipeline/${tag}",
+                                    propagate: true,
+                                    wait: true,
+                                    parameters: [
+                                        string(name: 'FUZZ_TIMEOUT', value: '6h'),
+                                        booleanParam(name: 'SLACK_NOTIFICATION', value: true)
+                                    ]
+                                )
+                            }
+                            else {
+                                sh('echo "Was not a master/release branch push or tag push, not calling Fuzz Testing AFL"')
+                            }
                         }
                     }
                 }
