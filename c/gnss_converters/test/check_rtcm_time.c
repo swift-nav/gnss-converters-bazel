@@ -370,7 +370,7 @@ static void setup_example_msm5(uint16_t msg_num, uint32_t tow) {
 
 // Get an example GPS orbit for testing
 static void setup_example_gps_eph(uint16_t wn, uint32_t tow) {
-  msg_ephemeris_gps_t eph;
+  sbp_msg_ephemeris_gps_t eph;
   eph.common.sid.sat = 25;
   eph.common.sid.code = CODE_GPS_L1CA;
   eph.common.toe.wn = wn;
@@ -406,14 +406,14 @@ static void setup_example_gps_eph(uint16_t wn, uint32_t tow) {
   iobuf_write_idx = 0;
   struct rtcm3_out_state state;
   sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-  sbp2rtcm_sbp_gps_eph_cb(0x1000, sizeof(eph), (const uint8_t *)&eph, &state);
+  sbp2rtcm_sbp_gps_eph_cb(0x1000, &eph, &state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
 
 // Get an example GLO orbit for testing
 static void setup_example_glo_eph(uint16_t wn, uint32_t tow) {
-  msg_ephemeris_glo_t eph;
+  sbp_msg_ephemeris_glo_t eph;
   eph.common.sid.sat = 25;
   eph.common.sid.code = CODE_GLO_L1OF;
   eph.common.toe.wn = wn;
@@ -444,14 +444,14 @@ static void setup_example_glo_eph(uint16_t wn, uint32_t tow) {
   struct rtcm3_out_state state;
   sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
   sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
-  sbp2rtcm_sbp_glo_eph_cb(0x1000, sizeof(eph), (const uint8_t *)&eph, &state);
+  sbp2rtcm_sbp_glo_eph_cb(0x1000, &eph, &state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
 
 // Get an example BDS orbit for testing
 static void setup_example_bds_eph(uint16_t wn, uint32_t tow) {
-  msg_ephemeris_bds_t eph;
+  sbp_msg_ephemeris_bds_t eph;
   eph.common.sid.sat = 25;
   eph.common.sid.code = CODE_BDS2_B1;
   eph.common.toe.wn = wn;
@@ -488,14 +488,14 @@ static void setup_example_bds_eph(uint16_t wn, uint32_t tow) {
   iobuf_write_idx = 0;
   struct rtcm3_out_state state;
   sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-  sbp2rtcm_sbp_bds_eph_cb(0x1000, sizeof(eph), (const uint8_t *)&eph, &state);
+  sbp2rtcm_sbp_bds_eph_cb(0x1000, &eph, &state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
 
 // Get an example GAL orbit for testing
 static void setup_example_gal_eph(uint16_t wn, uint32_t tow) {
-  msg_ephemeris_gal_t eph;
+  sbp_msg_ephemeris_gal_t eph;
   eph.source = EPH_SOURCE_GAL_INAV;
   eph.common.sid.sat = 25;
   eph.common.sid.code = CODE_GAL_E1B;
@@ -533,7 +533,7 @@ static void setup_example_gal_eph(uint16_t wn, uint32_t tow) {
   iobuf_write_idx = 0;
   struct rtcm3_out_state state;
   sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-  sbp2rtcm_sbp_gal_eph_cb(0x1000, sizeof(eph), (const uint8_t *)&eph, &state);
+  sbp2rtcm_sbp_gal_eph_cb(0x1000, &eph, &state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
@@ -541,30 +541,24 @@ static void setup_example_gal_eph(uint16_t wn, uint32_t tow) {
 static void setup_example_gps_obs(struct rtcm3_out_state *state,
                                   uint16_t wn,
                                   uint32_t tow) {
-  const size_t observations = 1;
-  const size_t message_length =
-      sizeof(msg_obs_t) + observations * sizeof(packed_obs_content_t);
-
-  uint8_t sbp_buffer[SBP_MAX_PAYLOAD_LEN];
-  msg_obs_t *obs = (msg_obs_t *)sbp_buffer;
-  obs->header.t.wn = wn;
-  obs->header.t.tow = tow * SECS_MS;
-  obs->header.n_obs = 0x10;
-  obs->obs[0].P = 1017977291;
-  obs->obs[0].L.i = 106990181;
-  obs->obs[0].L.f = 170;
-  obs->obs[0].D.i = -890;
-  obs->obs[0].D.f = 145;
-  obs->obs[0].cn0 = 146;
-  obs->obs[0].lock = 11;
-  obs->obs[0].flags = 15;
-  obs->obs[0].sid.sat = 3;
-  obs->obs[0].sid.code = 0;
+  sbp_msg_obs_t obs = {};
+  obs.n_obs = 1;
+  obs.header.t.wn = wn;
+  obs.header.t.tow = tow * SECS_MS;
+  obs.header.n_obs = 0x10;
+  obs.obs[0].P = 1017977291;
+  obs.obs[0].L.i = 106990181;
+  obs.obs[0].L.f = 170;
+  obs.obs[0].D.i = -890;
+  obs.obs[0].D.f = 145;
+  obs.obs[0].cn0 = 146;
+  obs.obs[0].lock = 11;
+  obs.obs[0].flags = 15;
+  obs.obs[0].sid.sat = 3;
+  obs.obs[0].sid.code = 0;
 
   iobuf_write_idx = 0;
-  state->sender_id = 0x1000;
-  sbp2rtcm_sbp_obs_cb(
-      state->sender_id, message_length, (const uint8_t *)obs, state);
+  sbp2rtcm_sbp_obs_cb(0x1000, &obs, state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }
@@ -572,31 +566,25 @@ static void setup_example_gps_obs(struct rtcm3_out_state *state,
 static void setup_example_glo_obs(struct rtcm3_out_state *state,
                                   uint16_t wn,
                                   uint32_t tow) {
-  const size_t observations = 1;
-  const size_t message_length =
-      sizeof(msg_obs_t) + observations * sizeof(packed_obs_content_t);
-
-  uint8_t sbp_buffer[SBP_MAX_PAYLOAD_LEN];
-  msg_obs_t *obs = (msg_obs_t *)sbp_buffer;
-  obs->header.t.wn = wn;
-  obs->header.t.tow = tow * SECS_MS;
-  obs->header.n_obs = 0x10;
-  obs->obs[0].P = 1005685484;
-  obs->obs[0].L.i = 107330634;
-  obs->obs[0].L.f = 61;
-  obs->obs[0].D.i = 2181;
-  obs->obs[0].D.f = 172;
-  obs->obs[0].cn0 = 169;
-  obs->obs[0].lock = 11;
-  obs->obs[0].flags = 15;
-  obs->obs[0].sid.sat = 2;
-  obs->obs[0].sid.code = 3;
+  sbp_msg_obs_t obs = {};
+  obs.n_obs = 1;
+  obs.header.t.wn = wn;
+  obs.header.t.tow = tow * SECS_MS;
+  obs.header.n_obs = 0x10;
+  obs.obs[0].P = 1005685484;
+  obs.obs[0].L.i = 107330634;
+  obs.obs[0].L.f = 61;
+  obs.obs[0].D.i = 2181;
+  obs.obs[0].D.f = 172;
+  obs.obs[0].cn0 = 169;
+  obs.obs[0].lock = 11;
+  obs.obs[0].flags = 15;
+  obs.obs[0].sid.sat = 2;
+  obs.obs[0].sid.code = 3;
 
   iobuf_write_idx = 0;
-  state->sender_id = 0x1000;
-  sbp2rtcm_set_glo_fcn(obs->obs[0].sid, 4, state);
-  sbp2rtcm_sbp_obs_cb(
-      state->sender_id, message_length, (const uint8_t *)obs, state);
+  sbp2rtcm_set_glo_fcn(obs.obs[0].sid, 4, state);
+  sbp2rtcm_sbp_obs_cb(0x1000, &obs, state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
 }

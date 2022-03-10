@@ -14,8 +14,6 @@
  * and writes RTCM3 on stdout. */
 
 #include <assert.h>
-#include <libsbp/legacy/logging.h>
-#include <libsbp/legacy/observation.h>
 #include <libsbp/sbp.h>
 #include <math.h>
 #include <stdint.h>
@@ -55,6 +53,13 @@ static void help(char *arg, const char *additional_opts_help) {
   fprintf(stderr, "  -h this message\n");
 }
 
+static void sbp2rtcm_sbp_void_cb(uint16_t sender_id,
+                                 sbp_msg_type_t msg_type,
+                                 const sbp_msg_t *msg,
+                                 void *context) {
+  sbp2rtcm_sbp_cb(sender_id, msg_type, msg, (struct rtcm3_out_state *)context);
+}
+
 int sbp2rtcm_main(int argc,
                   char **argv,
                   const char *additional_opts_help,
@@ -83,86 +88,35 @@ int sbp2rtcm_main(int argc,
   sbp2rtcm_init(&state, sbp2rtcm_writefn, context);
   sbp2rtcm_set_leap_second((s8)lrint(gps_utc_offset), &state);
 
-  sbp_nodes_t sbp_nodes;
+  sbp_nodes_t sbp_nodes = {};
   sbp_state_t sbp_state;
   sbp_state_init(&sbp_state);
   sbp_state_set_io_context(&sbp_state, context);
 
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_BASE_POS_ECEF,
-                        (void *)&sbp2rtcm_base_pos_ecef_cb,
-                        &state,
-                        &sbp_nodes.base_pos);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_GLO_BIASES,
-                        (void *)&sbp2rtcm_glo_biases_cb,
-                        &state,
-                        &sbp_nodes.glo_biases);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_OBS,
-                        (void *)&sbp2rtcm_sbp_obs_cb,
-                        &state,
-                        &sbp_nodes.obs);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_OSR,
-                        (void *)&sbp2rtcm_sbp_osr_cb,
-                        &state,
-                        &sbp_nodes.osr);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_ORBIT_CLOCK,
-                        (void *)&sbp2rtcm_sbp_ssr_orbit_clock_cb,
-                        &state,
-                        &sbp_nodes.ssr_orbit_clock);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_PHASE_BIASES,
-                        (void *)&sbp2rtcm_sbp_ssr_phase_biases_cb,
-                        &state,
-                        &sbp_nodes.ssr_phase_biases);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_CODE_BIASES,
-                        (void *)&sbp2rtcm_sbp_ssr_code_biases_cb,
-                        &state,
-                        &sbp_nodes.ssr_code_biases);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_GRIDDED_CORRECTION_DEP_A,
-                        (void *)&sbp2rtcm_sbp_ssr_gridded_correction_cb,
-                        &state,
-                        &sbp_nodes.ssr_gridded_correction);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_GRID_DEFINITION_DEP_A,
-                        (void *)&sbp2rtcm_sbp_ssr_grid_definition_cb,
-                        &state,
-                        &sbp_nodes.ssr_grid_definition);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_SSR_STEC_CORRECTION_DEP_A,
-                        (void *)&sbp2rtcm_sbp_ssr_stec_correction_cb,
-                        &state,
-                        &sbp_nodes.ssr_stec_correction);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_EPHEMERIS_GPS,
-                        (void *)&sbp2rtcm_sbp_gps_eph_cb,
-                        &state,
-                        &sbp_nodes.ephemeris_gps);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_EPHEMERIS_GLO,
-                        (void *)&sbp2rtcm_sbp_glo_eph_cb,
-                        &state,
-                        &sbp_nodes.ephemeris_glo);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_EPHEMERIS_BDS,
-                        (void *)&sbp2rtcm_sbp_bds_eph_cb,
-                        &state,
-                        &sbp_nodes.ephemeris_bds);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_EPHEMERIS_GAL,
-                        (void *)&sbp2rtcm_sbp_gal_eph_cb,
-                        &state,
-                        &sbp_nodes.ephemeris_gal);
-  sbp_register_callback(&sbp_state,
-                        SBP_MSG_LOG,
-                        (void *)&sbp2rtcm_sbp_log_cb,
-                        &state,
-                        &sbp_nodes.log);
+  struct {
+    sbp_msg_type_t msg_type;
+    sbp_msg_callbacks_node_t node;
+  } cb[15] = {
+      {SbpMsgBasePosEcef, sbp_nodes.base_pos},
+      {SbpMsgGloBiases, sbp_nodes.glo_biases},
+      {SbpMsgObs, sbp_nodes.obs},
+      {SbpMsgOsr, sbp_nodes.osr},
+      {SbpMsgSsrOrbitClock, sbp_nodes.ssr_orbit_clock},
+      {SbpMsgSsrPhaseBiases, sbp_nodes.ssr_phase_biases},
+      {SbpMsgSsrCodeBiases, sbp_nodes.ssr_code_biases},
+      {SbpMsgSsrGriddedCorrectionDepA, sbp_nodes.ssr_gridded_correction},
+      {SbpMsgSsrGridDefinitionDepA, sbp_nodes.ssr_grid_definition},
+      {SbpMsgSsrStecCorrectionDepA, sbp_nodes.ssr_stec_correction},
+      {SbpMsgEphemerisGps, sbp_nodes.ephemeris_gps},
+      {SbpMsgEphemerisGlo, sbp_nodes.ephemeris_glo},
+      {SbpMsgEphemerisBds, sbp_nodes.ephemeris_bds},
+      {SbpMsgEphemerisGal, sbp_nodes.ephemeris_gal},
+      {SbpMsgLog, sbp_nodes.log}};
+
+  for (size_t i = 0; i < ARRAY_SIZE(cb); i++) {
+    sbp_callback_register(
+        &sbp_state, cb[i].msg_type, &sbp2rtcm_sbp_void_cb, &state, &cb[i].node);
+  }
 
   while (!feof(stdin)) {
     sbp_process(&sbp_state, readfn);

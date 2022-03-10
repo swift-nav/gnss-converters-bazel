@@ -135,7 +135,7 @@ static sbp_packed_obs_content_t sbp_test_data[] = {
     {1243548284, {100145050, 137}, {935, 195}, 164, 13, 15, {19, 20}},
     {1297378054, {104480052, 213}, {-1907, 185}, 168, 13, 15, {25, 20}}};
 
-static packed_obs_content_t sbp_test_data_old[] = {
+static sbp_packed_obs_content_t sbp_test_data_old[] = {
     {1076594107, {113150797, 178}, {2025, 90}, 200, 14, 15, {8, 0}},
     {1052792371, {110649219, 83}, {1784, 3}, 204, 14, 15, {10, 0}},
     {1211420676, {127321212, 230}, {-2004, 131}, 148, 14, 15, {13, 0}},
@@ -854,16 +854,25 @@ static s32 sbp_read_file(u8 *buff, u32 n, void *context) {
 }
 
 static void ephemeris_glo_callback(u16 sender_id,
-                                   u8 len,
-                                   u8 msg[],
+                                   sbp_msg_type_t msg_type,
+                                   const sbp_msg_t *msg,
                                    void *context) {
+  assert(msg_type == SbpMsgEphemerisGlo);
+
   (void)context;
   (void)sender_id;
-  (void)len;
-  msg_ephemeris_glo_t *e = (msg_ephemeris_glo_t *)msg;
+  (void)msg_type;
+  const sbp_msg_ephemeris_glo_t *e = &msg->ephemeris_glo;
 
   /* extract just the FCN field */
   sbp2rtcm_set_glo_fcn(e->common.sid, e->fcn, &out_state);
+}
+
+static void sbp2rtcm_sbp_void_cb(uint16_t sender_id,
+                                 sbp_msg_type_t msg_type,
+                                 const sbp_msg_t *msg,
+                                 void *context) {
+  sbp2rtcm_sbp_cb(sender_id, msg_type, msg, (struct rtcm3_out_state *)context);
 }
 
 static void test_SBP(const char *filename,
@@ -888,63 +897,36 @@ static void test_SBP(const char *filename,
     exit(1);
   }
 
-  sbp_msg_callbacks_node_t sbp_base_pos_callback_node;
-  sbp_msg_callbacks_node_t sbp_glo_biases_callback_node;
-  sbp_msg_callbacks_node_t sbp_obs_callback_node;
-  sbp_msg_callbacks_node_t sbp_osr_callback_node;
-  sbp_msg_callbacks_node_t sbp_ephemeris_glo_callback_node;
-  sbp_msg_callbacks_node_t sbp_ephemeris_bds_callback_node;
-  sbp_msg_callbacks_node_t sbp_ephemeris_gps_callback_node;
-  sbp_msg_callbacks_node_t sbp_ephemeris_gal_callback_node;
-
   sbp_state_t s;
   sbp_state_init(&s);
 
-  sbp_register_callback(&s,
-                        SBP_MSG_BASE_POS_ECEF,
-                        (void *)&sbp2rtcm_base_pos_ecef_cb,
-                        &out_state,
-                        &sbp_base_pos_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_GLO_BIASES,
-                        (void *)&sbp2rtcm_glo_biases_cb,
-                        &out_state,
-                        &sbp_glo_biases_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_OBS,
-                        (void *)&sbp2rtcm_sbp_obs_cb,
-                        &out_state,
-                        &sbp_obs_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_OSR,
-                        (void *)&sbp2rtcm_sbp_osr_cb,
-                        &out_state,
-                        &sbp_osr_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_EPHEMERIS_GLO,
-                        (void *)&ephemeris_glo_callback,
+  struct {
+    sbp_msg_type_t msg_type;
+    sbp_msg_callbacks_node_t node;
+  } cb[] = {{SbpMsgBasePosEcef, {}},
+            {SbpMsgGloBiases, {}},
+            {SbpMsgObs, {}},
+            {SbpMsgOsr, {}},
+            {SbpMsgEphemerisGps, {}},
+            {SbpMsgEphemerisBds, {}},
+            {SbpMsgEphemerisGal, {}}};
+
+  for (size_t i = 0; i < ARRAY_SIZE(cb); i++) {
+    sbp_callback_register(
+        &s, cb[i].msg_type, &sbp2rtcm_sbp_void_cb, &out_state, &cb[i].node);
+  }
+  /* msg_type == SbpMsgEphemerisGlo => call twice w. different cb functions */
+  sbp_msg_callbacks_node_t sbp_ephemeris_glo_callback_node;
+  sbp_callback_register(&s,
+                        SbpMsgEphemerisGlo,
+                        &sbp2rtcm_sbp_void_cb,
                         &out_state,
                         &sbp_ephemeris_glo_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_EPHEMERIS_GPS,
-                        (void *)&sbp2rtcm_sbp_gps_eph_cb,
-                        &out_state,
-                        &sbp_ephemeris_gps_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_EPHEMERIS_GLO,
-                        (void *)&sbp2rtcm_sbp_glo_eph_cb,
+  sbp_callback_register(&s,
+                        SbpMsgEphemerisGlo,
+                        &ephemeris_glo_callback,
                         &out_state,
                         &sbp_ephemeris_glo_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_EPHEMERIS_BDS,
-                        (void *)&sbp2rtcm_sbp_bds_eph_cb,
-                        &out_state,
-                        &sbp_ephemeris_bds_callback_node);
-  sbp_register_callback(&s,
-                        SBP_MSG_EPHEMERIS_GAL,
-                        (void *)&sbp2rtcm_sbp_gal_eph_cb,
-                        &out_state,
-                        &sbp_ephemeris_gal_callback_node);
   sbp_state_set_io_context(&s, fp);
 
   while (!feof(fp)) {
@@ -2070,7 +2052,7 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   rtcm2sbp_set_time(&current_time, &leap_seconds, &state);
 
   /* set the FCNs for couple of GLO satellites */
-  sbp_gnss_signal_t sid = {2, CODE_GLO_L1OF};
+  sbp_v4_gnss_signal_t sid = {2, CODE_GLO_L1OF};
   sbp_v4_gnss_signal_t sid2 = {2, CODE_GLO_L1OF};
   sbp2rtcm_set_glo_fcn(sid, 4, &out_state);
   rtcm2sbp_set_glo_fcn(sid2, 4, &state);
@@ -2098,8 +2080,8 @@ START_TEST(test_sbp_to_msm_roundtrip) {
 END_TEST
 
 // Get an example GPS orbit for testing
-static msg_ephemeris_gps_t get_example_gps_eph() {
-  msg_ephemeris_gps_t ret;
+static sbp_msg_ephemeris_gps_t get_example_gps_eph() {
+  sbp_msg_ephemeris_gps_t ret = {};
   ret.common.sid.sat = 25;
   ret.common.sid.code = CODE_GPS_L1CA;
   ret.common.toe.wn = 2022;
@@ -2135,7 +2117,7 @@ static msg_ephemeris_gps_t get_example_gps_eph() {
 }
 
 // Compare two GPS orbits to make sure they are the same
-static void compare_gps_ephs(const msg_ephemeris_gps_t *first,
+static void compare_gps_ephs(const sbp_msg_ephemeris_gps_t *first,
                              const sbp_msg_ephemeris_gps_t *second) {
   (void)first;
   (void)second;
@@ -2174,8 +2156,8 @@ static void compare_gps_ephs(const msg_ephemeris_gps_t *first,
 }
 
 // Get an example GLO orbit for testing
-static msg_ephemeris_glo_t get_example_glo_eph() {
-  msg_ephemeris_glo_t ret;
+static sbp_msg_ephemeris_glo_t get_example_glo_eph() {
+  sbp_msg_ephemeris_glo_t ret = {};
   ret.common.sid.sat = 25;
   ret.common.sid.code = CODE_GLO_L1OF;
   ret.common.toe.wn = 2022;
@@ -2202,7 +2184,7 @@ static msg_ephemeris_glo_t get_example_glo_eph() {
 }
 
 // Compare two GLO orbits to make sure they are the same
-static void compare_glo_ephs(const msg_ephemeris_glo_t *first,
+static void compare_glo_ephs(const sbp_msg_ephemeris_glo_t *first,
                              const sbp_msg_ephemeris_glo_t *second) {
   (void)first;
   (void)second;
@@ -2235,8 +2217,8 @@ static void compare_glo_ephs(const msg_ephemeris_glo_t *first,
 }
 
 // Get an example BDS orbit for testing
-static msg_ephemeris_bds_t get_example_bds_eph() {
-  msg_ephemeris_bds_t ret;
+static sbp_msg_ephemeris_bds_t get_example_bds_eph() {
+  sbp_msg_ephemeris_bds_t ret = {};
   ret.common.sid.sat = 25;
   ret.common.sid.code = CODE_BDS2_B1;
   ret.common.toe.wn = 2022;
@@ -2273,7 +2255,7 @@ static msg_ephemeris_bds_t get_example_bds_eph() {
 }
 
 // Compare two BDS orbits to make sure they are the same
-static void compare_bds_ephs(const msg_ephemeris_bds_t *first,
+static void compare_bds_ephs(const sbp_msg_ephemeris_bds_t *first,
                              const sbp_msg_ephemeris_bds_t *second) {
   (void)first;
   (void)second;
@@ -2313,8 +2295,8 @@ static void compare_bds_ephs(const msg_ephemeris_bds_t *first,
 }
 
 // Get an example GAL orbit for testing
-static msg_ephemeris_gal_t get_example_gal_eph() {
-  msg_ephemeris_gal_t ret;
+static sbp_msg_ephemeris_gal_t get_example_gal_eph() {
+  sbp_msg_ephemeris_gal_t ret = {};
   ret.common.sid.sat = 25;
   ret.common.sid.code = CODE_GAL_E1B;
   ret.common.toe.wn = 2022;
@@ -2351,7 +2333,7 @@ static msg_ephemeris_gal_t get_example_gal_eph() {
 }
 
 // Compare two GAL orbits to make sure they are the same
-static void compare_gal_ephs(const msg_ephemeris_gal_t *first,
+static void compare_gal_ephs(const sbp_msg_ephemeris_gal_t *first,
                              const sbp_msg_ephemeris_gal_t *second) {
   (void)first;
   (void)second;
@@ -2466,7 +2448,7 @@ START_TEST(test_sbp_to_rtcm_1019_validity_decoding) {
   // Test out the four cases which should return a valid ephemeris - when the
   // 9th and 10th bits of the iodc are 00, 01, 10 and 11 but the other 8 bits
   // are the same as the iode.
-  msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
+  sbp_msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
   rtcm_msg_eph rtcm_msg_1019;
   sbp_to_rtcm3_gps_eph(&msg_1019_in, &rtcm_msg_1019, &out_state);
   sbp_msg_ephemeris_gps_t msg_1019_out;
@@ -2513,7 +2495,7 @@ START_TEST(test_sbp_to_rtcm_1019_roundtrip) {
   gps_time_t gps_time = (gps_time_t){.wn = 2022, .tow = 210853};
   rtcm2sbp_set_time(&gps_time, NULL, &state);
 
-  msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
+  sbp_msg_ephemeris_gps_t msg_1019_in = get_example_gps_eph();
   rtcm_msg_eph rtcm_msg_1019;
   sbp_to_rtcm3_gps_eph(&msg_1019_in, &rtcm_msg_1019, &out_state);
   sbp_msg_ephemeris_gps_t msg_1019_out;
@@ -2527,7 +2509,7 @@ START_TEST(test_sbp_to_rtcm_1020_roundtrip) {
   int8_t leap_seconds = 18;
   rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  msg_ephemeris_glo_t msg_1020_in = get_example_glo_eph();
+  sbp_msg_ephemeris_glo_t msg_1020_in = get_example_glo_eph();
   rtcm_msg_eph rtcm_msg_1020;
   sbp_to_rtcm3_glo_eph(&msg_1020_in, &rtcm_msg_1020, &out_state);
   sbp_msg_ephemeris_glo_t msg_1020_out;
@@ -2541,7 +2523,8 @@ START_TEST(test_sbp_to_rtcm_1042_roundtrip) {
   int8_t leap_seconds = 18;
   rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  msg_ephemeris_bds_t msg_1042_in = get_example_bds_eph();
+  sbp_msg_ephemeris_bds_t msg_1042_in = get_example_bds_eph();
+
   rtcm_msg_eph rtcm_msg_1042;
   sbp_to_rtcm3_bds_eph(&msg_1042_in, &rtcm_msg_1042, &out_state);
   sbp_msg_ephemeris_bds_t msg_1042_out;
@@ -2555,7 +2538,8 @@ START_TEST(test_sbp_to_rtcm_1045_roundtrip) {
   int8_t leap_seconds = 18;
   rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  msg_ephemeris_gal_t msg_1045_in = get_example_gal_eph();
+  sbp_msg_ephemeris_gal_t msg_1045_in = get_example_gal_eph();
+
   rtcm_msg_eph rtcm_msg_1045;
   sbp_to_rtcm3_gal_eph(&msg_1045_in, &rtcm_msg_1045, &out_state);
   sbp_msg_ephemeris_gal_t msg_1045_out;
@@ -2570,7 +2554,8 @@ START_TEST(test_sbp_to_rtcm_1046_roundtrip) {
   int8_t leap_seconds = 18;
   rtcm2sbp_set_time(&gps_time, &leap_seconds, &state);
 
-  msg_ephemeris_gal_t msg_1046_in = get_example_gal_eph();
+  sbp_msg_ephemeris_gal_t msg_1046_in = get_example_gal_eph();
+
   rtcm_msg_eph rtcm_msg_1046;
   sbp_to_rtcm3_gal_eph(&msg_1046_in, &rtcm_msg_1046, &out_state);
   sbp_msg_ephemeris_gal_t msg_1046_out;

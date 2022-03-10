@@ -105,36 +105,37 @@
  * 3 – unknown clock is used */
 #define PIKSI_EXT_CLOCK_INDICATOR 0
 
-void sbp_to_rtcm3_1005(const msg_base_pos_ecef_t *sbp_base_pos,
+void sbp_to_rtcm3_1005(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
                        rtcm_msg_1005 *rtcm_1005,
                        const struct rtcm3_out_state *state);
 
-void sbp_to_rtcm3_1006(const msg_base_pos_ecef_t *sbp_base_pos,
+void sbp_to_rtcm3_1006(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
                        rtcm_msg_1006 *rtcm_1006,
                        const struct rtcm3_out_state *state);
 
 void generate_rtcm3_1033(rtcm_msg_1033 *rtcm_1033,
                          const struct rtcm3_out_state *state);
+
 void rtcm3_1033_to_1008(const rtcm_msg_1033 *rtcm_1033,
                         rtcm_msg_1008 *rtcm_1008);
 
-void sbp_to_rtcm3_1230(const msg_glo_biases_t *sbp_glo_bias,
+void sbp_to_rtcm3_1230(const sbp_msg_glo_biases_t *sbp_glo_bias,
                        rtcm_msg_1230 *rtcm_1230,
                        const struct rtcm3_out_state *state);
 
-void sbp_to_rtcm3_gps_eph(const msg_ephemeris_gps_t *sbp_gps_eph,
+void sbp_to_rtcm3_gps_eph(const sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state);
 
-void sbp_to_rtcm3_glo_eph(const msg_ephemeris_glo_t *sbp_glo_eph,
+void sbp_to_rtcm3_glo_eph(const sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state);
 
-void sbp_to_rtcm3_bds_eph(const msg_ephemeris_bds_t *sbp_bds_eph,
+void sbp_to_rtcm3_bds_eph(const sbp_msg_ephemeris_bds_t *sbp_bds_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state);
 
-void sbp_to_rtcm3_gal_eph(const msg_ephemeris_gal_t *sbp_gal_eph,
+void sbp_to_rtcm3_gal_eph(const sbp_msg_ephemeris_gal_t *sbp_gal_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state);
 
@@ -147,7 +148,7 @@ void sbp_buffer_to_msm(const struct rtcm3_out_state *state);
 
 void gps_tow_to_beidou_tow(u32 *tow_ms);
 
-double sbp_diff_time(const sbp_gps_time_t *end,
-                     const sbp_gps_time_t *beginning);
+double sbp_diff_time(const sbp_v4_gps_time_t *end,
+                     const sbp_v4_gps_time_t *beginning);
 
 #endif /* GNSS_CONVERTERS_SBP_RTCM3_INTERNAL_H */

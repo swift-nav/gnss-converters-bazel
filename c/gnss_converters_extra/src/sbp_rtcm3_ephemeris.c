@@ -18,14 +18,14 @@
 #include "rtcm3_utils.h"
 #include "sbp_rtcm3_internal.h"
 
-static gps_time_t sbp_gps_time_2_gps_time(const gps_time_sec_t *s) {
+static gps_time_t sbp_gps_time_2_gps_time(const sbp_gps_time_sec_t *s) {
   gps_time_t t;
   t.wn = s->wn;
   t.tow = s->tow;
   return t;
 }
 
-void sbp_to_rtcm3_gps_eph(const msg_ephemeris_gps_t *sbp_gps_eph,
+void sbp_to_rtcm3_gps_eph(const sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state) {
   (void)state;
@@ -101,7 +101,7 @@ static bool compute_glo_time_of_day(const gps_time_t *obs_time,
   return true;
 }
 
-void sbp_to_rtcm3_glo_eph(const msg_ephemeris_glo_t *sbp_glo_eph,
+void sbp_to_rtcm3_glo_eph(const sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state) {
   (void)state;
@@ -169,7 +169,7 @@ static void get_bds_wn_tow(const gps_time_t *input,
   *wn = *wn % 8192;
 }
 
-void sbp_to_rtcm3_bds_eph(const msg_ephemeris_bds_t *sbp_bds_eph,
+void sbp_to_rtcm3_bds_eph(const sbp_msg_ephemeris_bds_t *sbp_bds_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state) {
   (void)state;
@@ -236,7 +236,7 @@ void sbp_to_rtcm3_bds_eph(const msg_ephemeris_bds_t *sbp_bds_eph,
                  &msg_eph->data.kepler.toc);
 }
 
-void sbp_to_rtcm3_gal_eph(const msg_ephemeris_gal_t *sbp_gal_eph,
+void sbp_to_rtcm3_gal_eph(const sbp_msg_ephemeris_gal_t *sbp_gal_eph,
                           rtcm_msg_eph *msg_eph,
                           const struct rtcm3_out_state *state) {
   (void)state;

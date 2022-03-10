@@ -10,13 +10,10 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include "gnss-converters-extra/sbp_rtcm3.h"
+
 #include <assert.h>
 #include <math.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <libsbp/legacy/gnss.h>
-#include <libsbp/legacy/logging.h>
 #include <rtcm3/bits.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>
@@ -24,6 +21,8 @@
 #include <rtcm3/eph_encode.h>
 #include <rtcm3/logging.h>
 #include <rtcm3/ssr_decode.h>
+#include <stdlib.h>
+#include <string.h>
 #include <swiftnav/edc.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/fifo_byte.h>
@@ -34,7 +33,6 @@
 #include <swiftnav/signal.h>
 #include <swiftnav/swift_strnlen.h>
 
-#include "gnss-converters-extra/sbp_rtcm3.h"
 #include "gnss-converters/utils.h"
 #include "rtcm3_utils.h"
 #include "sbp_rtcm3_internal.h"
@@ -53,7 +51,11 @@ void sbp2rtcm_init(struct rtcm3_out_state *state,
   state->cb_sbp_to_rtcm = cb_sbp_to_rtcm;
   state->context = context;
 
+  state->sender_id = 0;
   state->n_sbp_obs = 0;
+
+  memset(&state->sbp_header, 0, sizeof(state->sbp_header));
+  memset(state->sbp_obs_buffer, 0, sizeof(state->sbp_obs_buffer));
 
   for (u8 i = 0; i < sizeof(state->glo_sv_id_fcn_map); i++) {
     state->glo_sv_id_fcn_map[i] = MSM_GLO_FCN_UNKNOWN;
@@ -70,8 +72,8 @@ void sbp2rtcm_init(struct rtcm3_out_state *state,
 }
 
 /* Difference between two sbp time stamps in seconds */
-double sbp_diff_time(const sbp_gps_time_t *end,
-                     const sbp_gps_time_t *beginning) {
+double sbp_diff_time(const sbp_v4_gps_time_t *end,
+                     const sbp_v4_gps_time_t *beginning) {
   s32 week_diff = end->wn - beginning->wn;
   double dt = (double)end->tow / SECS_MS - (double)beginning->tow / SECS_MS;
   dt += week_diff * WEEK_SECS;
@@ -203,7 +205,7 @@ u16 encode_rtcm3_frame(const void *rtcm_msg, u16 message_type, u8 *frame) {
   return frame_size + 3;
 }
 
-void sbp_to_rtcm3_1005(const msg_base_pos_ecef_t *sbp_base_pos,
+void sbp_to_rtcm3_1005(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
                        rtcm_msg_1005 *rtcm_1005,
                        const struct rtcm3_out_state *state) {
   /* Reference Station ID DF003 */
@@ -231,7 +233,7 @@ void sbp_to_rtcm3_1005(const msg_base_pos_ecef_t *sbp_base_pos,
   rtcm_1005->arp_z = sbp_base_pos->z;
 }
 
-void sbp_to_rtcm3_1006(const msg_base_pos_ecef_t *sbp_base_pos,
+void sbp_to_rtcm3_1006(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
                        rtcm_msg_1006 *rtcm_1006,
                        const struct rtcm3_out_state *state) {
   sbp_to_rtcm3_1005(sbp_base_pos, &rtcm_1006->msg_1005, state);
@@ -306,7 +308,7 @@ void rtcm3_1033_to_1008(const rtcm_msg_1033 *rtcm_1033,
   }
 }
 
-void sbp_to_rtcm3_1230(const msg_glo_biases_t *sbp_glo_bias,
+void sbp_to_rtcm3_1230(const sbp_msg_glo_biases_t *sbp_glo_bias,
                        rtcm_msg_1230 *rtcm_1230,
                        const struct rtcm3_out_state *state) {
   /* Reference Station ID DF003 */
@@ -352,7 +354,7 @@ void sbp2rtcm_set_leap_second(s8 leap_seconds, struct rtcm3_out_state *state) {
  * \param state RTCM output state struct
  */
 void sbp2rtcm_set_rtcm_out_mode(msm_enum value, struct rtcm3_out_state *state) {
-  if (MSM4 == value || MSM5 == value) {
+  if ((MSM4 == value) || (MSM5 == value)) {
     /* enable MSM output if valid MSM type given */
     state->send_msm_obs = true;
     state->msm_type = value;
@@ -364,11 +366,12 @@ void sbp2rtcm_set_rtcm_out_mode(msm_enum value, struct rtcm3_out_state *state) {
   }
 }
 
-void sbp2rtcm_set_glo_fcn(sbp_gnss_signal_t sid,
+void sbp2rtcm_set_glo_fcn(sbp_v4_gnss_signal_t sid,
                           u8 sbp_fcn,
                           struct rtcm3_out_state *state) {
   /* convert FCN from SBP representation to RTCM representation */
-  if (sid.sat < GLO_FIRST_PRN || sid.sat >= GLO_FIRST_PRN + NUM_SATS_GLO) {
+  if ((sid.sat < GLO_FIRST_PRN) ||
+      (sid.sat >= (GLO_FIRST_PRN + NUM_SATS_GLO))) {
     /* invalid PRN */
     log_info("Ignoring invalid GLO PRN %u", sid.sat);
     return;
@@ -378,7 +381,7 @@ void sbp2rtcm_set_glo_fcn(sbp_gnss_signal_t sid,
 
 bool sbp2rtcm_set_ant_height(const double ant_height,
                              struct rtcm3_out_state *state) {
-  if (ant_height < 0.0 || ant_height > RTCM_1006_MAX_ANTENNA_HEIGHT_M) {
+  if ((ant_height < 0.0) || (ant_height > RTCM_1006_MAX_ANTENNA_HEIGHT_M)) {
     return false;
   }
   state->ant_height = ant_height;
@@ -403,10 +406,9 @@ void gps_tow_to_beidou_tow(u32 *tow_ms) {
 }
 
 void sbp2rtcm_base_pos_ecef_cb(const u16 sender_id,
-                               const u8 len,
-                               const u8 msg[],
+                               const sbp_msg_base_pos_ecef_t *msg,
                                struct rtcm3_out_state *state) {
-  (void)len;
+  /* For msg_type == SbpMsgBasePosEcef */
   rtcm_msg_1006 msg_1006;
   rtcm_msg_1008 msg_1008;
   rtcm_msg_1033 msg_1033;
@@ -415,7 +417,7 @@ void sbp2rtcm_base_pos_ecef_cb(const u16 sender_id,
   state->sender_id = sender_id;
 
   /* generate and send the base position message */
-  sbp_to_rtcm3_1006((const msg_base_pos_ecef_t *)msg, &msg_1006, state);
+  sbp_to_rtcm3_1006(msg, &msg_1006, state);
   u16 frame_size = encode_rtcm3_frame(&msg_1006, 1006, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 
@@ -433,21 +435,20 @@ void sbp2rtcm_base_pos_ecef_cb(const u16 sender_id,
 }
 
 void sbp2rtcm_glo_biases_cb(const u16 sender_id,
-                            const u8 len,
-                            const u8 msg[],
+                            const sbp_msg_glo_biases_t *msg,
                             struct rtcm3_out_state *state) {
-  (void)len;
+  /* For mag_type == SbpMsgGloBiases */
   state->sender_id = sender_id;
 
   rtcm_msg_1230 msg_1230;
-  sbp_to_rtcm3_1230((const msg_glo_biases_t *)msg, &msg_1230, state);
+  sbp_to_rtcm3_1230(msg, &msg_1230, state);
 
   u8 frame[RTCM3_MAX_MSG_LEN];
   u16 frame_size = encode_rtcm3_frame(&msg_1230, 1230, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 }
 
-static void sbp_obs_to_freq_data(const packed_obs_content_t *sbp_freq,
+static void sbp_obs_to_freq_data(const sbp_packed_obs_content_t *sbp_freq,
                                  rtcm_freq_data *rtcm_freq,
                                  u8 code_indicator) {
   /* 0=C/A code, 1=P code */
@@ -545,7 +546,7 @@ static void msm_init_obs_message(rtcm_msm_message *msg,
 }
 
 /* convert the SBP observation into MSM message structure */
-static void sbp_obs_to_msm_signal_data(const packed_obs_content_t *sbp_obs,
+static void sbp_obs_to_msm_signal_data(const sbp_packed_obs_content_t *sbp_obs,
                                        rtcm_msm_message *msg,
                                        const struct rtcm3_out_state *state) {
   rtcm_constellation_t cons = to_constellation(msg->header.msg_num);
@@ -630,7 +631,7 @@ uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms,
 static void rtcm_init_obs_message(rtcm_obs_message *msg,
                                   struct rtcm3_out_state *state,
                                   rtcm_constellation_t cons) {
-  memset(&*msg, 0, sizeof(*msg));
+  memset(msg, 0, sizeof(*msg));
 
   if (RTCM_CONSTELLATION_GPS == cons) {
     /* Msg Num DF002 uint16 12*/
@@ -671,7 +672,7 @@ void sbp_buffer_to_msm(const struct rtcm3_out_state *state) {
 
   /* loop through observations once to generate satellite and signal masks */
   for (u8 i = 0; i < state->n_sbp_obs; i++) {
-    const packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
+    const sbp_packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
     rtcm_constellation_t cons =
         (rtcm_constellation_t)code_to_constellation(sbp_obs->sid.code);
     msm_add_to_header(&obs[cons].header, sbp_obs->sid.code, sbp_obs->sid.sat);
@@ -680,7 +681,7 @@ void sbp_buffer_to_msm(const struct rtcm3_out_state *state) {
   /* using the complete satellite and signal masks, loop through observations
    * again to generate the cell mask */
   for (u8 i = 0; i < state->n_sbp_obs; i++) {
-    const packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
+    const sbp_packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
     rtcm_constellation_t cons =
         (rtcm_constellation_t)code_to_constellation(sbp_obs->sid.code);
     msm_add_to_cell_mask(
@@ -689,7 +690,7 @@ void sbp_buffer_to_msm(const struct rtcm3_out_state *state) {
 
   /* loop through observations once more to generate the actual signal data */
   for (u8 i = 0; i < state->n_sbp_obs; i++) {
-    const packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
+    const sbp_packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
     rtcm_constellation_t cons =
         (rtcm_constellation_t)code_to_constellation(sbp_obs->sid.code);
     sbp_obs_to_msm_signal_data(sbp_obs, &obs[cons], state);
@@ -737,8 +738,8 @@ static void sbp_buffer_to_legacy_rtcm3(struct rtcm3_out_state *state) {
    * This requires that observations come in sorted with L1 first.
    */
 
-  for (u8 i = 0; i < state->n_sbp_obs; i++) {
-    packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
+  for (size_t i = 0; i < state->n_sbp_obs; i++) {
+    const sbp_packed_obs_content_t *sbp_obs = &(state->sbp_obs_buffer[i]);
     switch (sbp_obs->sid.code) {
       case CODE_GPS_L1CA:
       case CODE_GPS_L1P: {
@@ -826,10 +827,10 @@ static void sbp_buffer_to_rtcm3(struct rtcm3_out_state *state) {
 }
 
 void sbp2rtcm_sbp_obs_cb(const u16 sender_id,
-                         const u8 len,
-                         const u8 msg[],
+                         const sbp_msg_obs_t *msg,
                          struct rtcm3_out_state *state) {
-  const msg_obs_t *sbp_obs = (const msg_obs_t *)msg;
+  /* For msg_type == SbpMsgObs */
+  const sbp_msg_obs_t *sbp_obs = msg;
 
   if (state->sender_id != sender_id) {
     /* sender changed, send existing buffer and reset */
@@ -886,8 +887,7 @@ void sbp2rtcm_sbp_obs_cb(const u16 sender_id,
   }
 
   /* number of observations in the incoming message */
-  u8 n_meas =
-      (len - sizeof(observation_header_t)) / sizeof(packed_obs_content_t);
+  u8 n_meas = sbp_obs->n_obs;
 
   for (u8 i = 0; i < n_meas; i++) {
     if ((0 == (sbp_obs->obs[i].flags & MSG_OBS_FLAGS_CODE_VALID)) ||
@@ -916,194 +916,206 @@ void sbp2rtcm_sbp_obs_cb(const u16 sender_id,
   }
 }
 
-void sbp2rtcm_sbp_osr_cb(const u16 sender_id,
-                         const u8 len,
-                         const u8 msg[],
+void sbp2rtcm_sbp_osr_cb(u16 sender_id,
+                         const sbp_msg_osr_t *msg,
                          struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgOsr */
   rtcm_msg_swift_proprietary osr_msg;
-  osr_msg.msg_type = SBP_MSG_OSR;
-  osr_msg.sender_id = sender_id;
-  osr_msg.len = len;
-  memcpy(osr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_osr_encode(
+          osr_msg.data, ARRAY_SIZE(osr_msg.data), &osr_msg.len, msg)) {
+    osr_msg.msg_type = (uint16_t)SbpMsgOsr;
+    osr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&osr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&osr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_orbit_clock_cb(const u16 sender_id,
-                                     const u8 len,
-                                     const u8 msg[],
+void sbp2rtcm_sbp_ssr_orbit_clock_cb(u16 sender_id,
+                                     const sbp_msg_ssr_orbit_clock_t *msg,
                                      struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrOrbitClock */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_ORBIT_CLOCK;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_orbit_clock_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrOrbitClock;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_phase_biases_cb(const u16 sender_id,
-                                      const u8 len,
-                                      const u8 msg[],
+void sbp2rtcm_sbp_ssr_phase_biases_cb(u16 sender_id,
+                                      const sbp_msg_ssr_phase_biases_t *msg,
                                       struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrPhaseBiases */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_PHASE_BIASES;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_phase_biases_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrPhaseBiases;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_code_biases_cb(const u16 sender_id,
-                                     const u8 len,
-                                     const u8 msg[],
+void sbp2rtcm_sbp_ssr_code_biases_cb(u16 sender_id,
+                                     const sbp_msg_ssr_code_biases_t *msg,
                                      struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrCodeBiases */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_CODE_BIASES;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_code_biases_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrCodeBiases;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_gridded_correction_cb(const u16 sender_id,
-                                            const u8 len,
-                                            const u8 msg[],
-                                            struct rtcm3_out_state *state) {
+void sbp2rtcm_sbp_ssr_gridded_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_gridded_correction_dep_a_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrGriddedCorrectionDepA */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_GRIDDED_CORRECTION_DEP_A;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_gridded_correction_dep_a_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrGriddedCorrectionDepA;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_grid_definition_cb(const u16 sender_id,
-                                         const u8 len,
-                                         const u8 msg[],
-                                         struct rtcm3_out_state *state) {
+void sbp2rtcm_sbp_ssr_grid_definition_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_grid_definition_dep_a_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrGridDefinitionDepA */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_GRID_DEFINITION_DEP_A;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_grid_definition_dep_a_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrGridDefinitionDepA;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_ssr_stec_correction_cb(const u16 sender_id,
-                                         const u8 len,
-                                         const u8 msg[],
-                                         struct rtcm3_out_state *state) {
+void sbp2rtcm_sbp_ssr_stec_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_stec_correction_dep_a_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrStecCorrectionDepA */
   rtcm_msg_swift_proprietary ssr_msg;
-  ssr_msg.msg_type = SBP_MSG_SSR_STEC_CORRECTION_DEP_A;
-  ssr_msg.sender_id = sender_id;
-  ssr_msg.len = len;
-  memcpy(ssr_msg.data, msg, len);
+  if (SBP_OK ==
+      sbp_msg_ssr_stec_correction_dep_a_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrStecCorrectionDepA;
+    ssr_msg.sender_id = sender_id;
 
-  u8 frame[RTCM3_MAX_MSG_LEN];
-  u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
-  state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    u8 frame[RTCM3_MAX_MSG_LEN];
+    u16 frame_size = encode_rtcm3_frame(&ssr_msg, 4062, frame);
+    state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+  }
 }
 
-void sbp2rtcm_sbp_gps_eph_cb(const u16 sender_id,
-                             const u8 len,
-                             const u8 msg[],
+void sbp2rtcm_sbp_gps_eph_cb(u16 sender_id,
+                             const sbp_msg_ephemeris_gps_t *msg,
                              struct rtcm3_out_state *state) {
-  (void)len;
+  /* For msg_type == SbpMsgEphemerisGps */
   (void)sender_id;
-  const msg_ephemeris_gps_t *sbp_gps_eph = (const msg_ephemeris_gps_t *)msg;
 
   rtcm_msg_eph msg_gps_eph;
   u8 frame[RTCM3_MAX_MSG_LEN];  // Max RTCM message length is 1023 Bytes
 
   /* generate and send the gps ephemeris message */
-  sbp_to_rtcm3_gps_eph(sbp_gps_eph, &msg_gps_eph, state);
+  sbp_to_rtcm3_gps_eph(msg, &msg_gps_eph, state);
   u16 frame_size = encode_rtcm3_frame(&msg_gps_eph, 1019, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 }
 
-void sbp2rtcm_sbp_glo_eph_cb(const u16 sender_id,
-                             const u8 len,
-                             const u8 msg[],
+void sbp2rtcm_sbp_glo_eph_cb(u16 sender_id,
+                             const sbp_msg_ephemeris_glo_t *msg,
                              struct rtcm3_out_state *state) {
-  (void)len;
+  /* For msg_type == SbpMsgEphemerisGlo */
   (void)sender_id;
-  const msg_ephemeris_glo_t *sbp_glo_eph = (const msg_ephemeris_glo_t *)msg;
 
   rtcm_msg_eph msg_glo_eph;
   u8 frame[RTCM3_MAX_MSG_LEN];  // Max RTCM message length is 1023 Bytes
 
   /* generate and send the glo ephemeris message */
-  sbp_to_rtcm3_glo_eph(sbp_glo_eph, &msg_glo_eph, state);
+  sbp_to_rtcm3_glo_eph(msg, &msg_glo_eph, state);
   u16 frame_size = encode_rtcm3_frame(&msg_glo_eph, 1020, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 }
 
-void sbp2rtcm_sbp_bds_eph_cb(const u16 sender_id,
-                             const u8 len,
-                             const u8 msg[],
+void sbp2rtcm_sbp_bds_eph_cb(u16 sender_id,
+                             const sbp_msg_ephemeris_bds_t *msg,
                              struct rtcm3_out_state *state) {
-  (void)len;
+  /* For msg_type == SbpMsgEphemerisBds */
   (void)sender_id;
-  const msg_ephemeris_bds_t *sbp_bds_eph = (const msg_ephemeris_bds_t *)msg;
 
   rtcm_msg_eph msg_bds_eph;
   u8 frame[RTCM3_MAX_MSG_LEN];  // Max RTCM message length is 1023 Bytes
 
   /* generate and send the bds ephemeris message - message type depends on
    * source */
-  sbp_to_rtcm3_bds_eph(sbp_bds_eph, &msg_bds_eph, state);
+  sbp_to_rtcm3_bds_eph(msg, &msg_bds_eph, state);
 
   u16 frame_size = encode_rtcm3_frame(&msg_bds_eph, 1042, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 }
 
-void sbp2rtcm_sbp_gal_eph_cb(const u16 sender_id,
-                             const u8 len,
-                             const u8 msg[],
+void sbp2rtcm_sbp_gal_eph_cb(u16 sender_id,
+                             const sbp_msg_ephemeris_gal_t *msg,
                              struct rtcm3_out_state *state) {
-  (void)len;
+  /* For msg_type == SbpMsgEphemerisGal */
   (void)sender_id;
-  const msg_ephemeris_gal_t *sbp_gal_eph = (const msg_ephemeris_gal_t *)msg;
 
   rtcm_msg_eph msg_gal_eph;
   u8 frame[RTCM3_MAX_MSG_LEN];  // Max RTCM message length is 1023 Bytes
 
   /* generate and send the gal ephemeris message - message type depends on
    * source */
-  sbp_to_rtcm3_gal_eph(sbp_gal_eph, &msg_gal_eph, state);
+  sbp_to_rtcm3_gal_eph(msg, &msg_gal_eph, state);
 
-  assert((sbp_gal_eph->source == EPH_SOURCE_GAL_INAV) ||
-         (sbp_gal_eph->source == EPH_SOURCE_GAL_FNAV));
-  u16 message_type = sbp_gal_eph->source == EPH_SOURCE_GAL_INAV ? 1046 : 1045;
+  assert((msg->source == EPH_SOURCE_GAL_INAV) ||
+         (msg->source == EPH_SOURCE_GAL_FNAV));
+  u16 message_type = msg->source == EPH_SOURCE_GAL_INAV ? 1046 : 1045;
   u16 frame_size = encode_rtcm3_frame(&msg_gal_eph, message_type, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
 }
 
-void sbp2rtcm_sbp_log_cb(const u16 sender_id,
-                         const u8 len,
-                         const u8 msg[],
+void sbp2rtcm_sbp_log_cb(u16 sender_id,
+                         const sbp_msg_log_t *msg,
                          struct rtcm3_out_state *state) {
-  if (len < 2) {
+  /* For msg_type == SbpMsgLog */
+  size_t text_len = sbp_msg_log_text_strlen(msg);
+  const char *text = sbp_msg_log_text_get(msg);
+
+  if (text_len == 0) {
     return;
   }
-  const msg_log_t *sbp_msg_log = (const msg_log_t *)msg;
+
   rtcm_msg_1029 rtcm_msg_log;
 
   state->sender_id = sender_id;
@@ -1111,12 +1123,80 @@ void sbp2rtcm_sbp_log_cb(const u16 sender_id,
   rtcm_msg_log.mjd_num = 0;
   rtcm_msg_log.utc_sec_of_day = 0;
   rtcm_msg_log.unicode_chars = 0;
-  rtcm_msg_log.utf8_code_units_n = len - 1;
-  MEMCPY_S(rtcm_msg_log.utf8_code_units,
-           RTCM_1029_MAX_CODE_UNITS,
-           &sbp_msg_log->text,
-           rtcm_msg_log.utf8_code_units_n);
+  rtcm_msg_log.utf8_code_units_n = text_len;
+  MEMCPY_S(
+      rtcm_msg_log.utf8_code_units, RTCM_1029_MAX_CODE_UNITS, text, text_len);
   u8 frame[RTCM3_MAX_MSG_LEN];
   u16 frame_size = encode_rtcm3_frame(&rtcm_msg_log, 1029, frame);
   state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+}
+
+void sbp2rtcm_sbp_cb(uint16_t sender_id,
+                     sbp_msg_type_t msg_type,
+                     const sbp_msg_t *msg,
+                     struct rtcm3_out_state *state) {
+  switch ((uint16_t)msg_type) {
+    case SbpMsgBasePosEcef: {
+      sbp2rtcm_base_pos_ecef_cb(sender_id, &msg->base_pos_ecef, state);
+      break;
+    }
+    case SbpMsgObs: {
+      sbp2rtcm_sbp_obs_cb(sender_id, &msg->obs, state);
+      break;
+    }
+    case SbpMsgOsr: {
+      sbp2rtcm_sbp_osr_cb(sender_id, &msg->osr, state);
+      break;
+    }
+    case SbpMsgSsrOrbitClock: {
+      sbp2rtcm_sbp_ssr_orbit_clock_cb(sender_id, &msg->ssr_orbit_clock, state);
+      break;
+    }
+    case SbpMsgSsrPhaseBiases: {
+      sbp2rtcm_sbp_ssr_phase_biases_cb(
+          sender_id, &msg->ssr_phase_biases, state);
+      break;
+    }
+    case SbpMsgSsrCodeBiases: {
+      sbp2rtcm_sbp_ssr_code_biases_cb(sender_id, &msg->ssr_code_biases, state);
+      break;
+    }
+    case SbpMsgSsrGriddedCorrectionDepA: {
+      sbp2rtcm_sbp_ssr_gridded_correction_cb(
+          sender_id, &msg->ssr_gridded_correction_dep_a, state);
+      break;
+    }
+    case SbpMsgSsrGridDefinitionDepA: {
+      sbp2rtcm_sbp_ssr_grid_definition_cb(
+          sender_id, &msg->ssr_grid_definition_dep_a, state);
+      break;
+    }
+    case SbpMsgSsrStecCorrectionDepA: {
+      sbp2rtcm_sbp_ssr_stec_correction_cb(
+          sender_id, &msg->ssr_stec_correction_dep_a, state);
+      break;
+    }
+    case SbpMsgEphemerisGps: {
+      sbp2rtcm_sbp_gps_eph_cb(sender_id, &msg->ephemeris_gps, state);
+      break;
+    }
+    case SbpMsgEphemerisGlo: {
+      sbp2rtcm_sbp_glo_eph_cb(sender_id, &msg->ephemeris_glo, state);
+      break;
+    }
+    case SbpMsgEphemerisBds: {
+      sbp2rtcm_sbp_bds_eph_cb(sender_id, &msg->ephemeris_bds, state);
+      break;
+    }
+    case SbpMsgEphemerisGal: {
+      sbp2rtcm_sbp_gal_eph_cb(sender_id, &msg->ephemeris_gal, state);
+      break;
+    }
+    case SbpMsgLog: {
+      sbp2rtcm_sbp_log_cb(sender_id, &msg->log, state);
+      break;
+    }
+    default:
+      break;
+  }
 }

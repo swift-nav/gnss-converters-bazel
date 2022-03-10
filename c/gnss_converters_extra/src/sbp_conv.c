@@ -10,16 +10,13 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <gnss-converters-extra/sbp_conv.h>
-
 #include <assert.h>
-#include <libsbp/legacy/logging.h>
+#include <gnss-converters-extra/sbp_conv.h>
+#include <gnss-converters-extra/sbp_rtcm3.h>
 #include <libsbp/sbp.h>
 #include <swiftnav/fifo_byte.h>
 #include <swiftnav/gnss_time.h>
 #include <time.h>
-
-#include <gnss-converters-extra/sbp_rtcm3.h>
 
 struct sbp_conv_s {
   struct rtcm3_out_state state;
@@ -56,65 +53,9 @@ size_t sbp_conv(sbp_conv_t conv,
                 size_t rlen,
                 uint8_t *wbuf,
                 size_t wlen) {
-  switch (type) {
-    case SBP_MSG_BASE_POS_ECEF: {
-      sbp2rtcm_base_pos_ecef_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_OBS: {
-      sbp2rtcm_sbp_obs_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_OSR: {
-      sbp2rtcm_sbp_osr_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_ORBIT_CLOCK: {
-      sbp2rtcm_sbp_ssr_orbit_clock_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_PHASE_BIASES: {
-      sbp2rtcm_sbp_ssr_phase_biases_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_CODE_BIASES: {
-      sbp2rtcm_sbp_ssr_code_biases_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_GRIDDED_CORRECTION_DEP_A: {
-      sbp2rtcm_sbp_ssr_gridded_correction_cb(
-          sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_GRID_DEFINITION_DEP_A: {
-      sbp2rtcm_sbp_ssr_grid_definition_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_SSR_STEC_CORRECTION_DEP_A: {
-      sbp2rtcm_sbp_ssr_stec_correction_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_EPHEMERIS_GPS: {
-      sbp2rtcm_sbp_gps_eph_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_EPHEMERIS_GLO: {
-      sbp2rtcm_sbp_glo_eph_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_EPHEMERIS_BDS: {
-      sbp2rtcm_sbp_bds_eph_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_EPHEMERIS_GAL: {
-      sbp2rtcm_sbp_gal_eph_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    case SBP_MSG_LOG: {
-      sbp2rtcm_sbp_log_cb(sender, (u8)rlen, rbuf, &conv->state);
-      break;
-    }
-    default: { break; }
+  sbp_msg_t msg;
+  if (SBP_OK == sbp_message_decode(rbuf, (uint8_t)rlen, NULL, type, &msg)) {
+    sbp2rtcm_sbp_cb(sender, type, &msg, &conv->state);
   }
   return fifo_read(&conv->fifo, wbuf, (u32)wlen);
 }

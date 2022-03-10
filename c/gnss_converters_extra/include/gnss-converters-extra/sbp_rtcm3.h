@@ -14,8 +14,6 @@
 #define GNSS_CONVERTERS_EXTRA_SBP_RTCM3_INTERFACE_H
 
 #include <gnss-converters/rtcm3_sbp.h>
-#include <libsbp/legacy/observation.h>
-#include <libsbp/legacy/ssr.h>
 #include <libsbp/sbp.h>
 #include <rtcm3/messages.h>
 #include <swiftnav/gnss_time.h>
@@ -31,8 +29,8 @@ struct rtcm3_out_state {
   bool ant_known;
   s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context);
   u16 sender_id;
-  observation_header_t sbp_header;
-  packed_obs_content_t sbp_obs_buffer[MAX_OBS_PER_EPOCH];
+  sbp_observation_header_t sbp_header;
+  sbp_packed_obs_content_t sbp_obs_buffer[MAX_OBS_PER_EPOCH];
   u16 n_sbp_obs;
   void *context;
   /* GLO FCN map, indexed by 1-based PRN */
@@ -59,7 +57,7 @@ void sbp2rtcm_set_leap_second(s8 leap_seconds, struct rtcm3_out_state *state);
 
 void sbp2rtcm_set_rtcm_out_mode(msm_enum value, struct rtcm3_out_state *state);
 
-void sbp2rtcm_set_glo_fcn(sbp_gnss_signal_t sid,
+void sbp2rtcm_set_glo_fcn(sbp_v4_gnss_signal_t sid,
                           u8 sbp_fcn,
                           struct rtcm3_out_state *state);
 
@@ -70,75 +68,72 @@ void sbp2rtcm_set_rcv_ant_descriptors(const char *ant_descriptor,
                                       struct rtcm3_out_state *state);
 
 void sbp2rtcm_base_pos_ecef_cb(u16 sender_id,
-                               u8 len,
-                               const u8 msg[],
+                               const sbp_msg_base_pos_ecef_t *msg,
                                struct rtcm3_out_state *state);
 
 void sbp2rtcm_glo_biases_cb(u16 sender_id,
-                            u8 len,
-                            const u8 msg[],
+                            const sbp_msg_glo_biases_t *msg,
                             struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_obs_cb(u16 sender_id,
-                         u8 len,
-                         const u8 msg[],
+                         const sbp_msg_obs_t *msg,
                          struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_osr_cb(u16 sender_id,
-                         u8 len,
-                         const u8 msg[],
+                         const sbp_msg_osr_t *msg,
                          struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_ssr_orbit_clock_cb(u16 sender_id,
-                                     u8 len,
-                                     const u8 msg[],
+                                     const sbp_msg_ssr_orbit_clock_t *msg,
                                      struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_ssr_phase_biases_cb(u16 sender_id,
-                                      u8 len,
-                                      const u8 msg[],
+                                      const sbp_msg_ssr_phase_biases_t *msg,
                                       struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_ssr_code_biases_cb(u16 sender_id,
-                                     u8 len,
-                                     const u8 msg[],
+                                     const sbp_msg_ssr_code_biases_t *msg,
                                      struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_gridded_correction_cb(u16 sender_id,
-                                            u8 len,
-                                            const u8 msg[],
-                                            struct rtcm3_out_state *state);
+void sbp2rtcm_sbp_ssr_gridded_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_gridded_correction_dep_a_t *msg,
+    struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_grid_definition_cb(u16 sender_id,
-                                         u8 len,
-                                         const u8 msg[],
-                                         struct rtcm3_out_state *state);
+void sbp2rtcm_sbp_ssr_grid_definition_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_grid_definition_dep_a_t *msg,
+    struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_stec_correction_cb(u16 sender_id,
-                                         u8 len,
-                                         const u8 msg[],
-                                         struct rtcm3_out_state *state);
+void sbp2rtcm_sbp_ssr_stec_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_stec_correction_dep_a_t *msg,
+    struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_gps_eph_cb(u16 sender_id,
-                             u8 len,
-                             const u8 msg[],
+                             const sbp_msg_ephemeris_gps_t *msg,
                              struct rtcm3_out_state *state);
+
 void sbp2rtcm_sbp_glo_eph_cb(u16 sender_id,
-                             u8 len,
-                             const u8 msg[],
+                             const sbp_msg_ephemeris_glo_t *msg,
                              struct rtcm3_out_state *state);
+
 void sbp2rtcm_sbp_bds_eph_cb(u16 sender_id,
-                             u8 len,
-                             const u8 msg[],
+                             const sbp_msg_ephemeris_bds_t *msg,
                              struct rtcm3_out_state *state);
+
 void sbp2rtcm_sbp_gal_eph_cb(u16 sender_id,
-                             u8 len,
-                             const u8 msg[],
+                             const sbp_msg_ephemeris_gal_t *msg,
                              struct rtcm3_out_state *state);
+
 void sbp2rtcm_sbp_log_cb(u16 sender_id,
-                         u8 len,
-                         const u8 msg[],
+                         const sbp_msg_log_t *msg,
                          struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_cb(uint16_t sender_id,
+                     sbp_msg_type_t msg_type,
+                     const sbp_msg_t *msg,
+                     struct rtcm3_out_state *state);
 
 #ifdef __cplusplus
 }
