@@ -24,8 +24,9 @@
 
 #include "gnss-converters-extra/sbp_rtcm3.h"
 
-typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint16_t, void *);
+typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
+typedef int32_t (*read_eof_fn_ptr)(void *);
+typedef int32_t (*writefn_ptr)(uint8_t *, uint16_t, void *);
 
 static writefn_ptr sbp2rtcm_writefn;
 
@@ -64,6 +65,7 @@ int sbp2rtcm_main(int argc,
                   char **argv,
                   const char *additional_opts_help,
                   readfn_ptr readfn,
+                  read_eof_fn_ptr read_eof_fn,
                   writefn_ptr writefn,
                   void *context) {
   int opt = -1;
@@ -118,7 +120,7 @@ int sbp2rtcm_main(int argc,
         &sbp_state, cb[i].msg_type, &sbp2rtcm_sbp_void_cb, &state, &cb[i].node);
   }
 
-  while (!feof(stdin)) {
+  while (!read_eof_fn(context)) {
     sbp_process(&sbp_state, readfn);
   }
   return 0;

@@ -10,10 +10,13 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+
+static bool at_eof = false;
 
 static int32_t readfn(uint8_t *buff, uint32_t n, void *context) {
   (void)context;
@@ -23,10 +26,14 @@ static int32_t readfn(uint8_t *buff, uint32_t n, void *context) {
     exit(EXIT_FAILURE);
   }
   if (n > 0 && read_bytes == 0) {
-    /* EOF */
-    exit(EXIT_SUCCESS);
+    at_eof = true;
   }
   return (int32_t)read_bytes;
+}
+
+static int32_t read_eof_fn(void *context) {
+  (void)context;
+  return at_eof ? 1 : 0;
 }
 
 /* Write the RTCM frame to STDOUT. */
@@ -41,10 +48,12 @@ static int32_t writefn(uint8_t *buffer, uint16_t n, void *context) {
 }
 
 typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
+typedef int32_t (*read_eof_fn_ptr)(void *);
 typedef int32_t (*writefn_ptr)(uint8_t *, uint16_t, void *);
 
-int sbp2rtcm_main(int, char **, const char *, readfn_ptr, writefn_ptr);
+int sbp2rtcm_main(
+    int, char **, const char *, readfn_ptr, read_eof_fn_ptr, writefn_ptr);
 
 int main(int argc, char **argv) {
-  return sbp2rtcm_main(argc, argv, "", readfn, writefn);
+  return sbp2rtcm_main(argc, argv, "", readfn, read_eof_fn, writefn);
 }

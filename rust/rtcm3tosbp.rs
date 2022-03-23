@@ -38,7 +38,7 @@ fn main() {
     let exit_code = {
         let _stdout_flusher = StdoutFlusher::new();
         let (reader, writer) = fetch_io("rtcm3tosbp");
-        let mut context = Context { reader, writer };
+        let mut context = Context::new(reader, writer);
         let cargs = CArgs::new();
         let argv = cargs.argv();
         let (argc, argv) = (cargs.len(), argv.as_ptr());

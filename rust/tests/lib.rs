@@ -29,6 +29,18 @@ fn rtcm3tosbp_convert() {
 }
 
 #[test]
+fn sbp2rtcm_convert() {
+    let tempfile = tempfile::NamedTempFile::new().unwrap();
+    let mut cmd = Command::cargo_bin("sbp2rtcm").unwrap();
+    cmd.arg("c/rtcm3tosbp/test/data/piksi-gps-glo.sbp")
+        .arg(tempfile.path())
+        .assert()
+        .success();
+    let stat = std::fs::metadata(tempfile.path()).unwrap();
+    assert!(stat.len() == 22846);
+}
+
+#[test]
 fn sbp2rtcm_help() {
     let mut cmd = Command::cargo_bin("sbp2rtcm").unwrap();
     cmd.arg("-h")

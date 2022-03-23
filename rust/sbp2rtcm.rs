@@ -29,8 +29,9 @@ extern "C" {
         argc: i32,
         argv: *const *const i8,
         addition_opts_help: *const c_char,
-        readfn: unsafe extern "C" fn(*mut u8, u32, *mut c_void) -> i32,
-        writefn: unsafe extern "C" fn(*const u8, u16, *mut c_void) -> i32,
+        read_fn: unsafe extern "C" fn(*mut u8, u32, *mut c_void) -> i32,
+        read_eof_fn: unsafe extern "C" fn(*mut c_void) -> i32,
+        write_fn: unsafe extern "C" fn(*const u8, u16, *mut c_void) -> i32,
         context: *mut c_void,
     ) -> i32;
 }
@@ -42,13 +43,14 @@ fn main() {
         let cargs = CArgs::new();
         let argv = cargs.argv();
         let (argc, argv) = (cargs.len(), argv.as_ptr());
-        let mut context = Context { reader, writer };
+        let mut context = Context::new(reader, writer);
         unsafe {
             sbp2rtcm_main(
                 argc,
                 argv,
                 ADDITIONAL_OPTS_HELP.as_ptr(),
                 readfn_u32,
+                read_eof,
                 writefn_u16,
                 &mut context as *mut Context as *mut c_void,
             )

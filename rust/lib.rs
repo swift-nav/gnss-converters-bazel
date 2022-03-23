@@ -36,6 +36,17 @@ lazy_static! {
 pub struct Context {
     pub reader: Box<dyn Read>,
     pub writer: Box<dyn Write>,
+    pub at_eof: bool,
+}
+
+impl Context {
+    pub fn new(reader: Box<dyn Read>, writer: Box<dyn Write>) -> Context {
+        Context {
+            reader,
+            writer,
+            at_eof: false,
+        }
+    }
 }
 
 /// # Safety
@@ -47,10 +58,26 @@ pub unsafe extern "C" fn readfn_u32(bytes: *mut u8, n_bytes: u32, ctx: *mut c_vo
 pub unsafe extern "C" fn readfn(bytes: *mut u8, n_bytes: usize, ctx: *mut c_void) -> i32 {
     let context: &mut Context = &mut *(ctx as *mut Context);
     let slice = slice::from_raw_parts_mut(bytes, n_bytes);
-    if let Ok(read_size) = context.reader.read(slice) {
-        read_size as i32
+    match context.reader.read(slice) {
+        Ok(read_size) => {
+            context.at_eof = n_bytes > 0 && read_size == 0;
+            read_size as i32
+        }
+        Err(err) => {
+            context.at_eof = true;
+            eprintln!("read error: {}", err);
+            -1
+        }
+    }
+}
+
+/// # Safety
+pub unsafe extern "C" fn read_eof(ctx: *mut c_void) -> i32 {
+    let context: &mut Context = &mut *(ctx as *mut Context);
+    if context.at_eof {
+        1
     } else {
-        -1
+        0
     }
 }
 
