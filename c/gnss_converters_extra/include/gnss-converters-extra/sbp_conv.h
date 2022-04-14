@@ -16,13 +16,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <rtcm3/messages.h>
+
 typedef struct sbp_conv_s *sbp_conv_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-sbp_conv_t sbp_conv_new();
+sbp_conv_t sbp_conv_new(msm_enum msm_output_type);
 
 void sbp_conv_delete(sbp_conv_t conv);
 

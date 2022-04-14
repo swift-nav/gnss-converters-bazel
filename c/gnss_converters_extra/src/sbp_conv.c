@@ -30,7 +30,7 @@ static s32 sbp_conv_cb(uint8_t *buf, uint16_t len, void *context) {
   return (s32)fifo_write(fifo, buf, len);
 }
 
-sbp_conv_t sbp_conv_new() {
+sbp_conv_t sbp_conv_new(msm_enum msm_output_type) {
   sbp_conv_t conv = malloc(sizeof(struct sbp_conv_s));
   if (conv != NULL) {
     fifo_init(&conv->fifo, conv->buf, sizeof(conv->buf));
@@ -40,6 +40,7 @@ sbp_conv_t sbp_conv_new() {
                              &conv->state);
     sbp2rtcm_set_rcv_ant_descriptors(
         "NULL                ", "SWFT", &conv->state);
+    sbp2rtcm_set_rtcm_out_mode(msm_output_type, &conv->state);
   }
   return conv;
 }
