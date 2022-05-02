@@ -11,10 +11,10 @@
  */
 
 #include <assert.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <math.h>
 
 #include "common.h"
-#include "gnss-converters-extra/sbp_rtcm3.h"
 #include "rtcm3_utils.h"
 #include "sbp_rtcm3_internal.h"
 
@@ -84,13 +84,15 @@ void sbp_to_rtcm3_gps_eph(const sbp_msg_ephemeris_gps_t *sbp_gps_eph,
 }
 
 static bool compute_glo_time_of_day(const gps_time_t *obs_time,
-                                    const struct rtcm3_out_state *state,
+                                    struct rtcm3_out_state *state,
                                     u8 *t_b) {
-  if (!state->leap_second_known) {
+  int8_t leap_seconds;
+  if (!sbp2rtcm_get_leap_seconds(&leap_seconds, state)) {
     return false;
   }
+
   assert(gps_time_valid(obs_time));
-  s32 tod_glo_s = (s32)(obs_time->tow - state->leap_seconds) % DAY_SECS;
+  s32 tod_glo_s = (s32)(obs_time->tow - leap_seconds) % DAY_SECS;
   tod_glo_s += UTC_SU_OFFSET * HOUR_SECS;
 
   if (tod_glo_s > DAY_SECS) {
@@ -103,7 +105,7 @@ static bool compute_glo_time_of_day(const gps_time_t *obs_time,
 
 void sbp_to_rtcm3_glo_eph(const sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           rtcm_msg_eph *msg_eph,
-                          const struct rtcm3_out_state *state) {
+                          struct rtcm3_out_state *state) {
   (void)state;
   assert(sbp_glo_eph);
   assert(msg_eph);
@@ -119,6 +121,7 @@ void sbp_to_rtcm3_glo_eph(const sbp_msg_ephemeris_glo_t *sbp_glo_eph,
       rtcm3_encode_fit_interval_glo(sbp_glo_eph->common.fit_interval);
   msg_eph->health_bits = sbp_glo_eph->common.health_bits;
   gps_time_t time = sbp_gps_time_2_gps_time(&sbp_glo_eph->common.toe);
+  msg_eph->data.glo.t_b = 0;
   if (!compute_glo_time_of_day(&time, state, &msg_eph->data.glo.t_b)) {
     msg_eph->health_bits = 1;
   }

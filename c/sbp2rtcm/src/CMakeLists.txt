@@ -12,7 +12,7 @@ swift_add_tool(sbp2rtcm
     -Wconversion
 )
 
-target_link_libraries(sbp2rtcm_main PUBLIC gnss_converters_extra)
+target_link_libraries(sbp2rtcm_main PUBLIC gnss_converters)
 target_link_libraries(sbp2rtcm PRIVATE sbp2rtcm_main)
 
 install(TARGETS sbp2rtcm_main DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})

@@ -16,14 +16,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <gnss-converters/sbp_rtcm3.h>
 #include "common.h"
-#include "gnss-converters-extra/sbp_rtcm3.h"
 #include "gnss-converters/rtcm3_sbp.h"
 #include "libsbp/legacy/logging.h"
 
-#include "../../gnss_converters_extra/src/sbp_rtcm3_internal.h"
 #include "../src/rtcm3_sbp_internal.h"
 #include "../src/rtcm3_utils.h"
+#include "../src/sbp_rtcm3_internal.h"
 
 #define FREQ_TOL 1e-3
 
@@ -41,7 +41,7 @@ void utils_setup(void) {
   rtcm2sbp_init(&state, NULL, NULL, NULL, NULL);
   rtcm2sbp_set_time(&setup_gps_time, &setup_leap_seconds, &state);
 
-  sbp2rtcm_set_leap_second(setup_leap_seconds, &out_state);
+  sbp2rtcm_set_leap_second(&setup_leap_seconds, &out_state);
 }
 
 /* end fixtures */
@@ -373,21 +373,4 @@ Suite *utils_suite(void) {
   suite_add_tcase(s, tc_utils);
 
   return s;
-}
-
-int main(void) {
-  int number_failed = 0;
-
-  Suite *s = {0};
-
-  SRunner *sr = srunner_create(s);
-  srunner_set_xml(sr, "test_results.xml");
-
-  srunner_add_suite(sr, utils_suite());
-
-  srunner_set_fork_status(sr, CK_NOFORK);
-  srunner_run_all(sr, CK_NORMAL);
-  number_failed = srunner_ntests_failed(sr);
-  srunner_free(sr);
-  return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

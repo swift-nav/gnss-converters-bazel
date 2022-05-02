@@ -19,7 +19,7 @@
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
 #include "common.h"
-#include "gnss-converters-extra/sbp_rtcm3.h"
+#include "gnss-converters/sbp_rtcm3.h"
 
 /* Multiplier for glonass bias resolution scaling */
 #define GLO_BIAS_RESOLUTION 50.0
@@ -105,6 +105,9 @@
  * 3 – unknown clock is used */
 #define PIKSI_EXT_CLOCK_INDICATOR 0
 
+bool sbp2rtcm_get_leap_seconds(int8_t *leap_seconds,
+                               struct rtcm3_out_state *state);
+
 void sbp_to_rtcm3_1005(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
                        rtcm_msg_1005 *rtcm_1005,
                        const struct rtcm3_out_state *state);
@@ -129,7 +132,7 @@ void sbp_to_rtcm3_gps_eph(const sbp_msg_ephemeris_gps_t *sbp_gps_eph,
 
 void sbp_to_rtcm3_glo_eph(const sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           rtcm_msg_eph *msg_eph,
-                          const struct rtcm3_out_state *state);
+                          struct rtcm3_out_state *state);
 
 void sbp_to_rtcm3_bds_eph(const sbp_msg_ephemeris_bds_t *sbp_bds_eph,
                           rtcm_msg_eph *msg_eph,
@@ -141,10 +144,9 @@ void sbp_to_rtcm3_gal_eph(const sbp_msg_ephemeris_gal_t *sbp_gal_eph,
 
 u16 encode_rtcm3_frame(const void *rtcm_msg, u16 message_type, u8 *frame);
 
-uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms,
-                            const struct rtcm3_out_state *state);
+uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms, struct rtcm3_out_state *state);
 
-void sbp_buffer_to_msm(const struct rtcm3_out_state *state);
+void sbp_buffer_to_msm(struct rtcm3_out_state *state);
 
 void gps_tow_to_beidou_tow(u32 *tow_ms);
 

@@ -23,9 +23,18 @@
 extern "C" {
 #endif
 
+typedef bool (*sbp_rtcm_unix_time_callback_t)(int64_t *now);
+
 struct rtcm3_out_state {
-  s8 leap_seconds;
-  bool leap_second_known;
+  int8_t cached_leap_seconds;
+  bool cached_leap_seconds_known;
+
+  int8_t user_leap_seconds;
+  bool user_leap_seconds_known;
+  sbp_rtcm_unix_time_callback_t unix_time_callback;
+  TimeTruth *time_truth;
+  TimeTruthCache *time_truth_cache;
+
   bool ant_known;
   s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context);
   u16 sender_id;
@@ -53,7 +62,46 @@ void sbp2rtcm_init(struct rtcm3_out_state *state,
                    s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context),
                    void *context);
 
-void sbp2rtcm_set_leap_second(s8 leap_seconds, struct rtcm3_out_state *state);
+/**
+ * Function allows users to specify the leap second explicitly rather than
+ * having the converter use the unix time callback function or the time truth
+ * object to query for it.
+ *
+ * @param leap_seconds current UTC->GPS leap second offset (value can be NULL at
+ * which point function will mark leap second as unknown)
+ * @param state pointer to converter object
+ */
+void sbp2rtcm_set_leap_second(const int8_t *leap_seconds,
+                              struct rtcm3_out_state *state);
+
+/**
+ * Function allows users to specify a callback function which the converter may
+ * invoke anytime it wishes to inquire about the current time. It uses the time
+ * to determine the current leap second.
+ *
+ * The callback function signature takes in a numeric value which it will use to
+ * store the unix time provided that it is able to successfully acquire a unix
+ * time, if it is able to do so, it will return true otherwise it returns false.
+ *
+ * @param callback callback function which the converter should call. value can
+ * be NULL, at which point it will remove any prior registered function.
+ * @param state pointer to converter object
+ */
+void sbp2rtcm_set_unix_time_callback_function(
+    rtcm_sbp_unix_time_callback_t callback, struct rtcm3_out_state *state);
+
+/**
+ * Allows user to specify a time truth object and its cache object which is used
+ * internally to query the current leap second data. The time truth cache is
+ * useful to avoid missing data during time truth queries.
+ *
+ * @param time_truth pointer to the time truth object (value can be NULL)
+ * @param time_truth_cache pointer to the time truth cache (value can be NULL)
+ * @param state pointer to converter object
+ */
+void sbp2rtcm_set_time_truth(TimeTruth *time_truth,
+                             TimeTruthCache *time_truth_cache,
+                             struct rtcm3_out_state *state);
 
 void sbp2rtcm_set_rtcm_out_mode(msm_enum value, struct rtcm3_out_state *state);
 

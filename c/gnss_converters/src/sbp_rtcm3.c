@@ -10,9 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "gnss-converters-extra/sbp_rtcm3.h"
-
 #include <assert.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <math.h>
 #include <rtcm3/bits.h>
 #include <rtcm3/decode.h>
@@ -42,11 +41,78 @@
 
 #define RTCM3_PREAMBLE 0xD3
 
+static bool sbp2rtcm_calculate_cache_leap_seconds(
+    struct rtcm3_out_state *state) {
+  int64_t unix_time;
+
+  if (state->user_leap_seconds_known) {
+    state->cached_leap_seconds_known = true;
+    state->cached_leap_seconds = state->user_leap_seconds;
+  } else if (state->unix_time_callback != NULL &&
+             state->unix_time_callback(&unix_time) && unix_time >= GPS_EPOCH) {
+    gps_time_t utc_time;
+    utc_time.wn = (int16_t)((unix_time - GPS_EPOCH) / WEEK_SECS);
+    utc_time.tow =
+        (double)(unix_time - GPS_EPOCH) - (double)(utc_time.wn) * WEEK_SECS;
+
+    int8_t leap_seconds = (int8_t)(-get_utc_gps_offset(&utc_time, NULL));
+
+    if (unix_time < unix_time_utc_leaps_expiry) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds = leap_seconds;
+    }
+  } else if (state->time_truth != NULL) {
+    uint16_t wn = 0;
+    uint32_t tow_ms = 0;
+    int8_t leap_seconds = 0;
+    TimeTruthState wn_state;
+    TimeTruthState tow_ms_state;
+    TimeTruthState leap_seconds_state;
+
+    time_truth_get_latest_time(state->time_truth,
+                               &wn,
+                               &wn_state,
+                               &tow_ms,
+                               &tow_ms_state,
+                               &leap_seconds,
+                               &leap_seconds_state,
+                               state->time_truth_cache);
+
+    if (leap_seconds_state != TIME_TRUTH_STATE_NONE) {
+      state->cached_leap_seconds_known = true;
+      state->cached_leap_seconds = leap_seconds;
+    }
+  }
+
+  return state->cached_leap_seconds_known;
+}
+
+bool sbp2rtcm_get_leap_seconds(int8_t *leap_seconds,
+                               struct rtcm3_out_state *state) {
+  if (!state->cached_leap_seconds_known &&
+      !sbp2rtcm_calculate_cache_leap_seconds(state)) {
+    return false;
+  }
+
+  if (state->cached_leap_seconds_known) {
+    *leap_seconds = state->cached_leap_seconds;
+    return true;
+  }
+
+  return false;
+}
+
 void sbp2rtcm_init(struct rtcm3_out_state *state,
                    s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context),
                    void *context) {
-  state->leap_seconds = 0;
-  state->leap_second_known = false;
+  state->cached_leap_seconds = 0;
+  state->cached_leap_seconds_known = false;
+
+  state->user_leap_seconds = 0;
+  state->user_leap_seconds_known = false;
+  state->unix_time_callback = NULL;
+  state->time_truth = NULL;
+  state->time_truth_cache = NULL;
 
   state->cb_sbp_to_rtcm = cb_sbp_to_rtcm;
   state->context = context;
@@ -342,9 +408,26 @@ static u8 sbp_fcn_to_rtcm(u8 sbp_fcn) {
   return rtcm_fcn;
 }
 
-void sbp2rtcm_set_leap_second(s8 leap_seconds, struct rtcm3_out_state *state) {
-  state->leap_seconds = leap_seconds;
-  state->leap_second_known = true;
+void sbp2rtcm_set_leap_second(const int8_t *leap_seconds,
+                              struct rtcm3_out_state *state) {
+  if (leap_seconds != NULL) {
+    state->user_leap_seconds_known = true;
+    state->user_leap_seconds = *leap_seconds;
+  } else {
+    state->user_leap_seconds_known = false;
+  }
+}
+
+void sbp2rtcm_set_unix_time_callback_function(
+    rtcm_sbp_unix_time_callback_t callback, struct rtcm3_out_state *state) {
+  state->unix_time_callback = callback;
+}
+
+void sbp2rtcm_set_time_truth(TimeTruth *time_truth,
+                             TimeTruthCache *time_truth_cache,
+                             struct rtcm3_out_state *state) {
+  state->time_truth = time_truth;
+  state->time_truth_cache = time_truth_cache;
 }
 
 /* Set RTCM output mode
@@ -395,7 +478,7 @@ void sbp2rtcm_set_rcv_ant_descriptors(const char *ant_descriptor,
   STRNCPY(state->ant_descriptor, ant_descriptor);
   STRNCPY(state->rcv_descriptor, rcv_descriptor);
   state->ant_known = true;
-};
+}
 
 void gps_tow_to_beidou_tow(u32 *tow_ms) {
   /* BDS system time has a constant offset */
@@ -478,15 +561,15 @@ static void sbp_obs_to_freq_data(const sbp_packed_obs_content_t *sbp_freq,
 }
 
 static uint32_t compute_glo_tow_ms(uint32_t gps_tow_ms,
-                                   const struct rtcm3_out_state *state) {
-  if (!state->leap_second_known) {
+                                   struct rtcm3_out_state *state) {
+  int8_t leap_seconds;
+  if (!sbp2rtcm_get_leap_seconds(&leap_seconds, state)) {
     return -1;
   }
 
   double gps_tow_s = (double)gps_tow_ms / SECS_MS;
 
-  double glo_tow_s =
-      gps_tow_s + UTC_SU_OFFSET * HOUR_SECS - state->leap_seconds;
+  double glo_tow_s = gps_tow_s + UTC_SU_OFFSET * HOUR_SECS - leap_seconds;
 
   if (glo_tow_s < 0) {
     glo_tow_s += WEEK_SECS;
@@ -503,7 +586,7 @@ static uint32_t compute_glo_tow_ms(uint32_t gps_tow_ms,
 
 /* initialize the MSM structure */
 static void msm_init_obs_message(rtcm_msm_message *msg,
-                                 const struct rtcm3_out_state *state,
+                                 struct rtcm3_out_state *state,
                                  const rtcm_constellation_t cons) {
   memset(msg, 0, sizeof(*msg));
 
@@ -621,8 +704,9 @@ static void sbp_obs_to_msm_signal_data(const sbp_packed_obs_content_t *sbp_obs,
 }
 
 uint32_t compute_glo_tod_ms(uint32_t gps_tow_ms,
-                            const struct rtcm3_out_state *state) {
-  if (!state->leap_second_known) {
+                            struct rtcm3_out_state *state) {
+  int8_t leap_seconds;
+  if (!sbp2rtcm_get_leap_seconds(&leap_seconds, state)) {
     return -1;
   }
   return compute_glo_tow_ms(gps_tow_ms, state) % (DAY_SECS * SECS_MS);
@@ -663,7 +747,7 @@ static u8 sat_index_from_obs(rtcm_sat_data sats[], u8 n_sats, u8 svId) {
   return n_sats;
 }
 
-void sbp_buffer_to_msm(const struct rtcm3_out_state *state) {
+void sbp_buffer_to_msm(struct rtcm3_out_state *state) {
   /* message for each constellation */
   rtcm_msm_message obs[RTCM_CONSTELLATION_COUNT];
   for (u8 cons = 0; cons < RTCM_CONSTELLATION_COUNT; cons++) {

@@ -28,6 +28,8 @@ int main(void) {
   srunner_add_suite(sr, options_suite());
   srunner_add_suite(sr, time_truth_suite());
   srunner_add_suite(sr, rtcm_time_suite());
+  srunner_add_suite(sr, sbp_rtcm_suite());
+  srunner_add_suite(sr, utils_suite());
 
   srunner_set_fork_status(sr, CK_NOFORK);
   srunner_run_all(sr, CK_NORMAL);

@@ -433,15 +433,28 @@ static uint16_t rtcm3_encode_999_stgsv_base(
   return (*bit + 7) / 8;
 }
 
+static uint16_t rtcm3_encode_999_restart_base(
+    const rtcm_msg_999_restart *msg_999_restart,
+    uint8_t buff[],
+    uint16_t *bit) {
+  rtcm_setbitu(buff, *bit, 32, msg_999_restart->restart_mask);
+  *bit += 32;
+
+  /* Round number of bits up to nearest whole byte. */
+  return (*bit + 7) / 8;
+}
+
 uint16_t rtcm3_encode_999(const rtcm_msg_999 *msg_999, uint8_t buff[]) {
   assert(msg_999);
   uint16_t bit = 0;
   rtcm_setbitu(buff, bit, 12, 999);
   bit += 12;
-  rtcm_setbitu(buff, bit, 8, 28);
+  rtcm_setbitu(buff, bit, 8, msg_999->sub_type_id);
   bit += 8;
 
   switch (msg_999->sub_type_id) {
+    case RTCM_TESEOV_RESTART:
+      return rtcm3_encode_999_restart_base(&msg_999->data.restart, buff, &bit);
     case RTCM_TESEOV_STGSV:
       return rtcm3_encode_999_stgsv_base(&msg_999->data.stgsv, buff, &bit);
     default:

@@ -1,8 +1,6 @@
 swift_add_library(gnss_converters_extra
   SOURCES
     sbp_conv.c
-    sbp_rtcm3.c
-    sbp_rtcm3_ephemeris.c
   REMOVE_COMPILE_OPTIONS
     -pedantic
     -Wconversion

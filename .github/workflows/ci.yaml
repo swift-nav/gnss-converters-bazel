@@ -94,6 +94,11 @@ jobs:
             cmake: Unix Makefiles
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Windows Git Preamble
+        if: ${{ matrix.os == 'windows-2019' }}
+        run: |
+          git config --global core.compression 0
+
       - name: Checkout source
         uses: actions/checkout@v2
         with:

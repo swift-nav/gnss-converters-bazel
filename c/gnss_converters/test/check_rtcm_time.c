@@ -11,8 +11,8 @@
  */
 
 #include <check.h>
-#include <gnss-converters-extra/sbp_rtcm3.h>
 #include <gnss-converters/rtcm3_sbp.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/sbp.h>
 #include <libsbp/v4/observation.h>
 #include <math.h>
@@ -438,12 +438,12 @@ static void setup_example_glo_eph(uint16_t wn, uint32_t tow) {
   eph.iod = 4;
 
   gps_time_t time = {.wn = wn, .tow = tow};
-  double leap_seconds = get_gps_utc_offset(&time, NULL);
+  int8_t leap_seconds = (int8_t)get_gps_utc_offset(&time, NULL);
 
   iobuf_write_idx = 0;
   struct rtcm3_out_state state;
   sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-  sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+  sbp2rtcm_set_leap_second(&leap_seconds, &state);
   sbp2rtcm_sbp_glo_eph_cb(0x1000, &eph, &state);
   iobuf_read_idx = 0;
   iobuf_len = iobuf_write_idx;
@@ -1681,7 +1681,7 @@ START_TEST(test_strs_21) {
        ++i) {
     struct rtcm3_out_state state;
     sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_leap_second(&leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
     reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
@@ -1725,7 +1725,7 @@ START_TEST(test_strs_22) {
        ++i) {
     struct rtcm3_out_state state;
     sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_leap_second(&leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
     reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
@@ -1767,7 +1767,7 @@ START_TEST(test_strs_23) {
        ++i) {
     struct rtcm3_out_state state;
     sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_leap_second(&leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
     reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);
@@ -1825,7 +1825,7 @@ START_TEST(test_strs_24) {
        ++i) {
     struct rtcm3_out_state state;
     sbp2rtcm_init(&state, save_rtcm_to_iobuf, NULL);
-    sbp2rtcm_set_leap_second((u8)leap_seconds, &state);
+    sbp2rtcm_set_leap_second(&leap_seconds, &state);
     sbp2rtcm_set_rtcm_out_mode(legacy_options[i] ? MSM_UNKNOWN : MSM4, &state);
 
     reset_test_fixture_solved(init_wn, init_tow, &leap_seconds);

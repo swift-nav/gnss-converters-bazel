@@ -11,6 +11,8 @@ set(TEST_SOURCE_FILES
   check_options.c
   check_time_truth.c
   check_rtcm_time.c
+  check_sbp_rtcm.c
+  check_utils.c
   time_truth.cc
   )
 
@@ -18,7 +20,7 @@ swift_add_test(test-gnss-converters
   UNIT_TEST
   SRCS ${TEST_SOURCE_FILES}
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK gnss_converters gnss_converters_extra check Threads::Threads
+  LINK gnss_converters check Threads::Threads
   )
 
 swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)

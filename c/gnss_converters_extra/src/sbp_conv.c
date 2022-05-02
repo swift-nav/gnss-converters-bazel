@@ -12,7 +12,7 @@
 
 #include <assert.h>
 #include <gnss-converters-extra/sbp_conv.h>
-#include <gnss-converters-extra/sbp_rtcm3.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/sbp.h>
 #include <swiftnav/fifo_byte.h>
 #include <swiftnav/gnss_time.h>
@@ -36,8 +36,8 @@ sbp_conv_t sbp_conv_new(msm_enum msm_output_type) {
     fifo_init(&conv->fifo, conv->buf, sizeof(conv->buf));
     sbp2rtcm_init(&conv->state, sbp_conv_cb, &conv->fifo);
     gps_time_t gps_time = time2gps_t(time(NULL));
-    sbp2rtcm_set_leap_second((s8)rint(get_gps_utc_offset(&gps_time, NULL)),
-                             &conv->state);
+    int8_t leap_seconds = rint(get_gps_utc_offset(&gps_time, NULL));
+    sbp2rtcm_set_leap_second(&leap_seconds, &conv->state);
     sbp2rtcm_set_rcv_ant_descriptors(
         "NULL                ", "SWFT", &conv->state);
     sbp2rtcm_set_rtcm_out_mode(msm_output_type, &conv->state);

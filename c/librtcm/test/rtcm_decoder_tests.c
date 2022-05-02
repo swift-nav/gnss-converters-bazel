@@ -35,6 +35,8 @@ int main(void) {
   test_lock_time_decoding();
   test_rtcm_999_stgsv_en_de();
   test_rtcm_999_stgsv_de_en();
+  test_rtcm_999_restart_en_de();
+  test_rtcm_999_restart_de_en();
   test_rtcm_1001();
   test_rtcm_1002();
   test_rtcm_1003();
@@ -74,10 +76,10 @@ void set_valid(
   msg->sats[sat].obs[0].flags.fields.valid_lock = lock;
 }
 
-/* Test rtcm 999 stgsv massage encode -> decode */
+/* Test rtcm 999 stgsv message encode -> decode */
 void test_rtcm_999_stgsv_en_de() {
   rtcm_msg_999 msg_999 = {0};
-  msg_999.sub_type_id = 28;
+  msg_999.sub_type_id = RTCM_TESEOV_STGSV;
 
   msg_999.data.stgsv.tow_ms = 91743000;  // (0x15DF8C6<<2 | 0)
   msg_999.data.stgsv.constellation = 0;  // 0x0
@@ -150,7 +152,25 @@ void test_rtcm_999_stgsv_en_de() {
          msg999stgsv_equals(&msg_999.data.stgsv, &msg_999_out.data.stgsv));
 }
 
-/* Test rtcm 999 stgsv massage decode -> encode */
+/* Test rtcm 999 restart message encode -> decode */
+void test_rtcm_999_restart_en_de() {
+  rtcm_msg_999 msg_999 = {0};
+  msg_999.sub_type_id = RTCM_TESEOV_RESTART;
+
+  msg_999.data.restart.restart_mask = 5;
+
+  uint8_t buff[1024];
+  memset(buff, 0, 1024);
+  assert(rtcm3_encode_999(&msg_999, buff) == 7);
+
+  rtcm_msg_999 msg_999_out;
+  rtcm3_rc ret = rtcm3_decode_999(buff, &msg_999_out);
+
+  assert(RC_OK == ret && msg999restart_equals(&msg_999.data.restart,
+                                              &msg_999_out.data.restart));
+}
+
+/* Test rtcm 999 stgsv message decode -> encode */
 void test_rtcm_999_stgsv_de_en() {
   const uint8_t msg_999_payload[50] = {
       0x3e, 0x71, 0xc1, 0x5d, 0xf8, 0xc6, 0x00, 0x01, 0x2d, 0x09,
@@ -165,6 +185,22 @@ void test_rtcm_999_stgsv_de_en() {
 
   uint8_t msg_999_payload_ev[218];
   memset(msg_999_payload_ev, 0, 218);
+  rtcm3_encode_999(&msg_999, msg_999_payload_ev);
+
+  assert(payload_equals(
+      msg_999_payload, msg_999_payload_ev, sizeof(msg_999_payload)));
+}
+
+/* Test rtcm 999 restart message decode -> encode */
+void test_rtcm_999_restart_de_en() {
+  const uint8_t msg_999_payload[7] = {0x3e, 0x71, 0x00, 0x00, 0x00, 0x00, 0x50};
+
+  rtcm_msg_999 msg_999 = {0};
+  rtcm3_rc ret_de = rtcm3_decode_999(msg_999_payload, &msg_999);
+  assert(RC_OK == ret_de);
+
+  uint8_t msg_999_payload_ev[7];
+  memset(msg_999_payload_ev, 0, 7);
   rtcm3_encode_999(&msg_999, msg_999_payload_ev);
 
   assert(payload_equals(
@@ -1255,6 +1291,15 @@ bool msg999stgsv_equals(const rtcm_msg_999_stgsv *lhs,
     if (!msg999stgsv_fv_equals(&lhs->field_value[i], &rhs->field_value[i]))
       return false;
   }
+  return true;
+}
+
+bool msg999restart_equals(const rtcm_msg_999_restart *lhs,
+                          const rtcm_msg_999_restart *rhs) {
+  if (lhs->restart_mask != rhs->restart_mask) {
+    return false;
+  }
+
   return true;
 }
 

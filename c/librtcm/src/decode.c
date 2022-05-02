@@ -1657,6 +1657,12 @@ static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
+static rtcm3_rc rtcm3_decode_999_restart_base(
+    swiftnav_bitstream_t *buff, rtcm_msg_999_restart *msg_999_restart) {
+  BITSTREAM_DECODE_U32(buff, msg_999_restart->restart_mask, 32);
+  return RC_OK;
+}
+
 /** Decode 999 message
  *
  * \param buff The input data buffer
@@ -1677,6 +1683,8 @@ rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_bitstream_t *buff,
   }
 
   switch (msg_999->sub_type_id) {
+    case RTCM_TESEOV_RESTART:
+      return rtcm3_decode_999_restart_base(buff, &msg_999->data.restart);
     case RTCM_TESEOV_STGSV:
       return rtcm3_decode_999_stgsv_base(buff, &msg_999->data.stgsv);
     default:

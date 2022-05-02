@@ -22,7 +22,7 @@
 #include <swiftnav/gnss_time.h>
 #include <unistd.h>
 
-#include "gnss-converters-extra/sbp_rtcm3.h"
+#include <gnss-converters/sbp_rtcm3.h>
 
 typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
 typedef int32_t (*read_eof_fn_ptr)(void *);
@@ -87,8 +87,9 @@ int sbp2rtcm_main(int argc,
   double gps_utc_offset = get_gps_utc_offset(&noleapsec, NULL);
 
   struct rtcm3_out_state state;
+  int8_t leap_seconds = lrint(gps_utc_offset);
   sbp2rtcm_init(&state, sbp2rtcm_writefn, context);
-  sbp2rtcm_set_leap_second((s8)lrint(gps_utc_offset), &state);
+  sbp2rtcm_set_leap_second(&leap_seconds, &state);
 
   sbp_nodes_t sbp_nodes = {};
   sbp_state_t sbp_state;

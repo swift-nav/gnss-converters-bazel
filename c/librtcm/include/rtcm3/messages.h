@@ -463,10 +463,26 @@ typedef struct {
   rtcm_999_stgsv_fv field_value[RTCM_STGSV_SATELLITE_MASK_SIZE];
 } rtcm_msg_999_stgsv;
 
+#define RTCM_TESEOV_RST_DEL_ALM_BIT (1 << 0)
+#define RTCM_TESEOV_RST_DEL_EPH_BIT (1 << 1)
+#define RTCM_TESEOV_RST_DEL_USR_POS_BIT (1 << 2)
+#define RTCM_TESEOV_RST_INV_RTC_BIT (1 << 3)
+#define RTCM_TESEOV_RST_NVM_PG_SWP_BIT (1 << 4)
+#define RTCM_TESEOV_RST_DEL_UTC_NVM_BIT (1 << 5)
+#define RTCM_TESEOV_RST_DEL_ION_PRM_BIT (1 << 6)
+#define RTCM_TESEOV_RST_DEL_COD_BIAS_BIT (1 << 7)
+#define RTCM_TESEOV_RST_SFT_RST_BIT (1 << 31)
+
+/* Encodes RESTART message 999 subtype 16 */
+typedef struct {
+  uint32_t restart_mask; /* Restart mask (32) */
+} rtcm_msg_999_restart;
+
 typedef struct {
   uint8_t sub_type_id;
   union {
     rtcm_msg_999_stgsv stgsv;
+    rtcm_msg_999_restart restart;
   } data;
 } rtcm_msg_999;
 

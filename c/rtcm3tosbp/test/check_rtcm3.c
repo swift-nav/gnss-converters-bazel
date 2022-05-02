@@ -882,8 +882,9 @@ static void test_SBP(const char *filename,
                      gps_time_t current_time_,
                      msm_enum msm_type) {
   (void)current_time_;
+  const int8_t leap_seconds = 18;
   sbp2rtcm_init(&out_state, cb_sbp_to_rtcm, NULL);
-  sbp2rtcm_set_leap_second(18, &out_state);
+  sbp2rtcm_set_leap_second(&leap_seconds, &out_state);
 
   sbp2rtcm_set_rtcm_out_mode(msm_type, &out_state);
 
@@ -2046,7 +2047,7 @@ START_TEST(test_sbp_to_msm_roundtrip) {
   const int8_t leap_seconds = (int8_t)get_gps_utc_offset(&current_time, NULL);
 
   sbp2rtcm_init(&out_state, rtcm_roundtrip_cb, NULL);
-  sbp2rtcm_set_leap_second(18, &out_state);
+  sbp2rtcm_set_leap_second(&leap_seconds, &out_state);
 
   rtcm2sbp_init(&state, NULL, sbp_roundtrip_cb, NULL, &known_fcn);
   rtcm2sbp_set_time(&current_time, &leap_seconds, &state);

@@ -39,6 +39,8 @@ swift_add_library(gnss_converters
     rtcm3_sbp_ssr.c
     rtcm3_utils.c
     sbp_nmea.c
+    sbp_rtcm3.c
+    sbp_rtcm3_ephemeris.c
     time_truth_v2.cc
     ubx_ephemeris/bds.c
     ubx_ephemeris/gal.c
