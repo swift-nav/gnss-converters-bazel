@@ -67,8 +67,6 @@
 #define SBP_GLO_FCN_OFFSET 8
 #define SBP_GLO_FCN_UNKNOWN 0
 
-#define RTCM3_PREAMBLE 0xD3
-
 #define TIME_TRUTH_GPS_TIME_SEC_ALERT (1 * MINUTE_SECS)
 #define TIME_TRUTH_LEAP_SECOND_SEC_ALERT 1
 
@@ -180,8 +178,8 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
 void rtcm2sbp_decode_payload(const uint8_t *payload,
                              uint32_t payload_length,
                              struct rtcm3_sbp_state *state) {
-  swiftnav_bitstream_t bitstream;
-  swiftnav_bitstream_init(&bitstream, payload, payload_length * 8);
+  swiftnav_in_bitstream_t bitstream;
+  swiftnav_in_bitstream_init(&bitstream, payload, payload_length * 8);
 
   if (payload_length < 2) {
     return;
@@ -1471,14 +1469,14 @@ void send_sbp_log_message(const uint8_t level,
       rtcm_stn_to_sbp_sender_id(stn_id), SbpMsgLog, &msg, state->context);
 }
 
-void send_MSM_warning(const swiftnav_bitstream_t *bitstream,
+void send_MSM_warning(const swiftnav_in_bitstream_t *bitstream,
                       struct rtcm3_sbp_state *state) {
   if (!state->sent_msm_warning) {
     /* Only send 1 warning */
     state->sent_msm_warning = true;
     /* Get the stn ID as well */
     uint32_t stn_id = 0;
-    if (swiftnav_bitstream_getbitu(bitstream, &stn_id, 12, 24)) {
+    if (swiftnav_in_bitstream_getbitu(bitstream, &stn_id, 12, 24)) {
       uint8_t msg[39] = "MSM1-3 Messages currently not supported";
       send_sbp_log_message(
           RTCM_MSM_LOGGING_LEVEL, msg, sizeof(msg), stn_id, state);

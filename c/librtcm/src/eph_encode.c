@@ -11,229 +11,161 @@
  */
 
 #include "rtcm3/eph_encode.h"
+
 #include <assert.h>
+#include <encode_helpers.h>
 #include <string.h>
+
 #include "rtcm3/bits.h"
 
-uint16_t rtcm3_encode_gps_eph(const rtcm_msg_eph *msg_1019, uint8_t buff[]) {
-  assert(msg_1019);
-  uint16_t bit = 0;
-  rtcm_setbitu(buff, bit, 12, 1019);
-  bit += 12;
-  rtcm_setbitu(buff, bit, 6, msg_1019->sat_id);
-  bit += 6;
-  rtcm_setbitu(buff, bit, 10, msg_1019->wn);
-  bit += 10;
-  rtcm_setbitu(buff, bit, 4, msg_1019->ura);
-  bit += 4;
-  rtcm_setbitu(buff, bit, 2, msg_1019->data.kepler.codeL2);
-  bit += 2;
-  rtcm_setbits(buff, bit, 14, msg_1019->data.kepler.inc_dot);
-  bit += 14;
-  rtcm_setbitu(buff, bit, 8, msg_1019->data.kepler.iode);
-  bit += 8;
-  rtcm_setbitu(buff, bit, 16, msg_1019->toe);
-  bit += 16;
-  rtcm_setbits(buff, bit, 8, msg_1019->data.kepler.af2);
-  bit += 8;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.af1);
-  bit += 16;
-  rtcm_setbits(buff, bit, 22, msg_1019->data.kepler.af0);
-  bit += 22;
-  rtcm_setbitu(buff, bit, 10, msg_1019->data.kepler.iodc);
-  bit += 10;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.crs);
-  bit += 16;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.dn);
-  bit += 16;
-  rtcm_setbits(buff, bit, 32, msg_1019->data.kepler.m0);
-  bit += 32;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.cuc);
-  bit += 16;
-  rtcm_setbitu(buff, bit, 32, msg_1019->data.kepler.ecc);
-  bit += 32;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.cus);
-  bit += 16;
-  rtcm_setbitu(buff, bit, 32, msg_1019->data.kepler.sqrta);
-  bit += 32;
-  rtcm_setbitu(buff, bit, 16, msg_1019->data.kepler.toc);
-  bit += 16;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.cic);
-  bit += 16;
-  rtcm_setbits(buff, bit, 32, msg_1019->data.kepler.omega0);
-  bit += 32;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.cis);
-  bit += 16;
-  rtcm_setbits(buff, bit, 32, msg_1019->data.kepler.inc);
-  bit += 32;
-  rtcm_setbits(buff, bit, 16, msg_1019->data.kepler.crc);
-  bit += 16;
-  rtcm_setbits(buff, bit, 32, msg_1019->data.kepler.w);
-  bit += 32;
-  rtcm_setbits(buff, bit, 24, msg_1019->data.kepler.omegadot);
-  bit += 24;
-  rtcm_setbits(buff, bit, 8, msg_1019->data.kepler.tgd.gps_s);
-  bit += 8;
-  rtcm_setbitu(buff, bit, 6, msg_1019->health_bits);
-  bit += 6;
-  rtcm_setbitu(buff, bit, 1, msg_1019->data.kepler.L2_data_bit);
-  bit += 1;
-  rtcm_setbitu(buff, bit, 1, msg_1019->fit_interval);
-  bit += 1;
+rtcm3_rc rtcm3_encode_gps_eph_bitstream(swiftnav_out_bitstream_t *buff,
+                                        const rtcm_msg_eph *msg_1019) {
+  assert(buff);
+  const uint32_t MSG_NUM = 1019;
+  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
+  BITSTREAM_ENCODE_U8(buff, msg_1019->sat_id, 6);
+  BITSTREAM_ENCODE_U16(buff, msg_1019->wn, 10);
+  BITSTREAM_ENCODE_U16(buff, msg_1019->ura, 4);
+  BITSTREAM_ENCODE_U8(buff, msg_1019->data.kepler.codeL2, 2);
+  BITSTREAM_ENCODE_S16(buff, msg_1019->data.kepler.inc_dot, 14);
+  BITSTREAM_ENCODE_U16(buff, msg_1019->data.kepler.iode, 8);
+  BITSTREAM_ENCODE_U32(buff, msg_1019->toe, 16);
+  BITSTREAM_ENCODE_S16(buff, msg_1019->data.kepler.af2, 8);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.af1, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.af0, 22);
+  BITSTREAM_ENCODE_U16(buff, msg_1019->data.kepler.iodc, 10);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.crs, 16);
+  BITSTREAM_ENCODE_S16(buff, msg_1019->data.kepler.dn, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.m0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.cuc, 16);
+  BITSTREAM_ENCODE_U32(buff, msg_1019->data.kepler.ecc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.cus, 16);
+  BITSTREAM_ENCODE_U32(buff, msg_1019->data.kepler.sqrta, 32);
+  BITSTREAM_ENCODE_U32(buff, msg_1019->data.kepler.toc, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.cic, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.omega0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.cis, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.inc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.crc, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.w, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.omegadot, 24);
+  BITSTREAM_ENCODE_S32(buff, msg_1019->data.kepler.tgd.gps_s, 8);
+  BITSTREAM_ENCODE_U8(buff, msg_1019->health_bits, 6);
+  BITSTREAM_ENCODE_U8(buff, msg_1019->data.kepler.L2_data_bit, 1);
+  BITSTREAM_ENCODE_U32(buff, msg_1019->fit_interval, 1);
 
-  /* Round number of bits up to nearest whole byte. */
-  return (bit + 7) / 8;
+  return RC_OK;
 }
 
-uint16_t rtcm3_encode_glo_eph(const rtcm_msg_eph *msg_1020, uint8_t buff[]) {
+rtcm3_rc rtcm3_encode_glo_eph_bitstream(swiftnav_out_bitstream_t *buff,
+                                        const rtcm_msg_eph *msg_1020) {
   assert(msg_1020);
-  uint16_t bit = 0;
-  rtcm_setbitu(buff, bit, 12, 1020);
-  bit += 12;
-  rtcm_setbitu(buff, bit, 6, msg_1020->sat_id);
-  bit += 6;
-  rtcm_setbitu(buff, bit, 5, msg_1020->data.glo.fcn);
-  bit += 5;
-  // Almanac health
-  rtcm_setbitu(buff, bit, 1, 1);
-  bit += 1;
-  // Almanac health availability
-  rtcm_setbitu(buff, bit, 1, 0);
-  bit += 1;
-  rtcm_setbitu(buff, bit, 2, msg_1020->fit_interval);
-  bit += 2;
-  // T_k
-  rtcm_setbitu(buff, bit, 12, 0);
-  bit += 12;
-  rtcm_setbitu(buff, bit, 1, msg_1020->health_bits);
-  bit += 1;
-  // P2
-  rtcm_setbitu(buff, bit, 1, 0);
-  bit += 1;
-  rtcm_setbitu(buff, bit, 7, msg_1020->data.glo.t_b);
-  bit += 7;
-  rtcm_set_sign_magnitude_bit(buff, bit, 24, msg_1020->data.glo.vel[0]);
-  bit += 24;
-  rtcm_set_sign_magnitude_bit(buff, bit, 27, msg_1020->data.glo.pos[0]);
-  bit += 27;
-  rtcm_set_sign_magnitude_bit(buff, bit, 5, msg_1020->data.glo.acc[0]);
-  bit += 5;
-  rtcm_set_sign_magnitude_bit(buff, bit, 24, msg_1020->data.glo.vel[1]);
-  bit += 24;
-  rtcm_set_sign_magnitude_bit(buff, bit, 27, msg_1020->data.glo.pos[1]);
-  bit += 27;
-  rtcm_set_sign_magnitude_bit(buff, bit, 5, msg_1020->data.glo.acc[1]);
-  bit += 5;
-  rtcm_set_sign_magnitude_bit(buff, bit, 24, msg_1020->data.glo.vel[2]);
-  bit += 24;
-  rtcm_set_sign_magnitude_bit(buff, bit, 27, msg_1020->data.glo.pos[2]);
-  bit += 27;
-  rtcm_set_sign_magnitude_bit(buff, bit, 5, msg_1020->data.glo.acc[2]);
-  bit += 5;
-  // P3
-  rtcm_setbitu(buff, bit, 1, 0);
-  bit += 1;
-  rtcm_set_sign_magnitude_bit(buff, bit, 11, msg_1020->data.glo.gamma);
-  bit += 11;
-  // P
-  rtcm_setbitu(buff, bit, 2, 0);
-  bit += 2;
-  rtcm_setbitu(buff, bit, 1, msg_1020->health_bits);
-  bit += 1;
-  rtcm_set_sign_magnitude_bit(buff, bit, 22, msg_1020->data.glo.tau);
-  bit += 22;
-  rtcm_set_sign_magnitude_bit(buff, bit, 5, msg_1020->data.glo.d_tau);
-  bit += 5;
-  // EN
-  rtcm_setbitu(buff, bit, 5, 0);
-  bit += 5;
-  // P4
-  rtcm_setbitu(buff, bit, 1, 0);
-  bit += 1;
-  rtcm_setbitu(buff, bit, 4, msg_1020->ura);
-  bit += 4;
-  // NT
-  rtcm_setbitu(buff, bit, 11, 0);
-  bit += 11;
-  // M
-  rtcm_setbitu(buff, bit, 2, 0);
-  bit += 2;
-  // Additional data
-  rtcm_setbitu(buff, bit, 32, 0);
-  bit += 32;
-  rtcm_setbitu(buff, bit, 32, 0);
-  bit += 32;
-  rtcm_setbitu(buff, bit, 15, 0);
-  bit += 15;
+  rtcm3_rc ret = RC_OK;
 
-  /* Round number of bits up to nearest whole byte. */
-  return (bit + 7) / 8;
+  const uint32_t MSG_NUM = 1020;
+  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
+  BITSTREAM_ENCODE_U8(buff, msg_1020->sat_id, 6);
+  BITSTREAM_ENCODE_U8(buff, msg_1020->data.glo.fcn, 5);
+  // Almanac health
+  BITSTREAM_ENCODE_U32(buff, (uint32_t)1, 1);
+  // Almanac health availability
+  BITSTREAM_ENCODE_U32(buff, 0, 1);
+  BITSTREAM_ENCODE_U32(buff, msg_1020->fit_interval, 2);
+  // T_k
+  BITSTREAM_ENCODE_U32(buff, 0, 12);
+  BITSTREAM_ENCODE_U8(buff, msg_1020->health_bits, 1);
+  // P2
+  BITSTREAM_ENCODE_U32(buff, 0, 1);
+  BITSTREAM_ENCODE_U8(buff, msg_1020->data.glo.t_b, 7);
+
+  for (size_t i = 0; i < 3; i++) {
+    ret =
+        rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.vel[i], 24);
+    if (ret != RC_OK) {
+      return ret;
+    }
+    ret =
+        rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.pos[i], 27);
+    if (ret != RC_OK) {
+      return ret;
+    }
+    ret = rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.acc[i], 5);
+    if (ret != RC_OK) {
+      return ret;
+    }
+  }
+  // P3
+  BITSTREAM_ENCODE_U32(buff, 0, 1);
+  ret = rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.gamma, 11);
+  if (ret != RC_OK) {
+    return ret;
+  }
+  // P
+  BITSTREAM_ENCODE_U32(buff, 0, 2);
+  BITSTREAM_ENCODE_U8(buff, msg_1020->health_bits, 1);
+  ret = rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.tau, 22);
+  if (ret != RC_OK) {
+    return ret;
+  }
+  ret = rtcm_set_sign_magnitude_bitstream(buff, msg_1020->data.glo.d_tau, 5);
+  if (ret != RC_OK) {
+    return ret;
+  }
+  // EN
+  BITSTREAM_ENCODE_U32(buff, 0, 5);
+  // P4
+  BITSTREAM_ENCODE_U32(buff, 0, 1);
+  BITSTREAM_ENCODE_U16(buff, msg_1020->ura, 4);
+  // NT
+  BITSTREAM_ENCODE_U32(buff, 0, 11);
+  // M
+  BITSTREAM_ENCODE_U32(buff, 0, 2);
+  // Additional data
+  BITSTREAM_ENCODE_U32(buff, 0, 32);
+  BITSTREAM_ENCODE_U32(buff, 0, 32);
+  BITSTREAM_ENCODE_U32(buff, 0, 15);
+
+  return RC_OK;
 }
 
-uint16_t rtcm3_encode_bds_eph(const rtcm_msg_eph *msg_1042, uint8_t buff[]) {
-  assert(msg_1042);
-  uint16_t bit = 0;
-  rtcm_setbitu(buff, bit, 12, 1042);
-  bit += 12;
-  rtcm_setbitu(buff, bit, 6, msg_1042->sat_id);
-  bit += 6;
-  rtcm_setbitu(buff, bit, 13, msg_1042->wn);
-  bit += 13;
-  rtcm_setbitu(buff, bit, 4, msg_1042->ura);
-  bit += 4;
-  rtcm_setbits(buff, bit, 14, msg_1042->data.kepler.inc_dot);
-  bit += 14;
-  rtcm_setbitu(buff, bit, 5, msg_1042->data.kepler.iode);
-  bit += 5;
-  rtcm_setbitu(buff, bit, 17, msg_1042->data.kepler.toc);
-  bit += 17;
-  rtcm_setbits(buff, bit, 11, msg_1042->data.kepler.af2);
-  bit += 11;
-  rtcm_setbits(buff, bit, 22, msg_1042->data.kepler.af1);
-  bit += 22;
-  rtcm_setbits(buff, bit, 24, msg_1042->data.kepler.af0);
-  bit += 24;
-  rtcm_setbitu(buff, bit, 5, msg_1042->data.kepler.iodc);
-  bit += 5;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.crs);
-  bit += 18;
-  rtcm_setbits(buff, bit, 16, msg_1042->data.kepler.dn);
-  bit += 16;
-  rtcm_setbits(buff, bit, 32, msg_1042->data.kepler.m0);
-  bit += 32;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.cuc);
-  bit += 18;
-  rtcm_setbitu(buff, bit, 32, msg_1042->data.kepler.ecc);
-  bit += 32;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.cus);
-  bit += 18;
-  rtcm_setbitu(buff, bit, 32, msg_1042->data.kepler.sqrta);
-  bit += 32;
-  rtcm_setbitu(buff, bit, 17, msg_1042->toe);
-  bit += 17;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.cic);
-  bit += 18;
-  rtcm_setbits(buff, bit, 32, msg_1042->data.kepler.omega0);
-  bit += 32;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.cis);
-  bit += 18;
-  rtcm_setbits(buff, bit, 32, msg_1042->data.kepler.inc);
-  bit += 32;
-  rtcm_setbits(buff, bit, 18, msg_1042->data.kepler.crc);
-  bit += 18;
-  rtcm_setbits(buff, bit, 32, msg_1042->data.kepler.w);
-  bit += 32;
-  rtcm_setbits(buff, bit, 24, msg_1042->data.kepler.omegadot);
-  bit += 24;
-  rtcm_setbits(buff, bit, 10, msg_1042->data.kepler.tgd.bds_s[0]);
-  bit += 10;
-  rtcm_setbits(buff, bit, 10, msg_1042->data.kepler.tgd.bds_s[1]);
-  bit += 10;
-  rtcm_setbitu(buff, bit, 1, msg_1042->health_bits);
-  bit += 1;
+rtcm3_rc rtcm3_encode_bds_eph_bitstream(swiftnav_out_bitstream_t *buff,
+                                        const rtcm_msg_eph *msg_1042) {
+  assert(buff);
 
-  /* Round number of bits up to nearest whole byte. */
-  return (bit + 7) / 8;
+  const uint32_t MSG_NUM = 1042;
+  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
+  BITSTREAM_ENCODE_U8(buff, msg_1042->sat_id, 6);
+  BITSTREAM_ENCODE_U16(buff, msg_1042->wn, 13);
+  BITSTREAM_ENCODE_U16(buff, msg_1042->ura, 4);
+  BITSTREAM_ENCODE_S16(buff, msg_1042->data.kepler.inc_dot, 14);
+  BITSTREAM_ENCODE_U16(buff, msg_1042->data.kepler.iode, 5);
+  BITSTREAM_ENCODE_U32(buff, msg_1042->data.kepler.toc, 17);
+  BITSTREAM_ENCODE_S16(buff, msg_1042->data.kepler.af2, 11);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.af1, 22);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.af0, 24);
+  BITSTREAM_ENCODE_U16(buff, msg_1042->data.kepler.iodc, 5);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.crs, 18);
+  BITSTREAM_ENCODE_S16(buff, msg_1042->data.kepler.dn, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.m0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.cuc, 18);
+  BITSTREAM_ENCODE_U32(buff, msg_1042->data.kepler.ecc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.cus, 18);
+  BITSTREAM_ENCODE_U32(buff, msg_1042->data.kepler.sqrta, 32);
+  BITSTREAM_ENCODE_U32(buff, msg_1042->toe, 17);
+
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.cic, 18);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.omega0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.cis, 18);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.inc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.crc, 18);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.w, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.omegadot, 24);
+
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.tgd.bds_s[0], 10);
+  BITSTREAM_ENCODE_S32(buff, msg_1042->data.kepler.tgd.bds_s[1], 10);
+  BITSTREAM_ENCODE_U8(buff, msg_1042->health_bits, 1);
+
+  return RC_OK;
 }
 
 /** Decode an RTCMv3 GAL (common part) Ephemeris Message
@@ -242,58 +174,36 @@ uint16_t rtcm3_encode_bds_eph(const rtcm_msg_eph *msg_1042, uint8_t buff[]) {
  * \param msg_eph RTCM message struct
  * \return bit position in the RTCM frame
  */
-static void rtcm3_encode_gal_eph_common(const rtcm_msg_eph *msg_eph,
-                                        uint8_t buff[],
-                                        uint16_t *bit) {
-  assert(msg_eph);
-  rtcm_setbitu(buff, *bit, 6, msg_eph->sat_id);
-  *bit += 6;
-  rtcm_setbitu(buff, *bit, 12, msg_eph->wn);
-  *bit += 12;
-  rtcm_setbitu(buff, *bit, 10, msg_eph->data.kepler.iode);
-  *bit += 10;
-  rtcm_setbitu(buff, *bit, 8, msg_eph->ura);
-  *bit += 8;
-  rtcm_setbits(buff, *bit, 14, msg_eph->data.kepler.inc_dot);
-  *bit += 14;
-  rtcm_setbitu(buff, *bit, 14, msg_eph->data.kepler.toc);
-  *bit += 14;
-  rtcm_setbits(buff, *bit, 6, msg_eph->data.kepler.af2);
-  *bit += 6;
-  rtcm_setbits(buff, *bit, 21, msg_eph->data.kepler.af1);
-  *bit += 21;
-  rtcm_setbits(buff, *bit, 31, msg_eph->data.kepler.af0);
-  *bit += 31;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.crs);
-  *bit += 16;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.dn);
-  *bit += 16;
-  rtcm_setbits(buff, *bit, 32, msg_eph->data.kepler.m0);
-  *bit += 32;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.cuc);
-  *bit += 16;
-  rtcm_setbitu(buff, *bit, 32, msg_eph->data.kepler.ecc);
-  *bit += 32;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.cus);
-  *bit += 16;
-  rtcm_setbitu(buff, *bit, 32, msg_eph->data.kepler.sqrta);
-  *bit += 32;
-  rtcm_setbitu(buff, *bit, 14, msg_eph->toe);
-  *bit += 14;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.cic);
-  *bit += 16;
-  rtcm_setbits(buff, *bit, 32, msg_eph->data.kepler.omega0);
-  *bit += 32;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.cis);
-  *bit += 16;
-  rtcm_setbits(buff, *bit, 32, msg_eph->data.kepler.inc);
-  *bit += 32;
-  rtcm_setbits(buff, *bit, 16, msg_eph->data.kepler.crc);
-  *bit += 16;
-  rtcm_setbits(buff, *bit, 32, msg_eph->data.kepler.w);
-  *bit += 32;
-  rtcm_setbits(buff, *bit, 24, msg_eph->data.kepler.omegadot);
-  *bit += 24;
+static rtcm3_rc rtcm3_encode_gal_eph_common_bitstream(
+    swiftnav_out_bitstream_t *buff, const rtcm_msg_eph *msg_eph) {
+  assert(buff);
+
+  BITSTREAM_ENCODE_U8(buff, msg_eph->sat_id, 6);
+  BITSTREAM_ENCODE_U16(buff, msg_eph->wn, 12);
+  BITSTREAM_ENCODE_U16(buff, msg_eph->data.kepler.iode, 10);
+  BITSTREAM_ENCODE_U16(buff, msg_eph->ura, 8);
+  BITSTREAM_ENCODE_S16(buff, msg_eph->data.kepler.inc_dot, 14);
+  BITSTREAM_ENCODE_U32(buff, msg_eph->data.kepler.toc, 14);
+  BITSTREAM_ENCODE_S16(buff, msg_eph->data.kepler.af2, 6);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.af1, 21);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.af0, 31);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.crs, 16);
+  BITSTREAM_ENCODE_S16(buff, msg_eph->data.kepler.dn, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.m0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.cuc, 16);
+  BITSTREAM_ENCODE_U32(buff, msg_eph->data.kepler.ecc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.cus, 16);
+  BITSTREAM_ENCODE_U32(buff, msg_eph->data.kepler.sqrta, 32);
+  BITSTREAM_ENCODE_U32(buff, msg_eph->toe, 14);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.cic, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.omega0, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.cis, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.inc, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.crc, 16);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.w, 32);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.omegadot, 24);
+
+  return RC_OK;
 }
 
 /** Decode an RTCMv3 GAL (I/NAV message) Ephemeris Message
@@ -303,29 +213,23 @@ static void rtcm3_encode_gal_eph_common(const rtcm_msg_eph *msg_eph,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-uint16_t rtcm3_encode_gal_eph_inav(const rtcm_msg_eph *msg_eph,
-                                   uint8_t buff[]) {
-  assert(msg_eph);
+rtcm3_rc rtcm3_encode_gal_eph_inav_bitstream(swiftnav_out_bitstream_t *buff,
+                                             const rtcm_msg_eph *msg_eph) {
+  assert(buff);
 
-  uint16_t bit = 0;
-  rtcm_setbitu(buff, bit, 12, 1046);
-  bit += 12;
-
+  const uint32_t MSG_NUM = 1046;
+  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
   /* parse common I/NAV and F/NAV part */
-  rtcm3_encode_gal_eph_common(msg_eph, buff, &bit);
-
-  rtcm_setbits(buff, bit, 10, msg_eph->data.kepler.tgd.gal_s[0]);
-  bit += 10;
-  rtcm_setbits(buff, bit, 10, msg_eph->data.kepler.tgd.gal_s[1]);
-  bit += 10;
-  rtcm_setbits(buff, bit, 6, msg_eph->health_bits);
-  bit += 6;
+  rtcm3_rc ret = rtcm3_encode_gal_eph_common_bitstream(buff, msg_eph);
+  if (ret != RC_OK) {
+    return ret;
+  }
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.tgd.gal_s[0], 10);
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.tgd.gal_s[1], 10);
+  BITSTREAM_ENCODE_S8(buff, msg_eph->health_bits, 6);
   /* reserved */
-  rtcm_setbits(buff, bit, 2, 0);
-  bit += 2;
-
-  /* Round number of bits up to nearest whole byte. */
-  return (bit + 7) / 8;
+  BITSTREAM_ENCODE_U32(buff, 0, 2);
+  return RC_OK;
 }
 
 /** Decode an RTCMv3 GAL (F/NAV message) Ephemeris Message
@@ -335,25 +239,20 @@ uint16_t rtcm3_encode_gal_eph_inav(const rtcm_msg_eph *msg_eph,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-uint16_t rtcm3_encode_gal_eph_fnav(const rtcm_msg_eph *msg_eph,
-                                   uint8_t buff[]) {
-  assert(msg_eph);
+rtcm3_rc rtcm3_encode_gal_eph_fnav_bitstream(swiftnav_out_bitstream_t *buff,
+                                             const rtcm_msg_eph *msg_eph) {
+  assert(buff);
 
-  uint16_t bit = 0;
-  rtcm_setbitu(buff, bit, 12, 1045);
-  bit += 12;
-
-  /* parse common F/NAV and I/NAV part */
-  rtcm3_encode_gal_eph_common(msg_eph, buff, &bit);
-
-  rtcm_setbits(buff, bit, 10, msg_eph->data.kepler.tgd.gal_s[0]);
-  bit += 10;
-  rtcm_setbits(buff, bit, 3, msg_eph->health_bits);
-  bit += 3;
+  const uint32_t MSG_NUM = 1045;
+  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
+  rtcm3_rc ret = rtcm3_encode_gal_eph_common_bitstream(buff, msg_eph);
+  if (ret != RC_OK) {
+    return ret;
+  }
+  BITSTREAM_ENCODE_S32(buff, msg_eph->data.kepler.tgd.gal_s[0], 10);
+  BITSTREAM_ENCODE_S8(buff, msg_eph->health_bits, 3);
   /* reserved */
-  rtcm_setbits(buff, bit, 7, 0);
-  bit += 7;
+  BITSTREAM_ENCODE_U32(buff, 0, 7);
 
-  /* Round number of bits up to nearest whole byte. */
-  return (bit + 7) / 8;
+  return RC_OK;
 }

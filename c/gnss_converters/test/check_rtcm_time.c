@@ -37,7 +37,6 @@
 #include "time_truth.h"
 
 #define GPS_TOW_TOLERANCE 1e-4
-#define RTCM3_PREAMBLE 0xD3
 
 static uint8_t iobuf[4096];
 static size_t iobuf_read_idx = 0;

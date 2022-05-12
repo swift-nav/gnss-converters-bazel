@@ -19,7 +19,6 @@
 /* rtcm helper defines and functions */
 
 #define MAX_FILE_SIZE 2337772
-#define RTCM3_PREAMBLE 0xD3
 
 #define FLOAT_EPS 1e-6
 #define GLO_SATELLITE_POSITION_EPS_METERS 1e-3

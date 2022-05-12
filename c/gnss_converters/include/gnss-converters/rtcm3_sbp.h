@@ -40,12 +40,6 @@ extern "C" {
 #define INVALID_TIME 0xFFFF
 #define MAX_WN (INT16_MAX)
 
-#define RTCM3_MSG_OVERHEAD 6
-#define RTCM3_MAX_MSG_LEN 1023
-#define RTCM3_FIFO_SIZE 4096
-#define RTCM3_BUFFER_SIZE \
-  (RTCM3_FIFO_SIZE - RTCM3_MSG_OVERHEAD - RTCM3_MAX_MSG_LEN)
-
 #define IS_POWER_OF_TWO(x) (0 == ((x) & ((x)-1)))
 
 typedef enum {

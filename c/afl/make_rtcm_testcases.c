@@ -7,8 +7,6 @@
 
 #include "make_afl_testcases.h"
 
-#define RTCM3_PREAMBLE 0xD3
-
 static uint8_t output_buf[4096];
 static uint16_t output_buf_len = 0;
 

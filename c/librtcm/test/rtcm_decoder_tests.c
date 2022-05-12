@@ -23,7 +23,6 @@
 #include "rtcm3/encode.h"
 #include "rtcm3/eph_decode.h"
 #include "rtcm3/eph_encode.h"
-#include "rtcm3/messages.h"
 #include "rtcm3/msm_utils.h"
 
 #define LIBRTCM_LOG_INTERNAL
@@ -87,62 +86,26 @@ void test_rtcm_999_stgsv_en_de() {
   msg_999.data.stgsv.mul_msg_ind = true;
   msg_999.data.stgsv.n_sat = 9;
 
-  msg_999.data.stgsv.field_value[0].sat_id = 10;
-  msg_999.data.stgsv.field_value[0].el = 47;
-  msg_999.data.stgsv.field_value[0].az = 305;
-  msg_999.data.stgsv.field_value[0].cn0_b1 = 23;
-  msg_999.data.stgsv.field_value[0].cn0_b2 = 0xFF;
+  int16_t field_value[9][5] = {{10, 47, 305, 23, 255},
+                               {13, 16, 134, 26, 255},
+                               {15, 38, 110, 255, 255},
+                               {16, 29, 254, 255, 255},
+                               {18, 62, 136, 20, 255},
+                               {23, 82, 265, 16, 255},
+                               {26, 25, 296, 255, 255},
+                               {27, 21, 224, 255, 255},
+                               {29, 31, 38, 47, 255}};
 
-  msg_999.data.stgsv.field_value[1].sat_id = 13;
-  msg_999.data.stgsv.field_value[1].el = 16;
-  msg_999.data.stgsv.field_value[1].az = 134;
-  msg_999.data.stgsv.field_value[1].cn0_b1 = 26;
-  msg_999.data.stgsv.field_value[1].cn0_b2 = 0xFF;
+  for (size_t i = 0; i < msg_999.data.stgsv.n_sat; i++) {
+    msg_999.data.stgsv.field_value[i].sat_id = (uint8_t)field_value[i][0];
+    msg_999.data.stgsv.field_value[i].el = (int8_t)field_value[i][1];
+    msg_999.data.stgsv.field_value[i].az = (uint16_t)field_value[i][2];
+    msg_999.data.stgsv.field_value[i].cn0_b1 = (uint8_t)field_value[i][3];
+    msg_999.data.stgsv.field_value[i].cn0_b2 = (uint8_t)field_value[i][4];
+  }
 
-  msg_999.data.stgsv.field_value[2].sat_id = 15;
-  msg_999.data.stgsv.field_value[2].el = 38;
-  msg_999.data.stgsv.field_value[2].az = 110;
-  msg_999.data.stgsv.field_value[2].cn0_b1 = 0xFF;
-  msg_999.data.stgsv.field_value[2].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[3].sat_id = 16;
-  msg_999.data.stgsv.field_value[3].el = 29;
-  msg_999.data.stgsv.field_value[3].az = 254;
-  msg_999.data.stgsv.field_value[3].cn0_b1 = 0xFF;
-  msg_999.data.stgsv.field_value[3].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[4].sat_id = 18;
-  msg_999.data.stgsv.field_value[4].el = 62;
-  msg_999.data.stgsv.field_value[4].az = 136;
-  msg_999.data.stgsv.field_value[4].cn0_b1 = 20;
-  msg_999.data.stgsv.field_value[4].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[5].sat_id = 23;
-  msg_999.data.stgsv.field_value[5].el = 82;
-  msg_999.data.stgsv.field_value[5].az = 265;
-  msg_999.data.stgsv.field_value[5].cn0_b1 = 16;
-  msg_999.data.stgsv.field_value[5].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[6].sat_id = 26;
-  msg_999.data.stgsv.field_value[6].el = 25;
-  msg_999.data.stgsv.field_value[6].az = 296;
-  msg_999.data.stgsv.field_value[6].cn0_b1 = 0xFF;
-  msg_999.data.stgsv.field_value[6].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[7].sat_id = 27;
-  msg_999.data.stgsv.field_value[7].el = 21;
-  msg_999.data.stgsv.field_value[7].az = 224;
-  msg_999.data.stgsv.field_value[7].cn0_b1 = 0xFF;
-  msg_999.data.stgsv.field_value[7].cn0_b2 = 0xFF;
-
-  msg_999.data.stgsv.field_value[8].sat_id = 29;
-  msg_999.data.stgsv.field_value[8].el = 31;
-  msg_999.data.stgsv.field_value[8].az = 38;
-  msg_999.data.stgsv.field_value[8].cn0_b1 = 47;
-  msg_999.data.stgsv.field_value[8].cn0_b2 = 0xFF;
-
-  uint8_t buff[218];
-  memset(buff, 0, 218);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_999(&msg_999, buff);
 
   rtcm_msg_999 msg_999_out;
@@ -159,8 +122,8 @@ void test_rtcm_999_restart_en_de() {
 
   msg_999.data.restart.restart_mask = 5;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   assert(rtcm3_encode_999(&msg_999, buff) == 7);
 
   rtcm_msg_999 msg_999_out;
@@ -184,7 +147,7 @@ void test_rtcm_999_stgsv_de_en() {
   assert(RC_OK == ret_de);
 
   uint8_t msg_999_payload_ev[218];
-  memset(msg_999_payload_ev, 0, 218);
+  memset(msg_999_payload_ev, 0, sizeof(msg_999_payload_ev));
   rtcm3_encode_999(&msg_999, msg_999_payload_ev);
 
   assert(payload_equals(
@@ -200,7 +163,7 @@ void test_rtcm_999_restart_de_en() {
   assert(RC_OK == ret_de);
 
   uint8_t msg_999_payload_ev[7];
-  memset(msg_999_payload_ev, 0, 7);
+  memset(msg_999_payload_ev, 0, sizeof(msg_999_payload_ev));
   rtcm3_encode_999(&msg_999, msg_999_payload_ev);
 
   assert(payload_equals(
@@ -241,12 +204,12 @@ void test_rtcm_1001(void) {
   msg1001.sats[2].obs[0].lock = 254;
   set_valid(&msg1001, 2, 1, 0, 0);
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1001(&msg1001, buff);
 
   rtcm_obs_message msg1001_out;
-  int8_t ret = rtcm3_decode_1001(buff, &msg1001_out);
+  rtcm3_rc ret = rtcm3_decode_1001(buff, &msg1001_out);
 
   assert(RC_OK == ret && msgobs_equals(&msg1001, &msg1001_out));
 }
@@ -291,12 +254,12 @@ void test_rtcm_1002(void) {
   msg1002.sats[2].obs[0].cnr = 50.2;
   msg1002.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1002(&msg1002, buff);
 
   rtcm_obs_message msg1002_out;
-  int8_t ret = rtcm3_decode_1002(buff, &msg1002_out);
+  rtcm3_rc ret = rtcm3_decode_1002(buff, &msg1002_out);
 
   assert(RC_OK == ret && msgobs_equals(&msg1002, &msg1002_out));
 }
@@ -345,12 +308,12 @@ void test_rtcm_1003(void) {
   msg1003.sats[2].obs[0].cnr = 50.2;
   msg1003.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1003(&msg1003, buff);
 
   rtcm_obs_message msg1003_out;
-  int8_t ret = rtcm3_decode_1003(buff, &msg1003_out);
+  rtcm3_rc ret = rtcm3_decode_1003(buff, &msg1003_out);
 
   assert(RC_OK == ret && msgobs_equals(&msg1003, &msg1003_out));
 }
@@ -437,12 +400,12 @@ void test_rtcm_1004(void) {
   msg1004.sats[4].obs[1].pseudorange = 22000024.4;
   msg1004.sats[4].obs[1].carrier_phase = 80086422.236; /* divergent phase */
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1004(&msg1004, buff);
 
   rtcm_obs_message msg1004_out;
-  int8_t ret = rtcm3_decode_1004(buff, &msg1004_out);
+  rtcm3_rc ret = rtcm3_decode_1004(buff, &msg1004_out);
 
   assert(RC_OK == ret && msgobs_equals(&msg1004, &msg1004_out));
 }
@@ -462,12 +425,12 @@ void test_rtcm_1005(void) {
   msg1005.arp_y = -5578346.5578;
   msg1005.arp_z = 2578346.6757;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1005(&msg1005, buff);
 
   rtcm_msg_1005 msg1005_out;
-  int8_t ret = rtcm3_decode_1005(buff, &msg1005_out);
+  rtcm3_rc ret = rtcm3_decode_1005(buff, &msg1005_out);
 
   assert(RC_OK == ret && msg1005_equals(&msg1005, &msg1005_out));
 }
@@ -488,12 +451,12 @@ void test_rtcm_1006(void) {
   msg1006.msg_1005.arp_z = 2578376.6757;
   msg1006.ant_height = 1.567;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1006(&msg1006, buff);
 
   rtcm_msg_1006 msg1006_out;
-  int8_t ret = rtcm3_decode_1006(buff, &msg1006_out);
+  rtcm3_rc ret = rtcm3_decode_1006(buff, &msg1006_out);
 
   assert(RC_OK == ret && msg1006_equals(&msg1006, &msg1006_out));
 }
@@ -506,12 +469,12 @@ void test_rtcm_1007(void) {
   strcpy(msg1007.ant_descriptor, "Something with 29 characters.");
   msg1007.ant_setup_id = 254;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1007(&msg1007, buff);
 
   rtcm_msg_1007 msg1007_out;
-  int8_t ret = rtcm3_decode_1007(buff, &msg1007_out);
+  rtcm3_rc ret = rtcm3_decode_1007(buff, &msg1007_out);
 
   assert(RC_OK == ret && msg1007_equals(&msg1007, &msg1007_out));
 }
@@ -526,12 +489,12 @@ void test_rtcm_1008(void) {
   msg1008.ant_serial_num_counter = 9;
   strncpy(msg1008.ant_serial_num, "123456789", 32);
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1008(&msg1008, buff);
 
   rtcm_msg_1008 msg1008_out;
-  int8_t ret = rtcm3_decode_1008(buff, &msg1008_out);
+  rtcm3_rc ret = rtcm3_decode_1008(buff, &msg1008_out);
 
   assert(RC_OK == ret && msg1008_equals(&msg1008, &msg1008_out));
 }
@@ -579,12 +542,12 @@ void test_rtcm_1010(void) {
   msg1010.sats[2].obs[0].cnr = 50.2;
   msg1010.sats[2].obs[0].flags.fields.valid_cnr = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1010(&msg1010, buff);
 
   rtcm_obs_message msg1010_out;
-  int8_t ret = rtcm3_decode_1010(buff, &msg1010_out);
+  rtcm3_rc ret = rtcm3_decode_1010(buff, &msg1010_out);
 
   assert(RC_OK == ret && msgobs_glo_equals(&msg1010, &msg1010_out));
 }
@@ -658,12 +621,12 @@ void test_rtcm_1012(void) {
   /* no L2 observation */
   msg1012.sats[3].obs[1].flags.data = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1012(&msg1012, buff);
 
   rtcm_obs_message msg1012_out;
-  int8_t ret = rtcm3_decode_1012(buff, &msg1012_out);
+  rtcm3_rc ret = rtcm3_decode_1012(buff, &msg1012_out);
 
   assert(RC_OK == ret && msgobs_glo_equals(&msg1012, &msg1012_out));
 }
@@ -712,8 +675,8 @@ void test_rtcm_1013_ok(void) {
   rtcm3_rc decode_status;
 
   memset(&msg_1013, 0, sizeof(msg_1013));
-  swiftnav_bitstream_t decode_bitstream;
-  swiftnav_bitstream_init(
+  swiftnav_in_bitstream_t decode_bitstream;
+  swiftnav_in_bitstream_init(
       &decode_bitstream, sample_1013_raw, 8 * sizeof(sample_1013_raw));
   decode_status = rtcm3_decode_1013_bitstream(
       &decode_bitstream, &msg_1013, sizeof(sample_1013_raw));
@@ -721,7 +684,7 @@ void test_rtcm_1013_ok(void) {
   assert(decode_bitstream.offset == sample_1013_raw_size_bits);
   assert(memcmp(&msg_1013, &sample_1013_struct, sizeof(rtcm_msg_1013)) == 0);
 
-  uint8_t buffer[1024] = {0};
+  uint8_t buffer[RTCM3_MAX_MSG_LEN] = {0};
   uint16_t encode_size = rtcm3_encode_1013(&sample_1013_struct, buffer);
   assert(encode_size == sizeof(sample_1013_raw));
   assert(memcmp(sample_1013_raw, buffer, sizeof(sample_1013_raw)) == 0);
@@ -732,10 +695,10 @@ void test_rtcm_1013_ok_zero_messages(void) {
   rtcm3_rc decode_status;
 
   memset(&msg_1013, 0, sizeof(msg_1013));
-  swiftnav_bitstream_t decode_bitstream;
-  swiftnav_bitstream_init(&decode_bitstream,
-                          sample_1013_zero_messages_raw,
-                          8 * sizeof(sample_1013_zero_messages_raw));
+  swiftnav_in_bitstream_t decode_bitstream;
+  swiftnav_in_bitstream_init(&decode_bitstream,
+                             sample_1013_zero_messages_raw,
+                             8 * sizeof(sample_1013_zero_messages_raw));
   decode_status = rtcm3_decode_1013_bitstream(
       &decode_bitstream, &msg_1013, sizeof(sample_1013_zero_messages_raw));
   assert(decode_status == RC_OK);
@@ -744,7 +707,7 @@ void test_rtcm_1013_ok_zero_messages(void) {
                 &sample_1013_zero_messages_struct,
                 sizeof(rtcm_msg_1013)) == 0);
 
-  uint8_t buffer[1024] = {0};
+  uint8_t buffer[RTCM3_MAX_MSG_LEN] = {0};
   uint16_t encode_size =
       rtcm3_encode_1013(&sample_1013_zero_messages_struct, buffer);
   assert(encode_size == sizeof(sample_1013_zero_messages_raw));
@@ -771,10 +734,10 @@ void test_rtcm_1013_ok_max_messages(void) {
   rtcm3_rc decode_status;
 
   memset(&msg_1013, 0, sizeof(msg_1013));
-  swiftnav_bitstream_t decode_bitstream;
-  swiftnav_bitstream_init(&decode_bitstream,
-                          sample_1013_max_messages_raw,
-                          8 * sizeof(sample_1013_max_messages_raw));
+  swiftnav_in_bitstream_t decode_bitstream;
+  swiftnav_in_bitstream_init(&decode_bitstream,
+                             sample_1013_max_messages_raw,
+                             8 * sizeof(sample_1013_max_messages_raw));
   decode_status = rtcm3_decode_1013_bitstream(
       &decode_bitstream, &msg_1013, sizeof(sample_1013_max_messages_raw));
   assert(decode_status == RC_OK);
@@ -783,7 +746,7 @@ void test_rtcm_1013_ok_max_messages(void) {
                 &sample_1013_max_messages_struct,
                 sizeof(rtcm_msg_1013)) == 0);
 
-  uint8_t buffer[1024] = {0};
+  uint8_t buffer[RTCM3_MAX_MSG_LEN] = {0};
   uint16_t encode_size =
       rtcm3_encode_1013(&sample_1013_max_messages_struct, buffer);
   assert(encode_size == sizeof(sample_1013_max_messages_raw));
@@ -793,11 +756,11 @@ void test_rtcm_1013_ok_max_messages(void) {
 }
 
 void test_rtcm_1013_message_type_mismatch(void) {
-  const uint8_t zero_message[1023] = {0};
+  const uint8_t zero_message[RTCM3_MAX_MSG_LEN] = {0};
 
   rtcm_msg_1013 msg_1013 = {0};
-  swiftnav_bitstream_t decode_bitstream;
-  swiftnav_bitstream_init(
+  swiftnav_in_bitstream_t decode_bitstream;
+  swiftnav_in_bitstream_init(
       &decode_bitstream, zero_message, 8 * sizeof(zero_message));
 
   rtcm3_rc decode_status = rtcm3_decode_1013_bitstream(
@@ -810,18 +773,18 @@ void test_rtcm_1013_invalid_message(void) {
   const uint8_t oversize_rtcm_message[1024] = {};
 
   rtcm_msg_1013 msg_1013;
-  swiftnav_bitstream_t decode_bitstream;
+  swiftnav_in_bitstream_t decode_bitstream;
   rtcm3_rc decode_status;
 
-  swiftnav_bitstream_init(
+  swiftnav_in_bitstream_init(
       &decode_bitstream, zero_message, 8 * sizeof(zero_message));
   decode_status = rtcm3_decode_1013_bitstream(
       &decode_bitstream, &msg_1013, sizeof(zero_message));
   assert(decode_status == RC_INVALID_MESSAGE);
 
-  swiftnav_bitstream_init(&decode_bitstream,
-                          oversize_rtcm_message,
-                          8 * sizeof(oversize_rtcm_message));
+  swiftnav_in_bitstream_init(&decode_bitstream,
+                             oversize_rtcm_message,
+                             8 * sizeof(oversize_rtcm_message));
   decode_status = rtcm3_decode_1013_bitstream(
       &decode_bitstream, &msg_1013, sizeof(oversize_rtcm_message));
   assert(decode_status == RC_INVALID_MESSAGE);
@@ -885,8 +848,8 @@ void test_rtcm_1029(void) {
   memcpy(
       msg1029.utf8_code_units, &sample_1029_raw[9], msg1029.utf8_code_units_n);
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1029(&msg1029, buff);
 
   for (uint16_t i = 0; i < sizeof(sample_1029_raw); i++) {
@@ -894,7 +857,7 @@ void test_rtcm_1029(void) {
   }
 
   rtcm_msg_1029 msg1029_out;
-  int8_t ret = rtcm3_decode_1029(buff, &msg1029_out);
+  rtcm3_rc ret = rtcm3_decode_1029(buff, &msg1029_out);
 
   assert(RC_OK == ret && msg1029_equals(&msg1029, &msg1029_out));
 }
@@ -914,12 +877,12 @@ void test_rtcm_1033(void) {
   msg1033.rcv_serial_num_counter = 20;
   strncpy(msg1033.rcv_serial_num, "66666666666666666666", 32);
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1033(&msg1033, buff);
 
   rtcm_msg_1033 msg1033_out;
-  int8_t ret = rtcm3_decode_1033(buff, &msg1033_out);
+  rtcm3_rc ret = rtcm3_decode_1033(buff, &msg1033_out);
 
   assert(RC_OK == ret && msg1033_equals(&msg1033, &msg1033_out));
 }
@@ -935,17 +898,17 @@ void test_rtcm_1230(void) {
   msg1230.L2_CA_cpb_meter = 34.33;
   msg1230.L2_P_cpb_meter = -29.32;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1230(&msg1230, buff);
 
   rtcm_msg_1230 msg1230_out_1;
-  int8_t ret = rtcm3_decode_1230(buff, &msg1230_out_1);
+  rtcm3_rc ret = rtcm3_decode_1230(buff, &msg1230_out_1);
 
   assert(RC_OK == ret && msg1230_equals(&msg1230, &msg1230_out_1));
 
   msg1230.fdma_signal_mask = 0x0D;
-  memset(buff, 0, 1024);
+  memset(buff, 0, sizeof(buff));
   rtcm3_encode_1230(&msg1230, buff);
 
   rtcm_msg_1230 msg1230_out_2;
@@ -1784,13 +1747,13 @@ void test_rtcm_msm4(void) {
   msg_msm4.signals[5].cnr = 54.2;
   msg_msm4.signals[5].flags.fields.valid_cnr = 1;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   uint16_t num_bytes = rtcm3_encode_msm4(&msg_msm4, buff);
-  assert(num_bytes > 0 && num_bytes < 1024);
+  assert((num_bytes > 0) && (num_bytes <= RTCM3_MAX_MSG_LEN));
 
   rtcm_msm_message msg_msm4_out;
-  int8_t ret = rtcm3_decode_msm4(buff, &msg_msm4_out);
+  rtcm3_rc ret = rtcm3_decode_msm4(buff, &msg_msm4_out);
 
   assert(RC_OK == ret && msg_msm_equals(&msg_msm4, &msg_msm4_out));
 }
@@ -1885,13 +1848,13 @@ void test_rtcm_msm5(void) {
   msg_msm5.signals[5].flags.fields.valid_cnr = 1;
   msg_msm5.signals[5].flags.fields.valid_dop = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   uint16_t num_bytes = rtcm3_encode_msm5(&msg_msm5, buff);
-  assert(num_bytes > 0 && num_bytes < 1024);
+  assert((num_bytes > 0) && (num_bytes <= RTCM3_MAX_MSG_LEN));
 
   rtcm_msm_message msg_msm5_out;
-  int8_t ret = rtcm3_decode_msm5(buff, &msg_msm5_out);
+  rtcm3_rc ret = rtcm3_decode_msm5(buff, &msg_msm5_out);
 
   assert(RC_OK == ret && msg_msm_equals(&msg_msm5, &msg_msm5_out));
 }
@@ -1989,20 +1952,20 @@ void test_rtcm_msm5_glo(void) {
   msg_msm5.signals[5].flags.fields.valid_cnr = 1;
   msg_msm5.signals[5].flags.fields.valid_dop = 0;
 
-  uint8_t buff[1024];
-  memset(buff, 0, 1024);
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, sizeof(buff));
   uint16_t num_bytes = rtcm3_encode_msm5(&msg_msm5, buff);
-  assert(num_bytes > 0 && num_bytes < 1024);
+  assert((num_bytes > 0) && (num_bytes <= RTCM3_MAX_MSG_LEN));
 
   rtcm_msm_message msg_msm5_out;
-  int8_t ret = rtcm3_decode_msm5(buff, &msg_msm5_out);
+  rtcm3_rc ret = rtcm3_decode_msm5(buff, &msg_msm5_out);
 
   assert(RC_OK == ret && msg_msm_equals(&msg_msm5, &msg_msm5_out));
 }
 
 void test_rtcm_msm7(void) {
   rtcm_msm_message msg_msm7_decoded;
-  int8_t ret = rtcm3_decode_msm7(msm7_raw, &msg_msm7_decoded);
+  rtcm3_rc ret = rtcm3_decode_msm7(msm7_raw, &msg_msm7_decoded);
 
   rtcm_msm_message msg_msm7_expected;
   msg_msm7_expected.header = msm7_expected_header;
@@ -2025,14 +1988,14 @@ void test_rtcm_4062(void) {
     msg_in.data[i] = rand();
   }
 
-  uint8_t buff[1024];
+  uint8_t buff[RTCM3_MAX_MSG_LEN] = {0};
   uint16_t num_bytes = rtcm3_encode_4062(&msg_in, buff);
 
   assert(num_bytes == (msg_in.len + 7));  // RTCM msg type + SBP msg type +
                                           // SBP sender id + SBP len
 
   rtcm_msg_swift_proprietary msg_out;
-  uint8_t ret = rtcm3_decode_4062(buff, &msg_out);
+  rtcm3_rc ret = rtcm3_decode_4062(buff, &msg_out);
 
   assert((RC_OK == ret) && (msg_in.msg_type == msg_out.msg_type) &&
          (msg_in.sender_id == msg_out.sender_id) &&
@@ -2046,13 +2009,13 @@ void test_rtcm_random_bits(void) {
   /* test the MSM decoders with random garbage, they should either return a
    * failure code or manage to decode something, but not crash */
 
-  uint8_t buff[1024];
-  uint8_t out_buff[1024];
+  uint8_t buff[RTCM3_MAX_MSG_LEN] = {0};
+  uint8_t out_buff[RTCM3_MAX_MSG_LEN] = {0};
 
   rtcm_msm_message msg_msm;
   for (uint32_t rep = 0; rep < 100000; rep++) {
     /* fill with random garbage */
-    for (uint16_t i = 0; i < 1024; i++) {
+    for (uint16_t i = 0; i < sizeof(buff); i++) {
       buff[i] = rand() & 0xFF;
     }
 
@@ -2071,7 +2034,7 @@ void test_rtcm_random_bits(void) {
       /* test the round-trip conversion of the valid random msg */
       memset(out_buff, 0, sizeof(out_buff));
       uint16_t len = rtcm3_encode_msm4(&msg_msm, out_buff);
-      assert(len > 0 && len < 1024);
+      assert((len > 0) && (len <= RTCM3_MAX_MSG_LEN));
       rtcm_msm_message msg_msm_out;
       assert(RC_OK == rtcm3_decode_msm4(out_buff, &msg_msm_out) &&
              msg_msm_equals(&msg_msm, &msg_msm_out));
@@ -2081,7 +2044,7 @@ void test_rtcm_random_bits(void) {
       /* test the round-trip conversion of the valid random msg */
       memset(out_buff, 0, sizeof(out_buff));
       uint16_t len = rtcm3_encode_msm5(&msg_msm, out_buff);
-      assert(len > 0 && len < 1024);
+      assert((len > 0) && (len <= RTCM3_MAX_MSG_LEN));
       rtcm_msm_message msg_msm_out;
       assert(RC_OK == rtcm3_decode_msm5(out_buff, &msg_msm_out) &&
              msg_msm_equals(&msg_msm, &msg_msm_out));
@@ -2347,11 +2310,11 @@ static void compare_glonass_ephs(const rtcm_msg_eph *first,
 void test_rtcm_1019() {
   rtcm_msg_eph msg_1019_in =
       get_example_keplerian_rtcm_eph(RTCM_CONSTELLATION_GPS);
-  uint8_t frame[1023];
-  rtcm3_encode_gps_eph(&msg_1019_in, &frame[0]);
+  uint8_t frame[RTCM3_MAX_FRAME_LEN] = {0};
+  rtcm3_encode_gps_eph(&msg_1019_in, frame);
 
   rtcm_msg_eph msg_1019_out;
-  rtcm3_decode_gps_eph(&frame[0], &msg_1019_out);
+  rtcm3_decode_gps_eph(frame, &msg_1019_out);
   compare_keplerian_ephs(&msg_1019_in, &msg_1019_out);
 }
 
@@ -2359,11 +2322,11 @@ void test_rtcm_1020() {
   // Test out all 96 possible 15 minute chunks of the day.
   for (uint8_t t_b = 0; t_b < 96; ++t_b) {
     rtcm_msg_eph msg_1020_in = get_example_glonass_rtcm_eph(t_b);
-    uint8_t frame[1023];
-    rtcm3_encode_glo_eph(&msg_1020_in, &frame[0]);
+    uint8_t frame[RTCM3_MAX_FRAME_LEN] = {0};
+    rtcm3_encode_glo_eph(&msg_1020_in, frame);
 
     rtcm_msg_eph msg_1020_out;
-    rtcm3_decode_glo_eph(&frame[0], &msg_1020_out);
+    rtcm3_decode_glo_eph(frame, &msg_1020_out);
     compare_glonass_ephs(&msg_1020_in, &msg_1020_out);
   }
 }
@@ -2371,22 +2334,22 @@ void test_rtcm_1020() {
 void test_rtcm_1042() {
   rtcm_msg_eph msg_1042_in =
       get_example_keplerian_rtcm_eph(RTCM_CONSTELLATION_BDS);
-  uint8_t frame[1023];
-  rtcm3_encode_bds_eph(&msg_1042_in, &frame[0]);
+  uint8_t frame[RTCM3_MAX_FRAME_LEN] = {0};
+  rtcm3_encode_bds_eph(&msg_1042_in, frame);
 
   rtcm_msg_eph msg_1042_out;
-  rtcm3_decode_bds_eph(&frame[0], &msg_1042_out);
+  rtcm3_decode_bds_eph(frame, &msg_1042_out);
   compare_keplerian_ephs(&msg_1042_in, &msg_1042_out);
 }
 
 void test_rtcm_1045() {
   rtcm_msg_eph msg_1045_in =
       get_example_keplerian_rtcm_eph(RTCM_CONSTELLATION_GAL);
-  uint8_t frame[1023];
-  rtcm3_encode_gal_eph_fnav(&msg_1045_in, &frame[0]);
+  uint8_t frame[RTCM3_MAX_FRAME_LEN] = {0};
+  rtcm3_encode_gal_eph_fnav(&msg_1045_in, frame);
 
   rtcm_msg_eph msg_1045_out;
-  rtcm3_decode_gal_eph_fnav(&frame[0], &msg_1045_out);
+  rtcm3_decode_gal_eph_fnav(frame, &msg_1045_out);
   msg_1045_out.data.kepler.tgd.gal_s[1] = msg_1045_in.data.kepler.tgd.gal_s[1];
   compare_keplerian_ephs(&msg_1045_in, &msg_1045_out);
 }
@@ -2394,11 +2357,11 @@ void test_rtcm_1045() {
 void test_rtcm_1046() {
   rtcm_msg_eph msg_1046_in =
       get_example_keplerian_rtcm_eph(RTCM_CONSTELLATION_GAL);
-  uint8_t frame[1023];
-  rtcm3_encode_gal_eph_inav(&msg_1046_in, &frame[0]);
+  uint8_t frame[RTCM3_MAX_FRAME_LEN] = {0};
+  rtcm3_encode_gal_eph_inav(&msg_1046_in, frame);
 
   rtcm_msg_eph msg_1046_out;
-  rtcm3_decode_gal_eph_inav(&frame[0], &msg_1046_out);
+  rtcm3_decode_gal_eph_inav(frame, &msg_1046_out);
   compare_keplerian_ephs(&msg_1046_in, &msg_1046_out);
 }
 

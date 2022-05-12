@@ -11,9 +11,10 @@
  */
 
 #include <rtcm3/bits.h>
-#include "rtcm3/messages.h"
 
 #include "decode_helpers.h"
+#include "encode_helpers.h"
+#include "rtcm3/messages.h"
 
 /** Get bit field from buffer as an unsigned integer.
  * Unpacks `len` bits at bit position `pos` from the start of the buffer.
@@ -198,7 +199,7 @@ void rtcm_set_sign_magnitude_bit(uint8_t *buff,
   rtcm_setbitu(buff, pos + 1, len - 1, ((data < 0) ? -data : data));
 }
 
-rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_in_bitstream_t *buff,
                                            uint8_t len,
                                            s32 *out) {
   uint32_t sign;
@@ -206,5 +207,17 @@ rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_bitstream_t *buff,
   BITSTREAM_DECODE_S32(buff, sign, 1);
   BITSTREAM_DECODE_U32(buff, value, len - 1);
   *out = sign ? -(s32)value : (s32)value;
+  return RC_OK;
+}
+
+rtcm3_rc rtcm_set_sign_magnitude_bitstream(swiftnav_out_bitstream_t *buff,
+                                           int64_t data,
+                                           uint8_t len) {
+  assert(buff);
+  uint32_t sign = ((data < 0) ? 1 : 0);
+  uint64_t value = ((data < 0) ? -data : data);
+  BITSTREAM_ENCODE_U32(buff, sign, 1);
+  BITSTREAM_ENCODE_U64(buff, value, len - 1);
+
   return RC_OK;
 }

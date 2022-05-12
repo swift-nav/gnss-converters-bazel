@@ -22,8 +22,6 @@
 #include "rtcm3/eph_decode.h"
 #include "rtcm3/msm_utils.h"
 
-#define RTCM3_MAX_MSG_LEN (1023)
-
 static void init_sat_data(rtcm_sat_data *sat_data) {
   for (uint8_t freq = 0; freq < NUM_FREQS; ++freq) {
     sat_data->obs[freq].flags.data = 0;
@@ -136,7 +134,7 @@ static uint32_t from_msm_lock_ind_ext(uint16_t lock) {
   return 67108864;
 }
 
-static rtcm3_rc decode_basic_gps_l1_freq_data(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_basic_gps_l1_freq_data(swiftnav_in_bitstream_t *buff,
                                               rtcm_freq_data *freq_data,
                                               uint32_t *pr,
                                               int32_t *phr_pr_diff) {
@@ -150,7 +148,7 @@ static rtcm3_rc decode_basic_gps_l1_freq_data(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_basic_glo_l1_freq_data(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_basic_glo_l1_freq_data(swiftnav_in_bitstream_t *buff,
                                               rtcm_freq_data *freq_data,
                                               uint32_t *pr,
                                               int32_t *phr_pr_diff,
@@ -165,7 +163,7 @@ static rtcm3_rc decode_basic_glo_l1_freq_data(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_basic_l2_freq_data(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_basic_l2_freq_data(swiftnav_in_bitstream_t *buff,
                                           rtcm_freq_data *freq_data,
                                           int32_t *pr,
                                           int32_t *phr_pr_diff) {
@@ -179,7 +177,7 @@ static rtcm3_rc decode_basic_l2_freq_data(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc rtcm3_read_header(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_read_header(swiftnav_in_bitstream_t *buff,
                                   rtcm_obs_header *header) {
   BITSTREAM_DECODE_U16(buff, header->msg_num, 12);
   BITSTREAM_DECODE_U16(buff, header->stn_id, 12);
@@ -191,7 +189,7 @@ static rtcm3_rc rtcm3_read_header(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc rtcm3_read_glo_header(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_read_glo_header(swiftnav_in_bitstream_t *buff,
                                       rtcm_obs_header *header) {
   BITSTREAM_DECODE_U16(buff, header->msg_num, 12);
   BITSTREAM_DECODE_U16(buff, header->stn_id, 12);
@@ -212,13 +210,13 @@ static uint32_t normalize_bds2_tow(const uint32_t tow_ms) {
   return tow_ms;
 }
 
-static rtcm3_rc rtcm3_read_msm_header(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_read_msm_header(swiftnav_in_bitstream_t *buff,
                                       const rtcm_constellation_t cons,
                                       rtcm_msm_header *header) {
   BITSTREAM_DECODE_U16(buff, header->stn_id, 12);
   if (RTCM_CONSTELLATION_GLO == cons) {
     /* skip the day of week, it is handled in gnss_converters */
-    swiftnav_bitstream_remove(buff, 3);
+    swiftnav_in_bitstream_remove(buff, 3);
     /* for GLONASS, the epoch time is the time of day in ms */
     BITSTREAM_DECODE_U32(buff, header->tow_ms, 27);
   } else if (RTCM_CONSTELLATION_BDS == cons) {
@@ -300,7 +298,8 @@ static uint8_t construct_L2_phase(rtcm_freq_data *l2_freq_data,
   return 0;
 }
 
-static rtcm3_rc get_cnr(rtcm_freq_data *freq_data, swiftnav_bitstream_t *buff) {
+static rtcm3_rc get_cnr(rtcm_freq_data *freq_data,
+                        swiftnav_in_bitstream_t *buff) {
   uint32_t cnr;
   BITSTREAM_DECODE_U32(buff, cnr, 8);
   if (cnr == 0) {
@@ -320,7 +319,7 @@ static rtcm3_rc get_cnr(rtcm_freq_data *freq_data, swiftnav_bitstream_t *buff) {
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1001_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1001_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1001) {
   assert(msg_1001);
   rtcm3_rc ret = rtcm3_read_header(buff, &msg_1001->header);
@@ -369,7 +368,7 @@ rtcm3_rc rtcm3_decode_1001_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1002_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1002_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1002) {
   assert(msg_1002);
   rtcm3_rc ret = rtcm3_read_header(buff, &msg_1002->header);
@@ -424,7 +423,7 @@ rtcm3_rc rtcm3_decode_1002_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1003_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1003_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1003) {
   assert(msg_1003);
   rtcm3_rc ret = rtcm3_read_header(buff, &msg_1003->header);
@@ -487,7 +486,7 @@ rtcm3_rc rtcm3_decode_1003_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1004_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1004_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1004) {
   assert(msg_1004);
   rtcm3_rc ret = rtcm3_read_header(buff, &msg_1004->header);
@@ -553,7 +552,7 @@ rtcm3_rc rtcm3_decode_1004_bitstream(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc rtcm3_decode_1005_base(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_decode_1005_base(swiftnav_in_bitstream_t *buff,
                                        rtcm_msg_1005 *msg_1005) {
   BITSTREAM_DECODE_U16(buff, msg_1005->stn_id, 12);
   BITSTREAM_DECODE_U8(buff, msg_1005->ITRF, 6);
@@ -565,7 +564,7 @@ static rtcm3_rc rtcm3_decode_1005_base(swiftnav_bitstream_t *buff,
   BITSTREAM_DECODE_S64(buff, tmp, 38);
   msg_1005->arp_x = (double)(tmp) / 10000.0;
   BITSTREAM_DECODE_U8(buff, msg_1005->osc_ind, 1);
-  swiftnav_bitstream_remove(buff, 1);
+  swiftnav_in_bitstream_remove(buff, 1);
   BITSTREAM_DECODE_S64(buff, tmp, 38);
   msg_1005->arp_y = (double)(tmp) / 10000.0;
   BITSTREAM_DECODE_U8(buff, msg_1005->quart_cycle_ind, 2);
@@ -582,7 +581,7 @@ static rtcm3_rc rtcm3_decode_1005_base(swiftnav_bitstream_t *buff,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-rtcm3_rc rtcm3_decode_1005_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1005_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1005 *msg_1005) {
   assert(msg_1005);
   uint32_t msg_num;
@@ -603,7 +602,7 @@ rtcm3_rc rtcm3_decode_1005_bitstream(swiftnav_bitstream_t *buff,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-rtcm3_rc rtcm3_decode_1006_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1006_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1006 *msg_1006) {
   assert(msg_1006);
   uint32_t msg_num;
@@ -620,7 +619,9 @@ rtcm3_rc rtcm3_decode_1006_bitstream(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_string(swiftnav_bitstream_t *buff, u8 *len, char *str) {
+static rtcm3_rc decode_string(swiftnav_in_bitstream_t *buff,
+                              u8 *len,
+                              char *str) {
   BITSTREAM_DECODE_U8(buff, *len, 8);
   if (*len > RTCM_MAX_STRING_LEN) {
     return RC_INVALID_MESSAGE;
@@ -631,7 +632,7 @@ static rtcm3_rc decode_string(swiftnav_bitstream_t *buff, u8 *len, char *str) {
   return RC_OK;
 }
 
-static rtcm3_rc rtcm3_decode_1007_base(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_decode_1007_base(swiftnav_in_bitstream_t *buff,
                                        rtcm_msg_1007 *msg_1007) {
   BITSTREAM_DECODE_U16(buff, msg_1007->stn_id, 12);
   if (decode_string(buff,
@@ -653,7 +654,7 @@ static rtcm3_rc rtcm3_decode_1007_base(swiftnav_bitstream_t *buff,
  *          - RC_INVALID_MESSAGE : String length too large
  *
  */
-rtcm3_rc rtcm3_decode_1007_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1007_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1007 *msg_1007) {
   assert(msg_1007);
   uint32_t msg_num;
@@ -674,7 +675,7 @@ rtcm3_rc rtcm3_decode_1007_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : String length too large
  */
-rtcm3_rc rtcm3_decode_1008_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1008_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1008 *msg_1008) {
   assert(msg_1008);
   uint32_t msg_num;
@@ -701,7 +702,7 @@ rtcm3_rc rtcm3_decode_1008_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1010_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1010_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1010) {
   assert(msg_1010);
   rtcm3_rc ret = rtcm3_read_glo_header(buff, &msg_1010->header);
@@ -761,7 +762,7 @@ rtcm3_rc rtcm3_decode_1010_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : TOW sanity check fail
  */
-rtcm3_rc rtcm3_decode_1012_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1012_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_obs_message *msg_1012) {
   assert(msg_1012);
   rtcm3_rc ret = rtcm3_read_glo_header(buff, &msg_1012->header);
@@ -844,7 +845,7 @@ rtcm3_rc rtcm3_decode_1012_bitstream(swiftnav_bitstream_t *buff,
  *         - RC_MESSAGE_TYPE_MISMATCH : Message type mismatched
  *         - RC_INVALID_MESSAGE : Buffer overflow would have taken place
  */
-rtcm3_rc rtcm3_decode_1013_bitstream(swiftnav_bitstream_t *buffer,
+rtcm3_rc rtcm3_decode_1013_bitstream(swiftnav_in_bitstream_t *buffer,
                                      rtcm_msg_1013 *msg_1013,
                                      size_t message_length) {
   assert(msg_1013);
@@ -893,7 +894,7 @@ rtcm3_rc rtcm3_decode_1013_bitstream(swiftnav_bitstream_t *buffer,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-rtcm3_rc rtcm3_decode_1029_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1029_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1029 *msg_1029) {
   assert(msg_1029);
   uint32_t msg_num;
@@ -927,7 +928,7 @@ rtcm3_rc rtcm3_decode_1029_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : String length too large
  */
-rtcm3_rc rtcm3_decode_1033_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1033_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1033 *msg_1033) {
   assert(msg_1033);
   uint32_t msg_num;
@@ -984,7 +985,7 @@ rtcm3_rc rtcm3_decode_1033_bitstream(swiftnav_bitstream_t *buff,
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  */
-rtcm3_rc rtcm3_decode_1230_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_1230_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_1230 *msg_1230) {
   assert(msg_1230);
   uint32_t msg_num;
@@ -997,7 +998,7 @@ rtcm3_rc rtcm3_decode_1230_bitstream(swiftnav_bitstream_t *buff,
   BITSTREAM_DECODE_U16(buff, msg_1230->stn_id, 12);
   BITSTREAM_DECODE_U8(buff, msg_1230->bias_indicator, 1);
   /* 3 Reserved bits */
-  swiftnav_bitstream_remove(buff, 3);
+  swiftnav_in_bitstream_remove(buff, 3);
   BITSTREAM_DECODE_U8(buff, msg_1230->fdma_signal_mask, 4);
   if (msg_1230->fdma_signal_mask & 0x08) {
     s32 tmp;
@@ -1031,7 +1032,7 @@ rtcm3_rc rtcm3_decode_1230_bitstream(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_sat_data(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_sat_data(swiftnav_in_bitstream_t *buff,
                                     const uint8_t num_sats,
                                     const msm_enum msm_type,
                                     double rough_range_ms[],
@@ -1084,7 +1085,7 @@ static rtcm3_rc decode_msm_sat_data(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_fine_pseudoranges(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_fine_pseudoranges(swiftnav_in_bitstream_t *buff,
                                              const uint8_t num_cells,
                                              double fine_pr_ms[],
                                              flag_bf flags[]) {
@@ -1099,7 +1100,7 @@ static rtcm3_rc decode_msm_fine_pseudoranges(swiftnav_bitstream_t *buff,
 }
 
 static rtcm3_rc decode_msm_fine_pseudoranges_extended(
-    swiftnav_bitstream_t *buff,
+    swiftnav_in_bitstream_t *buff,
     const uint8_t num_cells,
     double fine_pr_ms[],
     flag_bf flags[]) {
@@ -1113,7 +1114,7 @@ static rtcm3_rc decode_msm_fine_pseudoranges_extended(
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_fine_phaseranges(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_fine_phaseranges(swiftnav_in_bitstream_t *buff,
                                             const uint8_t num_cells,
                                             double fine_cp_ms[],
                                             flag_bf flags[]) {
@@ -1127,10 +1128,11 @@ static rtcm3_rc decode_msm_fine_phaseranges(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_fine_phaseranges_extended(swiftnav_bitstream_t *buff,
-                                                     const uint8_t num_cells,
-                                                     double fine_cp_ms[],
-                                                     flag_bf flags[]) {
+static rtcm3_rc decode_msm_fine_phaseranges_extended(
+    swiftnav_in_bitstream_t *buff,
+    const uint8_t num_cells,
+    double fine_cp_ms[],
+    flag_bf flags[]) {
   /* DF406 */
   for (uint16_t i = 0; i < num_cells; i++) {
     int32_t decoded;
@@ -1141,7 +1143,7 @@ static rtcm3_rc decode_msm_fine_phaseranges_extended(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_lock_times(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_lock_times(swiftnav_in_bitstream_t *buff,
                                       const uint8_t num_cells,
                                       double lock_time[],
                                       flag_bf flags[]) {
@@ -1155,7 +1157,7 @@ static rtcm3_rc decode_msm_lock_times(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_lock_times_extended(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_lock_times_extended(swiftnav_in_bitstream_t *buff,
                                                const uint8_t num_cells,
                                                double lock_time[],
                                                flag_bf flags[]) {
@@ -1169,7 +1171,7 @@ static rtcm3_rc decode_msm_lock_times_extended(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_hca_indicators(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_hca_indicators(swiftnav_in_bitstream_t *buff,
                                           const uint8_t num_cells,
                                           bool hca_indicator[]) {
   /* DF420 */
@@ -1179,7 +1181,7 @@ static rtcm3_rc decode_msm_hca_indicators(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_cnrs(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_cnrs(swiftnav_in_bitstream_t *buff,
                                 const uint8_t num_cells,
                                 double cnr[],
                                 flag_bf flags[]) {
@@ -1193,7 +1195,7 @@ static rtcm3_rc decode_msm_cnrs(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_cnrs_extended(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_cnrs_extended(swiftnav_in_bitstream_t *buff,
                                          const uint8_t num_cells,
                                          double cnr[],
                                          flag_bf flags[]) {
@@ -1207,7 +1209,7 @@ static rtcm3_rc decode_msm_cnrs_extended(swiftnav_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc decode_msm_fine_phaserangerates(swiftnav_bitstream_t *buff,
+static rtcm3_rc decode_msm_fine_phaserangerates(swiftnav_in_bitstream_t *buff,
                                                 const uint8_t num_cells,
                                                 double *fine_range_rate_m_s,
                                                 flag_bf *flags) {
@@ -1230,7 +1232,7 @@ static rtcm3_rc decode_msm_fine_phaserangerates(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Cell mask too large or invalid TOW
  */
-static rtcm3_rc rtcm3_decode_msm_internal(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_decode_msm_internal(swiftnav_in_bitstream_t *buff,
                                           const uint16_t msm_type,
                                           rtcm_msm_message *msg) {
   if (MSM4 != msm_type && MSM5 != msm_type && MSM6 != msm_type &&
@@ -1443,7 +1445,7 @@ static rtcm3_rc rtcm3_decode_msm_internal(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Cell mask too large or invalid TOW
  */
-rtcm3_rc rtcm3_decode_msm4_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_msm4_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msm_message *msg) {
   assert(msg);
   return rtcm3_decode_msm_internal(buff, MSM4, msg);
@@ -1457,7 +1459,7 @@ rtcm3_rc rtcm3_decode_msm4_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Cell mask too large or invalid TOW
  */
-rtcm3_rc rtcm3_decode_msm5_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_msm5_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msm_message *msg) {
   assert(msg);
   return rtcm3_decode_msm_internal(buff, MSM5, msg);
@@ -1471,7 +1473,7 @@ rtcm3_rc rtcm3_decode_msm5_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Cell mask too large or invalid TOW
  */
-rtcm3_rc rtcm3_decode_msm6_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_msm6_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msm_message *msg) {
   assert(msg);
   return rtcm3_decode_msm_internal(buff, MSM6, msg);
@@ -1485,7 +1487,7 @@ rtcm3_rc rtcm3_decode_msm6_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Cell mask too large or invalid TOW
  */
-rtcm3_rc rtcm3_decode_msm7_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_msm7_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msm_message *msg) {
   assert(msg);
   return rtcm3_decode_msm_internal(buff, MSM7, msg);
@@ -1499,7 +1501,7 @@ rtcm3_rc rtcm3_decode_msm7_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Nonzero reserved bits (invalid format)
  */
-rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_swift_proprietary *msg) {
   assert(msg);
   uint32_t msg_num;
@@ -1537,7 +1539,7 @@ rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_bitstream_t *buff,
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Nonzero reserved bits (invalid format)
  */
-rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_ndf *msg) {
   assert(msg);
   uint16_t msg_num;
@@ -1590,7 +1592,7 @@ rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_bitstream_t *buff,
 }
 
 static rtcm3_rc rtcm3_decode_999_stgsv_fv_base(
-    swiftnav_bitstream_t *buff,
+    swiftnav_in_bitstream_t *buff,
     rtcm_999_stgsv_fv *msg_999_stgsv_fv,
     const uint8_t field_mask) {
   if (field_mask & RTCM_STGSV_FIELDMASK_EL) {
@@ -1625,7 +1627,7 @@ static uint8_t count_sat_active(uint64_t sat_mask,
   return n_sat;
 }
 
-static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_bitstream_t *buff,
+static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_in_bitstream_t *buff,
                                             rtcm_msg_999_stgsv *msg_999_stgsv) {
   uint64_t sat_mask_64 = 0;
 
@@ -1658,7 +1660,7 @@ static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_bitstream_t *buff,
 }
 
 static rtcm3_rc rtcm3_decode_999_restart_base(
-    swiftnav_bitstream_t *buff, rtcm_msg_999_restart *msg_999_restart) {
+    swiftnav_in_bitstream_t *buff, rtcm_msg_999_restart *msg_999_restart) {
   BITSTREAM_DECODE_U32(buff, msg_999_restart->restart_mask, 32);
   return RC_OK;
 }
@@ -1671,7 +1673,7 @@ static rtcm3_rc rtcm3_decode_999_restart_base(
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
  *          - RC_INVALID_MESSAGE : Nonzero reserved bits (invalid format)
  */
-rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_in_bitstream_t *buff,
                                     rtcm_msg_999 *msg_999) {
   assert(msg_999);
   uint32_t msg_num;

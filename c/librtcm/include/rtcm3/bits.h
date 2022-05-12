@@ -13,8 +13,9 @@
 #ifndef SWIFTNAV_RTCM3_BITS_H
 #define SWIFTNAV_RTCM3_BITS_H
 
+#include <rtcm3/messages.h>
 #include <swiftnav/bitstream.h>
-#include "rtcm3/messages.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,13 +33,16 @@ void rtcm_setbitsl(uint8_t *buff, uint32_t pos, uint32_t len, int64_t data);
 int32_t rtcm_get_sign_magnitude_bit(const uint8_t *buff,
                                     uint32_t pos,
                                     uint8_t len);
-rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_bitstream_t *buff,
+rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_in_bitstream_t *buff,
                                            uint8_t len,
                                            int32_t *out);
 void rtcm_set_sign_magnitude_bit(uint8_t *buff,
                                  uint32_t pos,
                                  uint8_t len,
                                  int64_t data);
+rtcm3_rc rtcm_set_sign_magnitude_bitstream(swiftnav_out_bitstream_t *buff,
+                                           int64_t data,
+                                           uint8_t len);
 #ifdef __cplusplus
 }
 #endif
