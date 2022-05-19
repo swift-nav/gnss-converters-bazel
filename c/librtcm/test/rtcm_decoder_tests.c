@@ -36,6 +36,8 @@ int main(void) {
   test_rtcm_999_stgsv_de_en();
   test_rtcm_999_restart_en_de();
   test_rtcm_999_restart_de_en();
+  test_rtcm_999_aux_ttff_en_de();
+  test_rtcm_999_aux_ttff_de_en();
   test_rtcm_1001();
   test_rtcm_1002();
   test_rtcm_1003();
@@ -148,6 +150,43 @@ void test_rtcm_999_stgsv_de_en() {
 
   uint8_t msg_999_payload_ev[218];
   memset(msg_999_payload_ev, 0, sizeof(msg_999_payload_ev));
+  rtcm3_encode_999(&msg_999, msg_999_payload_ev);
+
+  assert(payload_equals(
+      msg_999_payload, msg_999_payload_ev, sizeof(msg_999_payload)));
+}
+
+/* Test rtcm 999 aux ttff message encode -> decode */
+void test_rtcm_999_aux_ttff_en_de() {
+  rtcm_msg_999 msg_999 = {0};
+  msg_999.sub_type_id = RTCM_TESEOV_AUX;
+
+  msg_999.data.aux.aux_data_type_id = RTCM_TESEOV_AUX_TTFF;
+  msg_999.data.aux.data.ttff.ttff = 4;
+
+  uint8_t buff[RTCM3_MAX_MSG_LEN];
+  memset(buff, 0, RTCM3_MAX_MSG_LEN);
+  assert(rtcm3_encode_999(&msg_999, buff) == 8);
+
+  rtcm_msg_999 msg_999_out;
+  rtcm3_rc ret = rtcm3_decode_999(buff, &msg_999_out);
+
+  assert(RC_OK == ret &&
+         msg999aux_ttff_equals(&msg_999.data.aux.data.ttff,
+                               &msg_999_out.data.aux.data.ttff));
+}
+
+/* Test rtcm 999 aux ttff message decode -> encode */
+void test_rtcm_999_aux_ttff_de_en() {
+  const uint8_t msg_999_payload[50] = {
+      0x3e, 0x71, 0x60, 0x40, 0x00, 0x00, 0x00, 0x50};
+
+  rtcm_msg_999 msg_999 = {0};
+  rtcm3_rc ret_de = rtcm3_decode_999(msg_999_payload, &msg_999);
+  assert(RC_OK == ret_de);
+
+  uint8_t msg_999_payload_ev[50];
+  memset(msg_999_payload_ev, 0, 50);
   rtcm3_encode_999(&msg_999, msg_999_payload_ev);
 
   assert(payload_equals(
@@ -1264,6 +1303,11 @@ bool msg999restart_equals(const rtcm_msg_999_restart *lhs,
   }
 
   return true;
+}
+
+bool msg999aux_ttff_equals(const rtcm_msg_999_aux_ttff *lhs,
+                           const rtcm_msg_999_aux_ttff *rhs) {
+  return (lhs->ttff == rhs->ttff);
 }
 
 bool msg1005_equals(const rtcm_msg_1005 *lhs, const rtcm_msg_1005 *rhs) {

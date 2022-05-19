@@ -81,6 +81,17 @@ typedef enum {
   RTCM_TESEOV_SENS = 64,
 } rtcm_teseov_subtype;
 
+/* Proprietary RTCM3 TeseoV auxiliary Messages */
+typedef enum {
+  RTCM_TESEOV_AUX_DHRYSTONE_RESULTS = 0,
+  RTCM_TESEOV_AUX_CHIP_ID_DATA = 1,
+  RTCM_TESEOV_AUX_TEMP = 2,
+  RTCM_TESEOV_AUX_SYSSTAT = 3,
+  RTCM_TESEOV_AUX_TTFF = 4,
+  RTCM_TESEOV_AUX_SAFEMEM = 5,
+  RTCM_TESEOV_AUX_FEDUMP = 6
+} rtcm_teseov_aux_data_type_id;
+
 typedef enum {
   RTCM_TESEOV_GPS = 0,
   RTCM_TESEOV_GLO = 1,
@@ -479,10 +490,23 @@ typedef struct {
 } rtcm_msg_999_restart;
 
 typedef struct {
+  uint32_t ttff;
+} rtcm_msg_999_aux_ttff;
+
+typedef struct {
+  uint8_t aux_data_type_id;
+
+  union {
+    rtcm_msg_999_aux_ttff ttff;
+  } data;
+} rtcm_msg_999_aux;
+
+typedef struct {
   uint8_t sub_type_id;
   union {
     rtcm_msg_999_stgsv stgsv;
     rtcm_msg_999_restart restart;
+    rtcm_msg_999_aux aux;
   } data;
 } rtcm_msg_999;
 

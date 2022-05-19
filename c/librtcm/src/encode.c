@@ -193,6 +193,25 @@ static rtcm3_rc rtcm3_encode_999_restart_base(
   return RC_OK;
 }
 
+static rtcm3_rc rtcm3_encode_999_aux_ttff_base(
+    swiftnav_out_bitstream_t *buff,
+    const rtcm_msg_999_aux_ttff *msg_999_aux_ttff) {
+  BITSTREAM_ENCODE_U32(buff, msg_999_aux_ttff->ttff, 32);
+  return RC_OK;
+}
+
+static rtcm3_rc rtcm3_encode_999_aux_base(swiftnav_out_bitstream_t *buff,
+                                          const rtcm_msg_999_aux *msg_999_aux) {
+  assert(msg_999_aux);
+  BITSTREAM_ENCODE_U8(buff, msg_999_aux->aux_data_type_id, 8);
+  switch (msg_999_aux->aux_data_type_id) {
+    case RTCM_TESEOV_AUX_TTFF:
+      return rtcm3_encode_999_aux_ttff_base(buff, &msg_999_aux->data.ttff);
+    default:
+      return RC_INVALID_MESSAGE;
+  }
+}
+
 rtcm3_rc rtcm3_encode_999_bitstream(swiftnav_out_bitstream_t *buff,
                                     const rtcm_msg_999 *msg_999) {
   assert(buff);
@@ -206,6 +225,8 @@ rtcm3_rc rtcm3_encode_999_bitstream(swiftnav_out_bitstream_t *buff,
       return rtcm3_encode_999_restart_base(buff, &msg_999->data.restart);
     case RTCM_TESEOV_STGSV:
       return rtcm3_encode_999_stgsv_base(buff, &msg_999->data.stgsv);
+    case RTCM_TESEOV_AUX:
+      return rtcm3_encode_999_aux_base(buff, &msg_999->data.aux);
     default:
       return RC_INVALID_MESSAGE;
   }
