@@ -1,0 +1,10 @@
+swift_add_test(test-gnss-converters-extra
+  UNIT_TEST
+  SRCS
+    test_sbp_conv.cc
+  LINK
+    gnss_converters
+    gnss_converters_extra
+    gtest
+    gtest_main
+)

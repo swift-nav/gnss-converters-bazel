@@ -56,11 +56,26 @@ struct rtcm3_out_state {
   double ant_height; /* Antenna height above ARP, meters */
   char ant_descriptor[RTCM_MAX_STRING_LEN];
   char rcv_descriptor[RTCM_MAX_STRING_LEN];
+
+  /** Customized attributes of message 1005, used for Classic context */
+  uint8_t GLO_ind;
+  uint8_t ref_stn_ind;
+  uint8_t quart_cycle_ind;
 };
 
 void sbp2rtcm_init(struct rtcm3_out_state *state,
                    s32 (*cb_sbp_to_rtcm)(u8 *buffer, u16 length, void *context),
                    void *context);
+
+/**
+ * Function allows users to customize some parameters/attributes of Classic
+ * context (specify in RTCM message 1005), including GLO_ind, ref_stn_ind,
+ * quart_cycle_ind.
+ */
+void sbp2rtcm_set_stn_description_parameters(struct rtcm3_out_state *state,
+                                             uint8_t glo_ind,
+                                             uint8_t ref_stn_ind,
+                                             uint8_t quart_cycle_ind);
 
 /**
  * Function allows users to specify the leap second explicitly rather than

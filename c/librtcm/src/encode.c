@@ -251,12 +251,12 @@ static rtcm3_rc encode_basic_freq_data(swiftnav_out_bitstream_t *buff,
   double freq = 0;
   if (L1_FREQ == freq_enum) {
     freq = GPS_L1_HZ;
-    BITSTREAM_ENCODE_U8(buff, (uint8_t)0, 1);
+    BITSTREAM_ENCODE_U8(buff, (uint8_t)freq_data->code, 1);
     BITSTREAM_ENCODE_U32(
         buff, freq_data->flags.fields.valid_pr ? pr : PR_L1_INVALID, 24);
   } else {
     freq = GPS_L2_HZ;
-    BITSTREAM_ENCODE_U8(buff, (uint8_t)0, 2);
+    BITSTREAM_ENCODE_U8(buff, (uint8_t)freq_data->code, 2);
     BITSTREAM_ENCODE_S32(buff,
                          freq_data->flags.fields.valid_pr
                              ? (int32_t)pr - (int32_t)calc_l1_pr

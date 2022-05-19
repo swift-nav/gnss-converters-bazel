@@ -30,7 +30,11 @@ static s32 sbp_conv_cb(uint8_t *buf, uint16_t len, void *context) {
   return (s32)fifo_write(fifo, buf, len);
 }
 
-sbp_conv_t sbp_conv_new(msm_enum msm_output_type) {
+sbp_conv_t sbp_conv_new(msm_enum msm_output_type,
+                        const char *ant_descriptor,
+                        const char *rcv_descriptor) {
+  assert(ant_descriptor);
+  assert(rcv_descriptor);
   sbp_conv_t conv = malloc(sizeof(struct sbp_conv_s));
   if (conv != NULL) {
     fifo_init(&conv->fifo, conv->buf, sizeof(conv->buf));
@@ -39,7 +43,7 @@ sbp_conv_t sbp_conv_new(msm_enum msm_output_type) {
     int8_t leap_seconds = rint(get_gps_utc_offset(&gps_time, NULL));
     sbp2rtcm_set_leap_second(&leap_seconds, &conv->state);
     sbp2rtcm_set_rcv_ant_descriptors(
-        "NULL                ", "SWFT", &conv->state);
+        ant_descriptor, rcv_descriptor, &conv->state);
     sbp2rtcm_set_rtcm_out_mode(msm_output_type, &conv->state);
   }
   return conv;
@@ -59,4 +63,18 @@ size_t sbp_conv(sbp_conv_t conv,
     sbp2rtcm_sbp_cb(sender, type, &msg, &conv->state);
   }
   return fifo_read(&conv->fifo, wbuf, (u32)wlen);
+}
+
+void sbp_conv_set_legacy_on(sbp_conv_t conv) {
+  assert(conv);
+  sbp2rtcm_set_rtcm_out_mode(MSM_UNKNOWN, &conv->state);
+}
+
+void sbp_conv_set_stn_description_parameters(sbp_conv_t conv,
+                                             uint8_t glo_ind,
+                                             uint8_t ref_stn_ind,
+                                             uint8_t quart_cycle_ind) {
+  assert(conv);
+  sbp2rtcm_set_stn_description_parameters(
+      &conv->state, glo_ind, ref_stn_ind, quart_cycle_ind);
 }

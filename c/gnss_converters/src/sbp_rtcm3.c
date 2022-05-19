@@ -133,6 +133,21 @@ void sbp2rtcm_init(struct rtcm3_out_state *state,
   state->ant_height = 0.0;
   memset(state->ant_descriptor, 0, sizeof(state->ant_descriptor));
   memset(state->rcv_descriptor, 0, sizeof(state->rcv_descriptor));
+
+  /** Customized attributes of message 1005 - default set for Piksi */
+  state->GLO_ind = PIKSI_GLO_SERVICE_SUPPORTED;
+  state->ref_stn_ind = PIKSI_REFERENCE_STATION_INDICATOR;
+  state->quart_cycle_ind = PIKSI_QUARTER_CYCLE_INDICATOR;
+}
+
+void sbp2rtcm_set_stn_description_parameters(struct rtcm3_out_state *state,
+                                             uint8_t glo_ind,
+                                             uint8_t ref_stn_ind,
+                                             uint8_t quart_cycle_ind) {
+  assert(state);
+  state->GLO_ind = glo_ind;
+  state->ref_stn_ind = ref_stn_ind;
+  state->quart_cycle_ind = quart_cycle_ind;
 }
 
 /* Difference between two sbp time stamps in seconds */
@@ -161,15 +176,15 @@ void sbp_to_rtcm3_1005(const sbp_msg_base_pos_ecef_t *sbp_base_pos,
   /* GPS Indicator DF022 */
   rtcm_1005->GPS_ind = PIKSI_GPS_SERVICE_SUPPORTED;
   /* GLONASS Indicator DF023 */
-  rtcm_1005->GLO_ind = PIKSI_GLO_SERVICE_SUPPORTED;
+  rtcm_1005->GLO_ind = state->GLO_ind;
   /* Galileo Indicator DF024 */
   rtcm_1005->GAL_ind = PIKSI_GAL_SERVICE_SUPPORTED;
   /* Reference-Station Indicator DF141 */
-  rtcm_1005->ref_stn_ind = PIKSI_REFERENCE_STATION_INDICATOR;
+  rtcm_1005->ref_stn_ind = state->ref_stn_ind;
   /* Single Receiver Oscillator Indicator DF142 */
   rtcm_1005->osc_ind = PIKSI_SINGLE_OSCILLATOR_INDICATOR;
   /* Quarter Cycle Indicator DF364 */
-  rtcm_1005->quart_cycle_ind = PIKSI_QUARTER_CYCLE_INDICATOR;
+  rtcm_1005->quart_cycle_ind = state->quart_cycle_ind;
 
   /* Antenna Reference Point ECEF-X DF025 */
   rtcm_1005->arp_x = sbp_base_pos->x;
