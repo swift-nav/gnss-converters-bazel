@@ -104,6 +104,7 @@ jobs:
         with:
           submodules: recursive
           ssh-key: ${{ secrets.SSH_KEY }}
+          fetch-depth: 0
 
       - name: Install SQLite
         if: ${{ matrix.os == 'windows-2019' }}
