@@ -24,11 +24,10 @@
 #include "rtcm3_utils.h"
 
 #include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-
 #include <rtcm3/constants.h>
 #include <rtcm3/msm_utils.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/logging.h>
 #include <swiftnav/signal.h>
@@ -351,7 +350,7 @@ u8 code_to_msm_signal_id(const code_t code, const rtcm_constellation_t cons) {
   return MSM_SIGNAL_MASK_SIZE;
 }
 
-static bool prn_valid(rtcm_constellation_t cons, u8 prn) {
+bool prn_valid(rtcm_constellation_t cons, u8 prn) {
   return (RTCM_CONSTELLATION_INVALID != cons) &&
          (RTCM_CONSTELLATION_COUNT > cons) &&
          (prn >= prn_table[cons].first_prn) &&
@@ -956,4 +955,163 @@ uint8_t convert_meters_to_sisa(const float ura) {
                      THIRD_SISA_STEP + 0.5);
   }
   return -1;
+}
+
+uint8_t satellite_id2prn(rtcm_constellation_t rtcm_cons, uint8_t sid) {
+  assert(rtcm_constellation_valid(rtcm_cons));
+  assert(rtcm_sid_valid(rtcm_cons, sid));
+
+  uint16_t prn = sid + prn_table[rtcm_cons].first_prn;
+
+  if (prn > UINT8_MAX) {
+    return PRN_INVALID;
+  }
+  return prn_valid(rtcm_cons, (uint8_t)prn) ? (uint8_t)prn : PRN_INVALID;
+}
+
+uint8_t satellite_prn2id(rtcm_constellation_t rtcm_cons, uint8_t prn) {
+  assert(rtcm_constellation_valid(rtcm_cons));
+  assert(prn_valid(rtcm_cons, prn));  // If prn is valid, it is greater than the
+                                      // first_prn offset of the constellation.
+
+  return (uint8_t)(prn - prn_table[rtcm_cons].first_prn);
+}
+
+bool rtcm_constellation_valid(rtcm_constellation_t rtcm_cons) {
+  return ((rtcm_cons > RTCM_CONSTELLATION_INVALID) &&
+          (rtcm_cons < RTCM_CONSTELLATION_COUNT));
+}
+
+bool teseov_constellation_valid(rtcm_teseov_constellation_t teseov_cons) {
+  rtcm_teseov_constellation_t teseov_cons_arr[] = {RTCM_TESEOV_GPS,
+                                                   RTCM_TESEOV_GLO,
+                                                   RTCM_TESEOV_QZS,
+                                                   RTCM_TESEOV_GAL,
+                                                   RTCM_TESEOV_SBAS,
+                                                   RTCM_TESEOV_BDS7,
+                                                   RTCM_TESEOV_BDS13};
+
+  for (size_t i = 0; i < ARRAY_SIZE(teseov_cons_arr); i++) {
+    if (teseov_cons == teseov_cons_arr[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool rtcm_sid_valid(rtcm_constellation_t rtcm_cons, uint8_t sid) {
+  assert(rtcm_constellation_valid(rtcm_cons));
+  return (sid < prn_table[rtcm_cons].num_sats);
+}
+
+bool teseov_sid_valid(rtcm_teseov_constellation_t teseov_cons,
+                      uint8_t teseov_sid) {
+  if (!teseov_constellation_valid(teseov_cons)) {
+    return false;
+  }
+
+  switch (teseov_cons) {
+    case RTCM_TESEOV_BDS13:
+      return (teseov_sid < RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13);
+    case RTCM_TESEOV_GPS:
+    case RTCM_TESEOV_GLO:
+    case RTCM_TESEOV_QZS:
+    case RTCM_TESEOV_GAL:
+    case RTCM_TESEOV_SBAS:
+    case RTCM_TESEOV_BDS7:
+      return (teseov_sid < RTCM_TESEOV_SATELLITE_MASK_SIZE);
+    default:
+      return false;
+  }
+}
+
+uint8_t constellation_to_num_sats(rtcm_constellation_t rtcm_cons) {
+  assert(rtcm_constellation_valid(rtcm_cons));
+  return (uint8_t)prn_table[rtcm_cons].num_sats;
+}
+
+rtcm_constellation_t constellation_teseov2rtcm(
+    rtcm_teseov_constellation_t teseov_cons) {
+  switch (teseov_cons) {
+    case RTCM_TESEOV_GPS:
+      return RTCM_CONSTELLATION_GPS;
+    case RTCM_TESEOV_GLO:
+      return RTCM_CONSTELLATION_GLO;
+    case RTCM_TESEOV_QZS:
+      return RTCM_CONSTELLATION_QZS;
+    case RTCM_TESEOV_GAL:
+      return RTCM_CONSTELLATION_GAL;
+    case RTCM_TESEOV_SBAS:
+      return RTCM_CONSTELLATION_SBAS;
+    case RTCM_TESEOV_BDS7:
+    case RTCM_TESEOV_BDS13:
+      return RTCM_CONSTELLATION_BDS;
+    default:
+      return RTCM_CONSTELLATION_INVALID;
+  }
+}
+
+uint8_t satellite_id_teseov2rtcm(rtcm_teseov_constellation_t teseov_cons,
+                                 uint8_t teseov_sid) {
+  assert(teseov_constellation_valid(teseov_cons));
+  assert(teseov_sid_valid(teseov_cons, teseov_sid));
+
+  uint8_t sid = 0;
+  switch (teseov_cons) {
+    case RTCM_TESEOV_BDS13:
+      sid = (teseov_sid + RTCM_TESEOV_SATELLITE_MASK_SIZE);
+      break;
+    case RTCM_TESEOV_GPS:
+    case RTCM_TESEOV_GLO:
+    case RTCM_TESEOV_QZS:
+    case RTCM_TESEOV_GAL:
+    case RTCM_TESEOV_SBAS:
+    case RTCM_TESEOV_BDS7:
+    default:
+      sid = teseov_sid;
+      break;
+  }
+  return sid;
+}
+
+rtcm_constellation_t constellation_sbp2rtcm(constellation_t sbp_cons) {
+  switch (sbp_cons) {
+    case CONSTELLATION_GPS:
+      return RTCM_CONSTELLATION_GPS;
+    case CONSTELLATION_SBAS:
+      return RTCM_CONSTELLATION_SBAS;
+    case CONSTELLATION_GLO:
+      return RTCM_CONSTELLATION_GLO;
+    case CONSTELLATION_BDS:
+      return RTCM_CONSTELLATION_BDS;
+    case CONSTELLATION_QZS:
+      return RTCM_CONSTELLATION_QZS;
+    case CONSTELLATION_GAL:
+      return RTCM_CONSTELLATION_GAL;
+    case CONSTELLATION_INVALID:
+    case CONSTELLATION_COUNT:
+    default:
+      return RTCM_CONSTELLATION_INVALID;
+  }
+}
+
+constellation_t constellation_rtcm2sbp(rtcm_constellation_t rtcm_cons) {
+  switch (rtcm_cons) {
+    case RTCM_CONSTELLATION_GPS:
+      return CONSTELLATION_GPS;
+    case RTCM_CONSTELLATION_SBAS:
+      return CONSTELLATION_SBAS;
+    case RTCM_CONSTELLATION_GLO:
+      return CONSTELLATION_GLO;
+    case RTCM_CONSTELLATION_BDS:
+      return CONSTELLATION_BDS;
+    case RTCM_CONSTELLATION_QZS:
+      return CONSTELLATION_QZS;
+    case RTCM_CONSTELLATION_GAL:
+      return CONSTELLATION_GAL;
+    case RTCM_CONSTELLATION_INVALID:
+    case RTCM_CONSTELLATION_COUNT:
+    default:
+      return CONSTELLATION_INVALID;
+  }
 }

@@ -10,9 +10,15 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <common.h>
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
 #include <observation_adjuster/obs_unpacker.h>
+#include <swiftnav/common.h>
 #include <swiftnav/gnss_time.h>
+#include <swiftnav/signal.h>
+
+#define MSG_OBS_FLAGS_CODE_VALID (UINT8_C(1) << 0)
+#define MSG_OBS_FLAGS_RAIM_EXCLUSION (UINT8_C(1) << 7)
 
 code_t to_supported_code_t(const code_t code);
 

@@ -167,11 +167,11 @@ static rtcm3_rc rtcm3_encode_999_stgsv_base(
 
   uint64_t sat_mask = 0;
   uint8_t sat_mask_size = (msg_999_stgsv->constellation == RTCM_TESEOV_BDS13
-                               ? RTCM_STGSV_SATELLITE_MASK_SIZE_GNSS13
-                               : RTCM_STGSV_SATELLITE_MASK_SIZE);
+                               ? RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13
+                               : RTCM_TESEOV_SATELLITE_MASK_SIZE);
   size_t max_n_sat = MIN(msg_999_stgsv->n_sat, sat_mask_size);
   for (size_t i = 0; i < max_n_sat; i++) {
-    sat_mask |= (INT64_C(1) << (RTCM_STGSV_SATELLITE_MASK_SIZE -
+    sat_mask |= (INT64_C(1) << (RTCM_TESEOV_SATELLITE_MASK_SIZE -
                                 msg_999_stgsv->field_value[i].sat_id - 1));
   }
   BITSTREAM_ENCODE_U64(buff, sat_mask, 40);

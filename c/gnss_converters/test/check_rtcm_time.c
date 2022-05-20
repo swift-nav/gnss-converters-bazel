@@ -13,6 +13,7 @@
 #include <check.h>
 #include <gnss-converters/rtcm3_sbp.h>
 #include <gnss-converters/sbp_rtcm3.h>
+#include <gnss_converters/src/rtcm3_sbp_internal.h>
 #include <libsbp/sbp.h>
 #include <libsbp/v4/observation.h>
 #include <math.h>
@@ -21,7 +22,6 @@
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/eph_encode.h>
 #include <rtcm3/msm_utils.h>
-#include <rtcm3_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +33,6 @@
 #include <swiftnav/sid_set.h>
 
 #include "config.h"
-#include "rtcm3_sbp_internal.h"
 #include "time_truth.h"
 
 #define GPS_TOW_TOLERANCE 1e-4

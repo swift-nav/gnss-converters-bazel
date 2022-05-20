@@ -47,7 +47,18 @@ typedef enum rtcm_constellation_e {
   RTCM_CONSTELLATION_COUNT,
 } rtcm_constellation_t;
 
-/* Proprietary RTCM3 Messages */
+/** Constellation identifier for ST msg (follows DF06P - Constellation Mask) */
+typedef enum {
+  RTCM_TESEOV_GPS = 0,
+  RTCM_TESEOV_GLO = 1,
+  RTCM_TESEOV_QZS = 2,
+  RTCM_TESEOV_GAL = 3,
+  RTCM_TESEOV_SBAS = 4,
+  RTCM_TESEOV_BDS7 = 7,
+  RTCM_TESEOV_BDS13 = 13,
+} rtcm_teseov_constellation_t;
+
+/** List of Proprietary RTCM3 Messages defined by ST (Table 10) */
 typedef enum {
   RTCM_TESEOV_RSS = 1,
   RTCM_TESEOV_RCC = 2,
@@ -91,16 +102,6 @@ typedef enum {
   RTCM_TESEOV_AUX_SAFEMEM = 5,
   RTCM_TESEOV_AUX_FEDUMP = 6
 } rtcm_teseov_aux_data_type_id;
-
-typedef enum {
-  RTCM_TESEOV_GPS = 0,
-  RTCM_TESEOV_GLO = 1,
-  RTCM_TESEOV_QZS = 2,
-  RTCM_TESEOV_GAL = 3,
-  RTCM_TESEOV_SBAS = 4,
-  RTCM_TESEOV_BDS7 = 7,
-  RTCM_TESEOV_BDS13 = 13,
-} rtcm_teseov_constellation_t;
 
 /* return codes for the decoders */
 typedef enum rtcm3_rc_e {
@@ -471,7 +472,7 @@ typedef struct {
   uint8_t field_mask;    /* Fields mask (8) */
   bool mul_msg_ind;      /* Multiple Message Indicator DF23P (1) */
   uint8_t n_sat;         /* Number of satellites */
-  rtcm_999_stgsv_fv field_value[RTCM_STGSV_SATELLITE_MASK_SIZE];
+  rtcm_999_stgsv_fv field_value[RTCM_TESEOV_SATELLITE_MASK_SIZE];
 } rtcm_msg_999_stgsv;
 
 #define RTCM_TESEOV_RST_DEL_ALM_BIT (1 << 0)

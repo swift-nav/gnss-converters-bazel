@@ -42,6 +42,8 @@ extern "C" {
 
 #define IS_POWER_OF_TWO(x) (0 == ((x) & ((x)-1)))
 
+#define RTCM_MAX_SINGLE_SAT_SIGNAL 3
+
 typedef enum {
   UNSUPPORTED_CODE_UNKNOWN = 0u,
   UNSUPPORTED_CODE_GLO_L1P,
@@ -63,6 +65,24 @@ typedef struct {
 } ssr_orbit_clock_cache;
 
 typedef bool (*rtcm_sbp_unix_time_callback_t)(int64_t *now);
+
+/** Represent measurement info of single satellite. Satellite info is
+ * transmitted under a range of signal (eg L1/L2/L5). Each signal has a code and
+ * CNO. */
+struct rtcm_meas_sat_signal {
+  struct {
+    uint8_t cn0;  // GNSS signal CNR [dB-Hz / 4]
+    code_t code;
+  } sig_data[RTCM_MAX_SINGLE_SAT_SIGNAL];
+  uint8_t n_signal;
+};
+
+/** Represent info of single constellation, including a list of gnss satellites
+and maximum number of satellites. */
+struct rtcm_gnss_signal {
+  uint8_t max_n_sat;
+  struct rtcm_meas_sat_signal sat_data[MAX_NUM_SATS];
+};
 
 struct rtcm3_sbp_state {
   bool has_cached_time;
@@ -129,6 +149,15 @@ struct rtcm3_sbp_state {
   uint32_t tow_ms_meas;
   sbp_msg_t msg_azel_full;
   sbp_msg_t msg_meas_full;
+
+  bool msg_azel_full_sent;
+  bool msg_meas_full_sent;
+
+  /* A "map" of measurement info of constellations. Dimension = #constellation.
+   * Each constellation is represented in gnss_signal struct. For convenience
+   * the array is stored in the order of constellation enum defined in
+   * rtcm_constellation_t. Info is extracted from the observation msgs. */
+  struct rtcm_gnss_signal cons_meas_map[RTCM_CONSTELLATION_COUNT];
 };
 
 void rtcm2sbp_decode_frame(const uint8_t *frame,

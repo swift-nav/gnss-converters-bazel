@@ -57,10 +57,7 @@
 /* maximum value for antenna height DF028 */
 #define RTCM_1006_MAX_ANTENNA_HEIGHT_M 6.5535
 
-/* Maximum size of STGSV satellite mask */
-#define RTCM_STGSV_SATELLITE_MASK_SIZE 40
-#define RTCM_STGSV_SATELLITE_MASK_SIZE_GNSS13 24
-
+/* Fieldmask bit of RTCM 999 STGSV  */
 typedef enum {
   RTCM_STGSV_FIELDMASK_BIT_EL = 0,
   RTCM_STGSV_FIELDMASK_BIT_AZ,
@@ -72,6 +69,10 @@ typedef enum {
   RTCM_STGSV_FIELDMASK_BIT_RES3,
   RTCM_STGSV_FIELDMASK_SIZE,
 } rtcm_stgsv_field_mask;
+
+/* Maximum size of STGSV satellite mask - Field DF07P */
+#define RTCM_TESEOV_SATELLITE_MASK_SIZE 40
+#define RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13 24
 
 #define RTCM_STGSV_UINT8_NOT_VALID (uint8_t)0xFF
 #define RTCM_STGSV_INT8_NOT_VALID (int8_t)0x80
@@ -85,6 +86,11 @@ typedef enum {
   (uint8_t)(0x01 << RTCM_STGSV_FIELDMASK_BIT_CN0_B2)
 #define RTCM_STGSV_FIELDMASK_CN0_B3 \
   (uint8_t)(0x01 << RTCM_STGSV_FIELDMASK_BIT_CN0_B3)
+#define RTCM_STGSV_FIELDMASK_AZEL \
+  (RTCM_STGSV_FIELDMASK_EL | RTCM_STGSV_FIELDMASK_AZ)
+#define RTCM_STGSV_FIELDMASK_CN0                               \
+  (RTCM_STGSV_FIELDMASK_CN0_B1 | RTCM_STGSV_FIELDMASK_CN0_B2 | \
+   RTCM_STGSV_FIELDMASK_CN0_B3)
 
 #define MAX_NDF_FRAMES 63
 #define MAX_NDF_FRAME_SIZE_BITS 4096 /* max uint12 */

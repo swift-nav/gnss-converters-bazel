@@ -268,9 +268,11 @@ bool rtcm_get_gps_time(gps_time_t *gps_time, struct rtcm3_sbp_state *state);
 bool rtcm_get_leap_seconds(int8_t *leap_seconds, struct rtcm3_sbp_state *state);
 
 void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
-                             sbp_msg_sv_az_el_t *sbp_sv_az_el);
+                             sbp_msg_sv_az_el_t *sbp_sv_az_el,
+                             const struct rtcm3_sbp_state *state);
 
 void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
-                             sbp_msg_measurement_state_t *sbp_meas_state);
+                             sbp_msg_measurement_state_t *sbp_meas_state,
+                             const struct rtcm3_sbp_state *state);
 
 #endif /* GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H */

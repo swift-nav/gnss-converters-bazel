@@ -11,19 +11,17 @@
  */
 
 #include <check.h>
+#include <gnss-converters/rtcm3_sbp.h>
+#include <gnss-converters/sbp_rtcm3.h>
+#include <gnss_converters/src/common.h>
+#include <gnss_converters/src/rtcm3_sbp_internal.h>
+#include <gnss_converters/src/rtcm3_utils.h>
+#include <gnss_converters/src/sbp_rtcm3_internal.h>
+#include <libsbp/legacy/logging.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <gnss-converters/sbp_rtcm3.h>
-#include "common.h"
-#include "gnss-converters/rtcm3_sbp.h"
-#include "libsbp/legacy/logging.h"
-
-#include "../src/rtcm3_sbp_internal.h"
-#include "../src/rtcm3_utils.h"
-#include "../src/sbp_rtcm3_internal.h"
 
 #define FREQ_TOL 1e-3
 
@@ -356,6 +354,149 @@ START_TEST(test_sisa_meters_convertor) {
 }
 END_TEST
 
+// Test base functions for constellation, prn vs sid conversion and validation.
+/** Copied from rtcm3_utils.c */
+typedef struct {
+  u16 first_prn;
+  u16 num_sats;
+} prn_table_element_t;
+
+static const prn_table_element_t prn_table[RTCM_CONSTELLATION_COUNT] = {
+    [RTCM_CONSTELLATION_GPS] = {GPS_FIRST_PRN, NUM_SATS_GPS},
+    [RTCM_CONSTELLATION_SBAS] = {SBAS_FIRST_PRN, NUM_SATS_SBAS},
+    [RTCM_CONSTELLATION_GLO] = {GLO_FIRST_PRN, NUM_SATS_GLO},
+    [RTCM_CONSTELLATION_BDS] = {BDS_FIRST_PRN, NUM_SATS_BDS},
+    [RTCM_CONSTELLATION_QZS] = {QZS_FIRST_PRN, NUM_SATS_QZS},
+    [RTCM_CONSTELLATION_GAL] = {GAL_FIRST_PRN, NUM_SATS_GAL},
+};
+
+START_TEST(test_constellation_sbp2rtcm_roundtrip) {
+  rtcm_constellation_t rtcm_cons;
+  for (rtcm_cons = RTCM_CONSTELLATION_GPS; rtcm_cons < RTCM_CONSTELLATION_COUNT;
+       rtcm_cons++) {
+    constellation_t cons = constellation_rtcm2sbp(rtcm_cons);
+    ck_assert(rtcm_cons == constellation_sbp2rtcm(cons));
+  }
+
+  // Invalid cases
+  ck_assert(constellation_rtcm2sbp(RTCM_CONSTELLATION_INVALID) ==
+            CONSTELLATION_INVALID);
+  ck_assert(constellation_rtcm2sbp(RTCM_CONSTELLATION_COUNT) ==
+            CONSTELLATION_INVALID);
+  ck_assert(constellation_sbp2rtcm(CONSTELLATION_INVALID) ==
+            RTCM_CONSTELLATION_INVALID);
+  ck_assert(constellation_sbp2rtcm(CONSTELLATION_COUNT) ==
+            RTCM_CONSTELLATION_INVALID);
+}
+
+START_TEST(test_constellation_teseov2rtcm) {
+  // Valid cases
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_GPS) ==
+            RTCM_CONSTELLATION_GPS);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_GLO) ==
+            RTCM_CONSTELLATION_GLO);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_QZS) ==
+            RTCM_CONSTELLATION_QZS);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_GAL) ==
+            RTCM_CONSTELLATION_GAL);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_SBAS) ==
+            RTCM_CONSTELLATION_SBAS);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_BDS7) ==
+            RTCM_CONSTELLATION_BDS);
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_BDS13) ==
+            RTCM_CONSTELLATION_BDS);
+
+  // Invalid cases
+  ck_assert(constellation_teseov2rtcm(RTCM_TESEOV_BDS13 + 1) ==
+            RTCM_CONSTELLATION_INVALID);
+}
+
+START_TEST(test_satellite_id_teseov2rtcm) {
+  rtcm_teseov_constellation_t teseov_cons[] = {RTCM_TESEOV_GPS,
+                                               RTCM_TESEOV_GLO,
+                                               RTCM_TESEOV_QZS,
+                                               RTCM_TESEOV_GAL,
+                                               RTCM_TESEOV_SBAS,
+                                               RTCM_TESEOV_BDS7};
+  uint8_t upper_bound;
+  for (size_t i = 0; i < ARRAY_SIZE(teseov_cons); i++) {
+    ck_assert(teseov_constellation_valid(teseov_cons[i]));
+
+    ck_assert(teseov_sid_valid(teseov_cons[i], 0));
+    ck_assert_uint_eq(satellite_id_teseov2rtcm(teseov_cons[i], 0), 0);
+
+    upper_bound = RTCM_TESEOV_SATELLITE_MASK_SIZE - 1;
+    ck_assert(teseov_sid_valid(teseov_cons[i], upper_bound));
+    ck_assert_uint_eq(satellite_id_teseov2rtcm(teseov_cons[i], upper_bound),
+                      upper_bound);
+
+    // invalid sid
+    ck_assert(
+        !teseov_sid_valid(teseov_cons[i], RTCM_TESEOV_SATELLITE_MASK_SIZE));
+  }
+
+  ck_assert(teseov_constellation_valid(RTCM_TESEOV_BDS13));
+  ck_assert_uint_eq(satellite_id_teseov2rtcm(RTCM_TESEOV_BDS13, 0),
+                    RTCM_TESEOV_SATELLITE_MASK_SIZE);
+  upper_bound = RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13 - 1;
+  ck_assert(teseov_sid_valid(RTCM_TESEOV_BDS13, upper_bound));
+  ck_assert_uint_eq(satellite_id_teseov2rtcm(RTCM_TESEOV_BDS13, upper_bound),
+                    (upper_bound + RTCM_TESEOV_SATELLITE_MASK_SIZE));
+
+  // invalid sid
+  ck_assert(!teseov_sid_valid(RTCM_TESEOV_BDS13,
+                              RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13));
+
+  // invalid constellation
+  ck_assert(!teseov_constellation_valid(RTCM_TESEOV_BDS13 + 1));
+}
+
+START_TEST(test_rtcm_cons_sid_valid) {
+  rtcm_constellation_t rtcm_cons;
+  for (rtcm_cons = RTCM_CONSTELLATION_GPS; rtcm_cons < RTCM_CONSTELLATION_COUNT;
+       rtcm_cons++) {
+    // assert rtcm_constellation_valid()
+    ck_assert(rtcm_constellation_valid(rtcm_cons));
+
+    // assert rtcm_sid_valid()
+    for (uint8_t sid = 0; sid < prn_table[rtcm_cons].num_sats; sid++) {
+      ck_assert(rtcm_sid_valid(rtcm_cons, sid));
+    }
+    ck_assert(!rtcm_sid_valid(rtcm_cons, prn_table[rtcm_cons].num_sats));
+    ck_assert(!rtcm_sid_valid(rtcm_cons, UINT8_MAX));
+  }
+
+  // assert rtcm_constellation_valid()
+  ck_assert(!rtcm_constellation_valid(RTCM_CONSTELLATION_INVALID));
+  ck_assert(!rtcm_constellation_valid(RTCM_CONSTELLATION_COUNT));
+}
+
+START_TEST(test_satellite_id2prn_roundtrip) {
+  for (rtcm_constellation_t rtcm_cons = RTCM_CONSTELLATION_GPS;
+       rtcm_cons < RTCM_CONSTELLATION_COUNT;
+       rtcm_cons++) {
+    ck_assert(rtcm_constellation_valid(rtcm_cons));
+
+    // Test id<->prn conversion
+    for (uint8_t sid = 0; sid < prn_table[rtcm_cons].num_sats; sid++) {
+      ck_assert(rtcm_sid_valid(rtcm_cons, sid));
+      uint8_t prn = satellite_id2prn(rtcm_cons, sid);
+      ck_assert(prn_valid(rtcm_cons, prn));
+      ck_assert_uint_eq(prn, (sid + prn_table[rtcm_cons].first_prn));
+
+      uint8_t sid_rt = satellite_prn2id(rtcm_cons, prn);
+      ck_assert(rtcm_sid_valid(rtcm_cons, sid_rt));
+      ck_assert_uint_eq(sid_rt, (prn - prn_table[rtcm_cons].first_prn));
+
+      ck_assert_uint_eq(sid_rt, sid);
+    }
+
+    // Test number of satellite each constellation
+    ck_assert_uint_eq(constellation_to_num_sats(rtcm_cons),
+                      prn_table[rtcm_cons].num_sats);
+  }
+}
+
 Suite *utils_suite(void) {
   Suite *s = suite_create("Utils");
 
@@ -369,8 +510,16 @@ Suite *utils_suite(void) {
   tcase_add_test(tc_utils, test_msm_add_to_header);
   tcase_add_test(tc_utils, test_ura_uri_convertor);
   tcase_add_test(tc_utils, test_sisa_meters_convertor);
-
   suite_add_tcase(s, tc_utils);
+
+  TCase *tc_cons_utils = tcase_create("Constellation Utils");
+  tcase_add_checked_fixture(tc_cons_utils, utils_setup, NULL);
+  tcase_add_test(tc_cons_utils, test_constellation_sbp2rtcm_roundtrip);
+  tcase_add_test(tc_cons_utils, test_constellation_teseov2rtcm);
+  tcase_add_test(tc_cons_utils, test_satellite_id_teseov2rtcm);
+  tcase_add_test(tc_cons_utils, test_rtcm_cons_sid_valid);
+  tcase_add_test(tc_cons_utils, test_satellite_id2prn_roundtrip);
+  suite_add_tcase(s, tc_cons_utils);
 
   return s;
 }

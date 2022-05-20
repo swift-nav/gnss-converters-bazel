@@ -1619,7 +1619,7 @@ static uint8_t count_sat_active(uint64_t sat_mask,
                                 uint8_t sat_active[]) {
   uint8_t n_sat = 0;
   for (uint8_t i = 0; i < sat_mask_size; i++) {
-    if (sat_mask & (INT64_C(1) << (RTCM_STGSV_SATELLITE_MASK_SIZE - i - 1))) {
+    if (sat_mask & (INT64_C(1) << (RTCM_TESEOV_SATELLITE_MASK_SIZE - i - 1))) {
       sat_active[n_sat] = i;
       n_sat++;
     }
@@ -1633,15 +1633,15 @@ static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_in_bitstream_t *buff,
 
   BITSTREAM_DECODE_U32(buff, msg_999_stgsv->tow_ms, 30);
   BITSTREAM_DECODE_U8(buff, msg_999_stgsv->constellation, 4);
-  BITSTREAM_DECODE_U64(buff, sat_mask_64, RTCM_STGSV_SATELLITE_MASK_SIZE);
+  BITSTREAM_DECODE_U64(buff, sat_mask_64, RTCM_TESEOV_SATELLITE_MASK_SIZE);
   BITSTREAM_DECODE_U8(buff, msg_999_stgsv->field_mask, 8);
   BITSTREAM_DECODE_U8(buff, msg_999_stgsv->mul_msg_ind, 1);
 
   uint8_t sat_mask_size = (msg_999_stgsv->constellation == RTCM_TESEOV_BDS13
-                               ? RTCM_STGSV_SATELLITE_MASK_SIZE_GNSS13
-                               : RTCM_STGSV_SATELLITE_MASK_SIZE);
+                               ? RTCM_TESEOV_SATELLITE_MASK_SIZE_GNSS13
+                               : RTCM_TESEOV_SATELLITE_MASK_SIZE);
 
-  uint8_t sat_active_arr[RTCM_STGSV_SATELLITE_MASK_SIZE] = {0};
+  uint8_t sat_active_arr[RTCM_TESEOV_SATELLITE_MASK_SIZE] = {0};
   msg_999_stgsv->n_sat =
       count_sat_active(sat_mask_64, sat_mask_size, sat_active_arr);
 

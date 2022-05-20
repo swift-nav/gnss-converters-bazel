@@ -91,6 +91,20 @@ static void validate_base_obs_sanity(struct rtcm3_sbp_state *state,
 static uint16_t extract_msg_len(const uint8_t *buf);
 static bool verify_crc(uint8_t *buf, uint16_t buf_len);
 
+/** After the measurement state info is decoded in observation messages, they
+ * are filled into cons_meas_map in converter state. */
+static void update_cons_meas_map(constellation_t sbp_cons,
+                                 const sbp_v4_gnss_signal_t *sid,
+                                 uint8_t cn0,
+                                 struct rtcm3_sbp_state *state);
+
+/** This function is used to reset the map after the measurement data is sent
+ * out, to prevent the use of outdated satellite code after long period.
+ * It is looped through all the constellations and sid. Instead of resetting all
+ * the elements to "default" values, this function just resets n_signals to 0,
+ * saving computation cost. */
+static void reset_cons_meas_map(struct rtcm3_sbp_state *state);
+
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
                    TimeTruth *time_truth,
                    void (*cb_rtcm_to_sbp)(uint16_t sender_id,
@@ -173,6 +187,19 @@ void rtcm2sbp_init(struct rtcm3_sbp_state *state,
   state->tow_ms_meas = 0;
   memset(&state->msg_azel_full, 0, sizeof(state->msg_azel_full));
   memset(&state->msg_meas_full, 0, sizeof(state->msg_meas_full));
+
+  state->msg_azel_full_sent = false;
+  state->msg_meas_full_sent = false;
+
+  // Set all bit to 0, then assigns <max_n_sat> with the maximum number of
+  // satellite for each constellation.
+  memset(&state->cons_meas_map, 0, sizeof(state->cons_meas_map));
+  for (rtcm_constellation_t cons = RTCM_CONSTELLATION_GPS;
+       cons < RTCM_CONSTELLATION_COUNT;
+       cons++) {
+    state->cons_meas_map->max_n_sat = constellation_to_num_sats(cons);
+  }
+  reset_cons_meas_map(state);
 }
 
 void rtcm2sbp_decode_payload(const uint8_t *payload,
@@ -917,6 +944,8 @@ void add_obs_to_buffer(const rtcm_obs_message *new_rtcm_obs,
                    sbp_freq->flags);
         }
 
+        constellation_t sbp_cons = code_to_constellation(sbp_freq->sid.code);
+        update_cons_meas_map(sbp_cons, &sbp_freq->sid, sbp_freq->cn0, state);
         state->obs_to_send++;
       }
     }
@@ -1789,6 +1818,8 @@ void add_msm_obs_to_buffer(const rtcm_msm_message *new_rtcm_obs,
                      sbp_freq->flags);
           }
 
+          constellation_t sbp_cons = code_to_constellation(sbp_freq->sid.code);
+          update_cons_meas_map(sbp_cons, &sid, sbp_freq->cn0, state);
           state->obs_to_send++;
         }
         cell_index++;
@@ -2100,139 +2131,212 @@ bool rtcm_get_leap_seconds(int8_t *leap_seconds,
   return false;
 }
 
-/* Update satellite prn in SBP following the GNSS ID from RTCM3 DF06P */
-static bool sat_rtcm2sbp(uint8_t rtcm_constellation,
-                         uint8_t rtcm_sat_id,
-                         constellation_t *sbp_constellation,
-                         uint8_t *sbp_sat) {
-  switch (rtcm_constellation) {
-    case RTCM_TESEOV_GPS:
-      *sbp_constellation = CONSTELLATION_GPS;
-      *sbp_sat = rtcm_sat_id + GPS_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_GLO:
-      *sbp_constellation = CONSTELLATION_GLO;
-      *sbp_sat = rtcm_sat_id + GLO_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_QZS:
-      *sbp_constellation = CONSTELLATION_QZS;
-      *sbp_sat = rtcm_sat_id + QZS_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_GAL:
-      *sbp_constellation = CONSTELLATION_GAL;
-      *sbp_sat = rtcm_sat_id + GAL_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_SBAS:
-      *sbp_constellation = CONSTELLATION_SBAS;
-      *sbp_sat = rtcm_sat_id + SBAS_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_BDS7:
-      *sbp_constellation = CONSTELLATION_BDS;
-      *sbp_sat = rtcm_sat_id + BDS_FIRST_PRN;
-      break;
-    case RTCM_TESEOV_BDS13:
-      // special case of BDS, according to DF07P and DF06P
-      *sbp_constellation = CONSTELLATION_BDS;
-      *sbp_sat = rtcm_sat_id + BDS_FIRST_PRN + 40;
-      break;
-    default:
-      return false;
+static void update_cons_meas_map(constellation_t sbp_cons,
+                                 const sbp_v4_gnss_signal_t *sid,
+                                 uint8_t cn0,
+                                 struct rtcm3_sbp_state *state) {
+  rtcm_constellation_t rtcm_cons = constellation_sbp2rtcm(sbp_cons);
+  if ((!rtcm_constellation_valid(rtcm_cons)) || (cn0 == 0) ||
+      (!prn_valid(rtcm_cons, sid->sat)) || (!code_valid(sid->code))) {
+    return;  // invalid cons/cn0/prn
   }
+
+  uint8_t rtcm_sid = satellite_prn2id(rtcm_cons, sid->sat);
+  if (!rtcm_sid_valid(rtcm_cons, rtcm_sid)) {
+    return;
+  }
+
+  struct rtcm_meas_sat_signal *sat_data =
+      &state->cons_meas_map[rtcm_cons].sat_data[rtcm_sid];
+  for (size_t j = 0; j < sat_data->n_signal; j++) {
+    if (sat_data->sig_data[j].code == sid->code) {
+      sat_data->sig_data[j].cn0 = cn0;
+      return;
+    }
+  }
+
+  if (sat_data->n_signal < ARRAY_SIZE(sat_data->sig_data)) {
+    // add sat code into map
+    sat_data->sig_data[sat_data->n_signal].code = (uint8_t)sid->code;
+    sat_data->sig_data[sat_data->n_signal].cn0 = cn0;
+    sat_data->n_signal++;
+  }
+}
+
+static void reset_cons_meas_map(struct rtcm3_sbp_state *state) {
+  for (rtcm_constellation_t cons = RTCM_CONSTELLATION_GPS;
+       cons < RTCM_CONSTELLATION_COUNT;
+       cons++) {
+    for (size_t sid = 0; sid < state->cons_meas_map[cons].max_n_sat; sid++) {
+      state->cons_meas_map[cons].sat_data[sid].n_signal = 0;
+    }
+  }
+}
+
+// Check if the field_value matches the field_mask and its values are valid.
+// *band_valid returns the equivalent bit of L1/L2/L5.
+static uint8_t rtcm3_stgsv_fv_valid(uint8_t field_mask,
+                                    const rtcm_999_stgsv_fv *field_value) {
+  bool azel_valid = ((field_value->el != RTCM_STGSV_INT8_NOT_VALID) &&
+                     (field_value->az != RTCM_STGSV_UINT9_NOT_VALID));
+  if (!azel_valid) {
+    return false;
+  }
+
+  bool band_enable[3] = {false};
+  band_enable[0] = (field_mask & RTCM_STGSV_FIELDMASK_CN0_B1);
+  band_enable[1] = (field_mask & RTCM_STGSV_FIELDMASK_CN0_B2);
+  band_enable[2] = (field_mask & RTCM_STGSV_FIELDMASK_CN0_B3);
+
+  band_enable[0] =
+      (band_enable[0] && (field_value->cn0_b1 != RTCM_STGSV_UINT8_NOT_VALID));
+  band_enable[1] =
+      (band_enable[1] && (field_value->cn0_b2 != RTCM_STGSV_UINT8_NOT_VALID));
+  band_enable[2] =
+      (band_enable[2] && (field_value->cn0_b3 != RTCM_STGSV_UINT8_NOT_VALID));
+
+  uint8_t n_signal_valid = 0;
+  for (size_t i = 0; i < ARRAY_SIZE(band_enable); i++) {
+    n_signal_valid += (band_enable[i] ? 1 : 0);
+  }
+  return n_signal_valid;
+}
+
+/* Check valid condition for each satellite: valid constellation, valid
+ * field_value, valid decoded satellite id, #signal in map == #signal in stgsv
+ */
+static bool rtcm_stgsv_to_sbp_fv_valid(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                                       uint8_t fv_id,
+                                       const struct rtcm3_sbp_state *state,
+                                       rtcm_constellation_t *rtcm_cons,
+                                       uint8_t *sid) {
+  assert(rtcm_cons);
+  assert(sid);
+  assert(fv_id < rtcm_999_stgsv->n_sat);
+
+  if ((!teseov_constellation_valid(rtcm_999_stgsv->constellation)) ||
+      (!teseov_sid_valid(rtcm_999_stgsv->constellation,
+                         rtcm_999_stgsv->field_value[fv_id].sat_id))) {
+    return false;
+  }
+
+  *rtcm_cons = constellation_teseov2rtcm(rtcm_999_stgsv->constellation);
+  if (!rtcm_constellation_valid(*rtcm_cons)) {
+    false;
+  }
+
+  uint8_t n_signal_valid = rtcm3_stgsv_fv_valid(
+      rtcm_999_stgsv->field_mask, &rtcm_999_stgsv->field_value[fv_id]);
+  if (n_signal_valid == 0) {
+    return false;  // Check if the field value is valid.
+  }
+
+  *sid = satellite_id_teseov2rtcm(rtcm_999_stgsv->constellation,
+                                  rtcm_999_stgsv->field_value[fv_id].sat_id);
+  if (!rtcm_sid_valid(*rtcm_cons, *sid)) {
+    return false;  // Check if the decoded sid is valid.
+  }
+
+  struct rtcm_meas_sat_signal sat_sig =
+      state->cons_meas_map[*rtcm_cons].sat_data[*sid];
+  if ((sat_sig.n_signal == 0) || (sat_sig.n_signal != n_signal_valid)) {
+    return false;  // Skip if no equiv signal in "cons_meas_map" or different
+                   // info
+  }
+
   return true;
 }
 
+// The code of the satellite can NOT be decoded from STGSV msg (same for
+// measurement state decoding). Therefore, it is filled by searching the equiv
+// PRN in "cons_meas_map" obtained by Obs msg.
 void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
-                             sbp_msg_sv_az_el_t *sbp_sv_az_el) {
+                             sbp_msg_sv_az_el_t *sbp_sv_az_el,
+                             const struct rtcm3_sbp_state *state) {
   assert(sbp_sv_az_el);
-
-  const uint8_t field_mask =
-      (RTCM_STGSV_FIELDMASK_EL | RTCM_STGSV_FIELDMASK_AZ);
-  if ((rtcm_999_stgsv->field_mask & field_mask) != field_mask) {
-    return;
-  }
-
-  constellation_t sbp_constellation = 0;
   uint8_t sbp_n_sat = 0;
 
-  for (size_t i = 0; i < rtcm_999_stgsv->n_sat; i++) {
-    uint8_t sbp_sat_id = 0;
+  // Scan all field_value (each includes az, el, cn0 [1st-3rd band]
+  for (size_t id = 0; id < rtcm_999_stgsv->n_sat; id++) {
+    rtcm_constellation_t cons = RTCM_CONSTELLATION_INVALID;
+    uint8_t sid = 0;
 
-    if ((rtcm_999_stgsv->field_value[i].el == RTCM_STGSV_INT8_NOT_VALID) ||
-        (rtcm_999_stgsv->field_value[i].az == RTCM_STGSV_UINT9_NOT_VALID)) {
+    if (!rtcm_stgsv_to_sbp_fv_valid(
+            rtcm_999_stgsv, (uint8_t)id, state, &cons, &sid)) {
       continue;
     }
 
-    if (!sat_rtcm2sbp(rtcm_999_stgsv->constellation,
-                      rtcm_999_stgsv->field_value[i].sat_id,
-                      &sbp_constellation,
-                      &sbp_sat_id)) {
-      continue;
+    struct rtcm_meas_sat_signal sat_sig =
+        state->cons_meas_map[cons].sat_data[sid];
+
+    // Assign all the signals (with equiv. PRN) to sbp msg.
+    // Note: ensure #signals in cons_meas_map == #signals in stgsv.
+    uint8_t prn = satellite_id2prn(cons, sid);
+    uint8_t az = (uint8_t)(rtcm_999_stgsv->field_value[id].az / 2);
+    int8_t el = rtcm_999_stgsv->field_value[id].el;
+
+    for (size_t j = 0; j < sat_sig.n_signal; j++) {
+      if (sbp_n_sat >= SBP_MSG_SV_AZ_EL_AZEL_MAX) {
+        break;
+      }
+
+      sbp_sv_az_el->azel[sbp_n_sat].sid.code =
+          (uint8_t)sat_sig.sig_data[j].code;
+      sbp_sv_az_el->azel[sbp_n_sat].sid.sat = prn;
+      sbp_sv_az_el->azel[sbp_n_sat].az = az;
+      sbp_sv_az_el->azel[sbp_n_sat].el = el;
+
+      sbp_n_sat++;
     }
-
-    sbp_sv_az_el->azel[sbp_n_sat].sid.sat = sbp_sat_id;
-    sbp_sv_az_el->azel[sbp_n_sat].sid.code =
-        (uint8_t)(constellation_to_l1_code(sbp_constellation));
-
-    sbp_sv_az_el->azel[sbp_n_sat].az =
-        (uint8_t)(rtcm_999_stgsv->field_value[i].az / 2);
-    sbp_sv_az_el->azel[sbp_n_sat].el = rtcm_999_stgsv->field_value[i].el;
-    sbp_n_sat++;
   }
-
   sbp_sv_az_el->n_azel = sbp_n_sat;
 }
 
+// A duplicated version of measurement state can be decoded from Observation
+// msg. It can NOT be decoded directly from STGSV msg (due to the lack of
+// satellite code & complex multi band scenarios). Therefore, the decoding
+// conditions are checked with STGSV, while the measurement data is obtained
+// by Obs msg. It is stored in "cons_meas_map" of the converter state.
 void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
-                             sbp_msg_measurement_state_t *sbp_meas_state) {
+                             sbp_msg_measurement_state_t *sbp_meas_state,
+                             const struct rtcm3_sbp_state *state) {
   assert(sbp_meas_state);
-
-  const uint8_t field_mask =
-      (RTCM_STGSV_FIELDMASK_CN0_B1 | RTCM_STGSV_FIELDMASK_CN0_B2 |
-       RTCM_STGSV_FIELDMASK_CN0_B3);
-  if (!(rtcm_999_stgsv->field_mask & field_mask)) {
-    return;
-  }
-
-  constellation_t sbp_constellation = 0;
   uint8_t sbp_n_sat = 0;
 
-  for (size_t i = 0; i < rtcm_999_stgsv->n_sat; i++) {
-    uint8_t sbp_sat_id = 0;
+  // Scan all field_value (each includes az, el, cn0 [1st-3rd band]
+  for (size_t id = 0; id < rtcm_999_stgsv->n_sat; id++) {
+    rtcm_constellation_t cons = RTCM_CONSTELLATION_INVALID;
+    uint8_t sid = 0;
 
-    if (!sat_rtcm2sbp(rtcm_999_stgsv->constellation,
-                      rtcm_999_stgsv->field_value[i].sat_id,
-                      &sbp_constellation,
-                      &sbp_sat_id)) {
+    if (!rtcm_stgsv_to_sbp_fv_valid(
+            rtcm_999_stgsv, (uint8_t)id, state, &cons, &sid)) {
       continue;
     }
 
-    uint16_t sbp_cn0 = 0;
-    if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B1) &&
-        (rtcm_999_stgsv->field_value[i].cn0_b1 != RTCM_STGSV_UINT8_NOT_VALID)) {
-      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b1 * 4;
-    } else if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B2) &&
-               (rtcm_999_stgsv->field_value[i].cn0_b2 !=
-                RTCM_STGSV_UINT8_NOT_VALID)) {
-      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b2 * 4;
-    } else if ((rtcm_999_stgsv->field_mask & RTCM_STGSV_FIELDMASK_CN0_B3) &&
-               (rtcm_999_stgsv->field_value[i].cn0_b3 !=
-                RTCM_STGSV_UINT8_NOT_VALID)) {
-      sbp_cn0 = rtcm_999_stgsv->field_value[i].cn0_b3 * 4;
+    struct rtcm_meas_sat_signal sat_sig =
+        state->cons_meas_map[cons].sat_data[sid];
+
+    // Assign all the signals (with equiv. PRN) to sbp msg.
+    // Note: ensure #signals in cons_meas_map == #signals in stgsv.
+    for (size_t j = 0; j < sat_sig.n_signal; j++) {
+      if (sbp_n_sat >= SBP_MSG_MEASUREMENT_STATE_STATES_MAX) {
+        break;
+      }
+
+      uint8_t sbp_cn0 = sat_sig.sig_data[j].cn0;
+      // Check <1. cn0 within uint8_t> & <2. cn0 != 0 (invalid value) pg158>
+      if (sbp_cn0 == 0) {
+        continue;
+      }
+
+      sbp_meas_state->states[sbp_n_sat].cn0 = sbp_cn0;
+      sbp_meas_state->states[sbp_n_sat].mesid.sat = satellite_id2prn(cons, sid);
+      sbp_meas_state->states[sbp_n_sat].mesid.code =
+          (uint8_t)sat_sig.sig_data[j].code;
+
+      sbp_n_sat++;
     }
-
-    // Check <1. cn0 within uint8_t> & <2. cn0 != 0 (invalid value) pg 158>
-    if ((sbp_cn0 > 255) || (sbp_cn0 == 0)) {
-      continue;
-    }
-
-    sbp_meas_state->states[sbp_n_sat].cn0 = (uint8_t)sbp_cn0;
-    sbp_meas_state->states[sbp_n_sat].mesid.sat = sbp_sat_id;
-    sbp_meas_state->states[sbp_n_sat].mesid.code =
-        (uint8_t)(constellation_to_l1_code(sbp_constellation));
-
-    sbp_n_sat++;
   }
-
   sbp_meas_state->n_states = sbp_n_sat;
 }
 
@@ -2281,6 +2385,14 @@ static bool expand_multi_msg(sbp_msg_t *msg_full,
   return false;
 }
 
+static void reset_check_cons_meas_map(struct rtcm3_sbp_state *state) {
+  if (state->msg_azel_full_sent && state->msg_meas_full_sent) {
+    reset_cons_meas_map(state);
+    state->msg_azel_full_sent = false;
+    state->msg_meas_full_sent = false;
+  }
+}
+
 static void state_callback_update(struct rtcm3_sbp_state *state,
                                   sbp_msg_type_t msg_type) {
   if (msg_type == SbpMsgSvAzEl) {
@@ -2289,6 +2401,7 @@ static void state_callback_update(struct rtcm3_sbp_state *state,
                           &state->msg_azel_full,
                           state->context);
     state->msg_azel_full.sv_az_el.n_azel = 0;
+    reset_check_cons_meas_map(state);
     return;
   }
   if (msg_type == SbpMsgMeasurementState) {
@@ -2297,6 +2410,7 @@ static void state_callback_update(struct rtcm3_sbp_state *state,
                           &state->msg_meas_full,
                           state->context);
     state->msg_meas_full.measurement_state.n_states = 0;
+    reset_check_cons_meas_map(state);
     return;
   }
 }
@@ -2311,7 +2425,7 @@ static void rtcm3_stgsv_azel_to_sbp_update(const rtcm_msg_999 *msg_999,
 
   sbp_msg_t msg;
   sbp_msg_sv_az_el_t sbp_az_el;
-  rtcm3_stgsv_azel_to_sbp(&msg_999->data.stgsv, &sbp_az_el);
+  rtcm3_stgsv_azel_to_sbp(&msg_999->data.stgsv, &sbp_az_el, state);
   msg.sv_az_el = sbp_az_el;
 
   if (state->msg_azel_full.sv_az_el.n_azel < SBP_MSG_SV_AZ_EL_AZEL_MAX) {
@@ -2320,6 +2434,7 @@ static void rtcm3_stgsv_azel_to_sbp_update(const rtcm_msg_999 *msg_999,
   }
 
   if (!msg_999->data.stgsv.mul_msg_ind) {
+    state->msg_azel_full_sent = true;
     state_callback_update(state, SbpMsgSvAzEl);
   }
 }
@@ -2334,7 +2449,7 @@ static void rtcm3_stgsv_meas_to_sbp_update(const rtcm_msg_999 *msg_999,
 
   sbp_msg_t msg;
   sbp_msg_measurement_state_t sbp_meas_state;
-  rtcm3_stgsv_meas_to_sbp(&msg_999->data.stgsv, &sbp_meas_state);
+  rtcm3_stgsv_meas_to_sbp(&msg_999->data.stgsv, &sbp_meas_state, state);
   msg.measurement_state = sbp_meas_state;
 
   if (state->msg_meas_full.measurement_state.n_states <
@@ -2344,7 +2459,20 @@ static void rtcm3_stgsv_meas_to_sbp_update(const rtcm_msg_999 *msg_999,
   }
 
   if (!msg_999->data.stgsv.mul_msg_ind) {
+    state->msg_meas_full_sent = true;
     state_callback_update(state, SbpMsgMeasurementState);
+  }
+}
+
+static void rtcm3_stgsv_to_sbp_update(const rtcm_msg_999 *msg_999,
+                                      struct rtcm3_sbp_state *state) {
+  uint8_t field_mask = msg_999->data.stgsv.field_mask;
+  bool azel_available =
+      ((field_mask & RTCM_STGSV_FIELDMASK_AZEL) == RTCM_STGSV_FIELDMASK_AZEL);
+  bool cn0_available = (field_mask & RTCM_STGSV_FIELDMASK_CN0);
+  if (azel_available && cn0_available) {
+    rtcm3_stgsv_azel_to_sbp_update(msg_999, state);
+    rtcm3_stgsv_meas_to_sbp_update(msg_999, state);
   }
 }
 
@@ -2352,8 +2480,7 @@ static void handle_rtcm3_999_subframe(const rtcm_msg_999 *msg_999,
                                       struct rtcm3_sbp_state *state) {
   switch (msg_999->sub_type_id) {
     case RTCM_TESEOV_STGSV: {
-      rtcm3_stgsv_azel_to_sbp_update(msg_999, state);
-      rtcm3_stgsv_meas_to_sbp_update(msg_999, state);
+      rtcm3_stgsv_to_sbp_update(msg_999, state);
       break;
     }
     default:

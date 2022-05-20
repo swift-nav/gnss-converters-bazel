@@ -19,7 +19,9 @@ set(TEST_SOURCE_FILES
 swift_add_test(test-gnss-converters
   UNIT_TEST
   SRCS ${TEST_SOURCE_FILES}
-  INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
+  INCLUDE
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}
   LINK gnss_converters check Threads::Threads
   )
 
