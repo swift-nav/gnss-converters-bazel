@@ -14,7 +14,6 @@
 #include <swiftnav/logging.h>
 
 #include <cmath>
-#include <iostream>
 
 namespace obs_adjuster {
 

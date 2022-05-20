@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Swift Navigation Inc.
+ * Copyright (C) 2022 Swift Navigation Inc.
  * Contact: Swift Navigation <dev@swiftnav.com>
  *
  * This source is subject to the license found in the file 'LICENSE' which must
@@ -10,13 +10,13 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_EXTRA_OBSERVATION_ADJUSTER_H
-#define GNSS_CONVERTERS_EXTRA_OBSERVATION_ADJUSTER_H
+#ifndef OBSERVATION_ADJUSTER_OBSERVATION_ADJUSTER_H
+#define OBSERVATION_ADJUSTER_OBSERVATION_ADJUSTER_H
 
 #include <gnss-converters-extra/sbp_conv.h>
-#include <observation_adjuster/internal/observation_adjuster_constants.h>
-#include <observation_adjuster/internal/sbp_obs_array.h>
 #include <observation_adjuster/message_matcher.h>
+#include <observation_adjuster/observation_adjuster_constants.h>
+#include <observation_adjuster/sbp_obs_array.h>
 #include <observation_adjuster/sbp_packer.h>
 #include <observation_adjuster/sbp_unpacker.h>
 
@@ -80,4 +80,4 @@ class ObservationAdjuster {
   sbp_conv_t sbp2rtcm_converter_;
 };
 
-#endif  // GNSS_CONVERTERS_EXTRA_OBSERVATION_ADJUSTER_H
+#endif  // OBSERVATION_ADJUSTER_OBSERVATION_ADJUSTER_H

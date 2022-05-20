@@ -10,7 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <gnss-converters-extra/observation_adjuster/observation_adjuster_extern.h>
+#include <observation_adjuster/binding.h>
 #include <observation_adjuster/observation_adjuster.h>
 
 #include <cassert>

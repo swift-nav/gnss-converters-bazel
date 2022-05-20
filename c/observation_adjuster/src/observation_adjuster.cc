@@ -13,9 +13,8 @@
 #include <libsbp/sbp.h>
 #include <observation_adjuster/epoch_adjuster.h>
 #include <observation_adjuster/observation_adjuster.h>
+#include <rtcm3/messages.h>
 #include <swiftnav/logging.h>
-
-#include <iostream>
 
 uint32_t type_to_idx(const obs_adjuster::StreamType type) {
   return static_cast<uint32_t>(type);

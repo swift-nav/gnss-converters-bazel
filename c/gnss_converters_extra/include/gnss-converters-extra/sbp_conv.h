@@ -10,8 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_SBP_CONV_INTERFACE_H
-#define GNSS_CONVERTERS_SBP_CONV_INTERFACE_H
+#ifndef GNSS_CONVERTERS_EXTRA_SBP_CONV_INTERFACE_H
+#define GNSS_CONVERTERS_EXTRA_SBP_CONV_INTERFACE_H
 
 #include <rtcm3/messages.h>
 #include <stdint.h>
@@ -55,4 +55,4 @@ void sbp_conv_set_stn_description_parameters(sbp_conv_t conv,
 }
 #endif
 
-#endif /* GNSS_CONVERTERS_SBP_CONV_INTERFACE_H */
+#endif /* GNSS_CONVERTERS_EXTRA_SBP_CONV_INTERFACE_H */

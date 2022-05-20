@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Swift Navigation Inc.
+ * Copyright (C) 2022 Swift Navigation Inc.
  * Contact: Swift Navigation <dev@swiftnav.com>
  *
  * This source is subject to the license found in the file 'LICENSE' which must
@@ -10,8 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_EXTRA_OBSERVATION_ADJUSTER_HELPERS_SBP_OBS_ARRAY_H
-#define GNSS_CONVERTERS_EXTRA_OBSERVATION_ADJUSTER_HELPERS_SBP_OBS_ARRAY_H
+#ifndef OBSERVATION_ADJUSTER_SBP_OBS_ARRAY_H
+#define OBSERVATION_ADJUSTER_SBP_OBS_ARRAY_H
 
 #include <libsbp/v4/observation/PackedObsContent.h>
 #include <swiftnav/gnss_time.h>

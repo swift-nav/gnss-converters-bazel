@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Swift Navigation Inc.
+ * Copyright (C) 2022 Swift Navigation Inc.
  * Contact: Swift Navigation <dev@swiftnav.com>
  *
  * This source is subject to the license found in the file 'LICENSE' which must
@@ -10,12 +10,12 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_OBSERVATION_ADJUSTER_CONSTANTS_H
-#define GNSS_CONVERTERS_OBSERVATION_ADJUSTER_CONSTANTS_H
-
-#include <cstddef>
+#ifndef OBSERVATION_ADJUSTER_OBSERVATION_ADJUSTER_CONSTANTS_H
+#define OBSERVATION_ADJUSTER_OBSERVATION_ADJUSTER_CONSTANTS_H
 
 #include <libsbp/v4/observation/MSG_OBS.h>
+
+#include <cstddef>
 
 namespace obs_adjuster {
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Swift Navigation Inc.
+ * Copyright (C) 2022 Swift Navigation Inc.
  * Contact: Swift Navigation <dev@swiftnav.com>
  *
  * This source is subject to the license found in the file 'LICENSE' which must
@@ -10,17 +10,16 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_OBS_UNPACKER_H
-#define GNSS_CONVERTERS_OBS_UNPACKER_H
-
-#include <cstdint>
-#include <functional>
-
-#include <observation_adjuster/internal/observation_adjuster_constants.h>
-#include <observation_adjuster/internal/sbp_obs_array.h>
+#ifndef OBSERVATION_ADJUSTER_OBS_UNPACKER_H
+#define OBSERVATION_ADJUSTER_OBS_UNPACKER_H
 
 #include <libsbp/v4/observation/ObservationHeader.h>
 #include <libsbp/v4/observation/PackedObsContent.h>
+#include <observation_adjuster/observation_adjuster_constants.h>
+#include <observation_adjuster/sbp_obs_array.h>
+
+#include <cstdint>
+#include <functional>
 
 namespace obs_adjuster {
 
@@ -48,4 +47,4 @@ class ObsUnpacker final {
 
 }  // namespace obs_adjuster
 
-#endif  // GNSS_CONVERTERS_OBS_UNPACKER_H
+#endif  // OBSERVATION_ADJUSTER_OBS_UNPACKER_H

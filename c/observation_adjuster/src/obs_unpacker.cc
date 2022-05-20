@@ -11,7 +11,7 @@
  */
 
 #include <common.h>
-#include <observation_adjuster/internal/obs_unpacker.h>
+#include <observation_adjuster/obs_unpacker.h>
 #include <swiftnav/gnss_time.h>
 
 code_t to_supported_code_t(const code_t code);

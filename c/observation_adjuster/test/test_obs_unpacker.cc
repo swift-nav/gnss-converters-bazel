@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include <observation_adjuster/internal/obs_unpacker.h>
+#include <observation_adjuster/obs_unpacker.h>
 
 namespace obs_adjuster_tests {
 

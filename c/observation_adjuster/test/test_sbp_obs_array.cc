@@ -12,7 +12,7 @@
 
 #include <gtest/gtest.h>
 
-#include <observation_adjuster/internal/sbp_obs_array.h>
+#include <observation_adjuster/sbp_obs_array.h>
 
 TEST(SbpObsArray, AddAndClear) {
   // Given an empty initialized array
