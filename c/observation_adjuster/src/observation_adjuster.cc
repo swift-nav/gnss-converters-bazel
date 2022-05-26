@@ -39,6 +39,9 @@ ObservationAdjuster::ObservationAdjuster(const double vrs_ecef[3],
 
   msm_type_e msm_type = static_cast<msm_type_e>(msm_output_type);
   sbp2rtcm_converter_ = sbp_conv_new(msm_type, "ADVNULLANTENNA  NONE", "");
+  // Activate Skylark RTK specific station parameters
+  // (no Glonass, VRS like reference station, no quarter cycle bias)
+  sbp_conv_set_stn_description_parameters(sbp2rtcm_converter_, 0, 1, 1);
 }
 
 ObservationAdjuster::~ObservationAdjuster() {
