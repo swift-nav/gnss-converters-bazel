@@ -177,7 +177,7 @@ START_TEST(test_msm_sid_conversion) {
   ck_assert_uint_eq(msm_signal_to_code(&header, 0), CODE_BDS2_B1);
   ck_assert_uint_eq(msm_signal_to_code(&header, 1), CODE_BDS2_B2);
   ck_assert(msm_signal_frequency(&header, 0, 0, &freq) &&
-            fabs(freq - BDS2_B11_HZ) < FREQ_TOL);
+            fabs(freq - BDS2_B1I_HZ) < FREQ_TOL);
   ck_assert(msm_signal_frequency(&header, 1, 0, &freq) &&
             fabs(freq - BDS2_B2_HZ) < FREQ_TOL);
 }
