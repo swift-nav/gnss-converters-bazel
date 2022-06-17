@@ -73,12 +73,12 @@ void ObservationAdjuster::read_receiver_corrections(uint16_t sender,
   (void)sender;
   (void)type;
 
+  std::lock_guard<std::mutex> lock(mutex_);
   if (type != SBP_MSG_OBS && type != SBP_MSG_BASE_POS_ECEF) {
     sbp_packer_.pack(sender, type, buf, size);
     return;
   }
 
-  std::lock_guard<std::mutex> lock(mutex_);
   unpackers_.at(type_to_idx(obs_adjuster::StreamType::VRS_CORR))
       ->process(sender, type, buf, size);
 }
