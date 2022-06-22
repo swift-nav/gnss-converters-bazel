@@ -15,6 +15,7 @@
 
 #include <gnss-converters/rtcm3_sbp.h>
 #include <libsbp/sbp.h>
+#include <libsbp/version.h>
 #include <rtcm3/messages.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
@@ -150,6 +151,16 @@ void sbp2rtcm_sbp_ssr_orbit_clock_cb(u16 sender_id,
                                      const sbp_msg_ssr_orbit_clock_t *msg,
                                      struct rtcm3_out_state *state);
 
+void sbp2rtcm_sbp_ssr_orbit_clock_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_orbit_clock_bounds_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_orbit_clock_bounds_degradation_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_orbit_clock_bounds_degradation_t *msg,
+    struct rtcm3_out_state *state);
+
 void sbp2rtcm_sbp_ssr_phase_biases_cb(u16 sender_id,
                                       const sbp_msg_ssr_phase_biases_t *msg,
                                       struct rtcm3_out_state *state);
@@ -158,19 +169,39 @@ void sbp2rtcm_sbp_ssr_code_biases_cb(u16 sender_id,
                                      const sbp_msg_ssr_code_biases_t *msg,
                                      struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_gridded_correction_cb(
+void sbp2rtcm_sbp_ssr_code_phase_biases_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_code_phase_biases_bounds_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_gridded_correction_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_gridded_correction_dep_a_t *msg,
     struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_grid_definition_cb(
+void sbp2rtcm_sbp_ssr_gridded_correction_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_gridded_correction_bounds_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_grid_definition_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_grid_definition_dep_a_t *msg,
     struct rtcm3_out_state *state);
 
-void sbp2rtcm_sbp_ssr_stec_correction_cb(
+void sbp2rtcm_sbp_ssr_stec_correction_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_stec_correction_dep_a_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_stec_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_stec_correction_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_tile_definition_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_tile_definition_t *msg,
     struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_gps_eph_cb(u16 sender_id,
@@ -188,6 +219,44 @@ void sbp2rtcm_sbp_bds_eph_cb(u16 sender_id,
 void sbp2rtcm_sbp_gal_eph_cb(u16 sender_id,
                              const sbp_msg_ephemeris_gal_t *msg,
                              struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_high_level_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_high_level_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_satellites_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_satellites_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_tropo_grid_points_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_tropo_grid_points_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_iono_grid_points_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_grid_points_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_iono_tile_sat_los_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_tile_sat_los_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_ssr_flag_iono_grid_point_sat_los_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_grid_point_sat_los_t *msg,
+    struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_utc_leap_second_cb(u16 sender_id,
+                                     const sbp_msg_utc_leap_second_t *msg,
+                                     struct rtcm3_out_state *state);
+
+void sbp2rtcm_sbp_reference_frame_cb(u16 sender_id,
+                                     const sbp_msg_reference_frame_param_t *msg,
+                                     struct rtcm3_out_state *state);
 
 void sbp2rtcm_sbp_log_cb(u16 sender_id,
                          const sbp_msg_log_t *msg,

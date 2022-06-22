@@ -14,6 +14,7 @@
  * and writes RTCM3 on stdout. */
 
 #include <assert.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/sbp.h>
 #include <math.h>
 #include <stdint.h>
@@ -21,8 +22,6 @@
 #include <stdlib.h>
 #include <swiftnav/gnss_time.h>
 #include <unistd.h>
-
-#include <gnss-converters/sbp_rtcm3.h>
 
 typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
 typedef int32_t (*read_eof_fn_ptr)(void *);
@@ -36,16 +35,30 @@ typedef struct {
   sbp_msg_callbacks_node_t obs;
   sbp_msg_callbacks_node_t osr;
   sbp_msg_callbacks_node_t ssr_orbit_clock;
+  sbp_msg_callbacks_node_t ssr_orbit_clock_bounds;
+  sbp_msg_callbacks_node_t ssr_orbit_clock_bounds_degradation;
   sbp_msg_callbacks_node_t ssr_phase_biases;
   sbp_msg_callbacks_node_t ssr_code_biases;
-  sbp_msg_callbacks_node_t ssr_gridded_correction;
-  sbp_msg_callbacks_node_t ssr_grid_definition;
+  sbp_msg_callbacks_node_t ssr_code_phase_biases_bounds;
+  sbp_msg_callbacks_node_t ssr_gridded_correction_dep_a;
+  sbp_msg_callbacks_node_t ssr_gridded_correction_bounds;
+  sbp_msg_callbacks_node_t ssr_grid_definition_dep_a;
+  sbp_msg_callbacks_node_t ssr_stec_correction_dep_a;
   sbp_msg_callbacks_node_t ssr_stec_correction;
+  sbp_msg_callbacks_node_t ssr_tile_definition;
   sbp_msg_callbacks_node_t ephemeris_gps;
   sbp_msg_callbacks_node_t ephemeris_gal;
   sbp_msg_callbacks_node_t ephemeris_bds;
   sbp_msg_callbacks_node_t ephemeris_qzss;
   sbp_msg_callbacks_node_t ephemeris_glo;
+  sbp_msg_callbacks_node_t ssr_flag_high_level;
+  sbp_msg_callbacks_node_t ssr_flag_satellites;
+  sbp_msg_callbacks_node_t ssr_flag_tropo_grid_points;
+  sbp_msg_callbacks_node_t ssr_flag_iono_grid_points;
+  sbp_msg_callbacks_node_t ssr_flag_iono_tile_sat_los;
+  sbp_msg_callbacks_node_t ssr_flag_iono_grid_point_sat_los;
+  sbp_msg_callbacks_node_t utc_leap_second;
+  sbp_msg_callbacks_node_t reference_frame_parameters;
   sbp_msg_callbacks_node_t log;
 } sbp_nodes_t;
 
@@ -99,21 +112,38 @@ int sbp2rtcm_main(int argc,
   struct {
     sbp_msg_type_t msg_type;
     sbp_msg_callbacks_node_t node;
-  } cb[15] = {
+  } cb[29] = {
       {SbpMsgBasePosEcef, sbp_nodes.base_pos},
       {SbpMsgGloBiases, sbp_nodes.glo_biases},
       {SbpMsgObs, sbp_nodes.obs},
       {SbpMsgOsr, sbp_nodes.osr},
       {SbpMsgSsrOrbitClock, sbp_nodes.ssr_orbit_clock},
+      {SbpMsgSsrOrbitClockBounds, sbp_nodes.ssr_orbit_clock_bounds},
+      {SbpMsgSsrOrbitClockBoundsDegradation,
+       sbp_nodes.ssr_orbit_clock_bounds_degradation},
       {SbpMsgSsrPhaseBiases, sbp_nodes.ssr_phase_biases},
       {SbpMsgSsrCodeBiases, sbp_nodes.ssr_code_biases},
-      {SbpMsgSsrGriddedCorrectionDepA, sbp_nodes.ssr_gridded_correction},
-      {SbpMsgSsrGridDefinitionDepA, sbp_nodes.ssr_grid_definition},
-      {SbpMsgSsrStecCorrectionDepA, sbp_nodes.ssr_stec_correction},
+      {SbpMsgSsrCodePhaseBiasesBounds, sbp_nodes.ssr_code_phase_biases_bounds},
+      {SbpMsgSsrGriddedCorrectionDepA, sbp_nodes.ssr_gridded_correction_dep_a},
+      {SbpMsgSsrGriddedCorrectionBounds,
+       sbp_nodes.ssr_gridded_correction_bounds},
+      {SbpMsgSsrGridDefinitionDepA, sbp_nodes.ssr_grid_definition_dep_a},
+      {SbpMsgSsrStecCorrectionDepA, sbp_nodes.ssr_stec_correction_dep_a},
+      {SbpMsgSsrStecCorrection, sbp_nodes.ssr_stec_correction},
+      {SbpMsgSsrTileDefinition, sbp_nodes.ssr_tile_definition},
       {SbpMsgEphemerisGps, sbp_nodes.ephemeris_gps},
       {SbpMsgEphemerisGlo, sbp_nodes.ephemeris_glo},
       {SbpMsgEphemerisBds, sbp_nodes.ephemeris_bds},
       {SbpMsgEphemerisGal, sbp_nodes.ephemeris_gal},
+      {SbpMsgSsrFlagHighLevel, sbp_nodes.ssr_flag_high_level},
+      {SbpMsgSsrFlagSatellites, sbp_nodes.ssr_flag_satellites},
+      {SbpMsgSsrFlagTropoGridPoints, sbp_nodes.ssr_flag_tropo_grid_points},
+      {SbpMsgSsrFlagIonoGridPoints, sbp_nodes.ssr_flag_iono_grid_points},
+      {SbpMsgSsrFlagIonoTileSatLos, sbp_nodes.ssr_flag_iono_tile_sat_los},
+      {SbpMsgSsrFlagIonoGridPointSatLos,
+       sbp_nodes.ssr_flag_iono_grid_point_sat_los},
+      {SbpMsgUtcLeapSecond, sbp_nodes.utc_leap_second},
+      {SbpMsgReferenceFrameParam, sbp_nodes.reference_frame_parameters},
       {SbpMsgLog, sbp_nodes.log}};
 
   for (size_t i = 0; i < ARRAY_SIZE(cb); i++) {

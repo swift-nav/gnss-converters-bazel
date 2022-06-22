@@ -964,6 +964,48 @@ void sbp2rtcm_sbp_ssr_orbit_clock_cb(u16 sender_id,
   }
 }
 
+void sbp2rtcm_sbp_ssr_orbit_clock_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_orbit_clock_bounds_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrOrbitClockBounds */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_orbit_clock_bounds_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrOrbitClockBounds;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_MSG_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_orbit_clock_bounds_degradation_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_orbit_clock_bounds_degradation_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrOrbitClockBoundsDegradation */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_orbit_clock_bounds_degradation_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrOrbitClockBoundsDegradation;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_MSG_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
 void sbp2rtcm_sbp_ssr_phase_biases_cb(u16 sender_id,
                                       const sbp_msg_ssr_phase_biases_t *msg,
                                       struct rtcm3_out_state *state) {
@@ -1004,7 +1046,28 @@ void sbp2rtcm_sbp_ssr_code_biases_cb(u16 sender_id,
   }
 }
 
-void sbp2rtcm_sbp_ssr_gridded_correction_cb(
+void sbp2rtcm_sbp_ssr_code_phase_biases_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_code_phase_biases_bounds_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrCodePhaseBiasesBounds */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_code_phase_biases_bounds_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrCodePhaseBiasesBounds;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_gridded_correction_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_gridded_correction_dep_a_t *msg,
     struct rtcm3_out_state *state) {
@@ -1025,7 +1088,28 @@ void sbp2rtcm_sbp_ssr_gridded_correction_cb(
   }
 }
 
-void sbp2rtcm_sbp_ssr_grid_definition_cb(
+void sbp2rtcm_sbp_ssr_gridded_correction_bounds_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_gridded_correction_bounds_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrGriddedCorrectionBounds */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_gridded_correction_bounds_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrGriddedCorrectionBounds;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_grid_definition_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_grid_definition_dep_a_t *msg,
     struct rtcm3_out_state *state) {
@@ -1046,7 +1130,7 @@ void sbp2rtcm_sbp_ssr_grid_definition_cb(
   }
 }
 
-void sbp2rtcm_sbp_ssr_stec_correction_cb(
+void sbp2rtcm_sbp_ssr_stec_correction_dep_a_cb(
     u16 sender_id,
     const sbp_msg_ssr_stec_correction_dep_a_t *msg,
     struct rtcm3_out_state *state) {
@@ -1056,6 +1140,48 @@ void sbp2rtcm_sbp_ssr_stec_correction_cb(
       sbp_msg_ssr_stec_correction_dep_a_encode(
           ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
     ssr_msg.msg_type = (uint16_t)SbpMsgSsrStecCorrectionDepA;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_stec_correction_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_stec_correction_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrStecCorrection */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_stec_correction_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrStecCorrection;
+    ssr_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(&ssr_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_tile_definition_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_tile_definition_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrTileDefinition */
+  rtcm_msg_swift_proprietary ssr_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_tile_definition_encode(
+          ssr_msg.data, ARRAY_SIZE(ssr_msg.data), &ssr_msg.len, msg)) {
+    ssr_msg.msg_type = (uint16_t)SbpMsgSsrTileDefinition;
     ssr_msg.sender_id = sender_id;
 
     u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
@@ -1147,6 +1273,187 @@ void sbp2rtcm_sbp_gal_eph_cb(u16 sender_id,
   }
 }
 
+void sbp2rtcm_sbp_ssr_flag_high_level_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_high_level_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagHighLevel */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_flag_high_level_encode(integrity_msg.data,
+                                         ARRAY_SIZE(integrity_msg.data),
+                                         &integrity_msg.len,
+                                         msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagHighLevel;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_flag_satellites_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_satellites_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagSatellites */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_flag_satellites_encode(integrity_msg.data,
+                                         ARRAY_SIZE(integrity_msg.data),
+                                         &integrity_msg.len,
+                                         msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagSatellites;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_flag_tropo_grid_points_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_tropo_grid_points_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagTropoGridPoints */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_flag_tropo_grid_points_encode(integrity_msg.data,
+                                                ARRAY_SIZE(integrity_msg.data),
+                                                &integrity_msg.len,
+                                                msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagTropoGridPoints;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_flag_iono_grid_points_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_grid_points_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagIonoGridPoints */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_flag_iono_grid_points_encode(integrity_msg.data,
+                                               ARRAY_SIZE(integrity_msg.data),
+                                               &integrity_msg.len,
+                                               msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagIonoGridPoints;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_flag_iono_tile_sat_los_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_tile_sat_los_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagIonoTileSatLos */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK ==
+      sbp_msg_ssr_flag_iono_tile_sat_los_encode(integrity_msg.data,
+                                                ARRAY_SIZE(integrity_msg.data),
+                                                &integrity_msg.len,
+                                                msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagIonoTileSatLos;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_ssr_flag_iono_grid_point_sat_los_cb(
+    u16 sender_id,
+    const sbp_msg_ssr_flag_iono_grid_point_sat_los_t *msg,
+    struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgSsrFlagIonoGridPointSatLos */
+  rtcm_msg_swift_proprietary integrity_msg;
+  if (SBP_OK == sbp_msg_ssr_flag_iono_grid_point_sat_los_encode(
+                    integrity_msg.data,
+                    ARRAY_SIZE(integrity_msg.data),
+                    &integrity_msg.len,
+                    msg)) {
+    integrity_msg.msg_type = (uint16_t)SbpMsgSsrFlagIonoGridPointSatLos;
+    integrity_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &integrity_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_utc_leap_second_cb(u16 sender_id,
+                                     const sbp_msg_utc_leap_second_t *msg,
+                                     struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgGpsLeapSecond */
+  rtcm_msg_swift_proprietary utc_ls_msg;
+  if (SBP_OK ==
+      sbp_msg_utc_leap_second_encode(
+          utc_ls_msg.data, ARRAY_SIZE(utc_ls_msg.data), &utc_ls_msg.len, msg)) {
+    utc_ls_msg.msg_type = (uint16_t)SbpMsgUtcLeapSecond;
+    utc_ls_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK == rtcm3_encode_frame(
+                     &utc_ls_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
+void sbp2rtcm_sbp_reference_frame_cb(u16 sender_id,
+                                     const sbp_msg_reference_frame_param_t *msg,
+                                     struct rtcm3_out_state *state) {
+  /* For msg_type == SbpMsgItrf */
+  rtcm_msg_swift_proprietary reference_frame_msg;
+  if (SBP_OK ==
+      sbp_msg_reference_frame_param_encode(reference_frame_msg.data,
+                                           ARRAY_SIZE(reference_frame_msg.data),
+                                           &reference_frame_msg.len,
+                                           msg)) {
+    reference_frame_msg.msg_type = (uint16_t)SbpMsgReferenceFrameParam;
+    reference_frame_msg.sender_id = sender_id;
+
+    u8 frame[RTCM3_MAX_FRAME_LEN] = {0};
+    u16 frame_size = 0;
+    if (RC_OK ==
+        rtcm3_encode_frame(
+            &reference_frame_msg, frame, sizeof(frame), 4062, &frame_size)) {
+      state->cb_sbp_to_rtcm(frame, frame_size, state->context);
+    }
+  }
+}
+
 void sbp2rtcm_sbp_log_cb(u16 sender_id,
                          const sbp_msg_log_t *msg,
                          struct rtcm3_out_state *state) {
@@ -1181,66 +1488,107 @@ void sbp2rtcm_sbp_cb(uint16_t sender_id,
                      const sbp_msg_t *msg,
                      struct rtcm3_out_state *state) {
   switch ((uint16_t)msg_type) {
-    case SbpMsgBasePosEcef: {
+    case SbpMsgBasePosEcef:
       sbp2rtcm_base_pos_ecef_cb(sender_id, &msg->base_pos_ecef, state);
       break;
-    }
-    case SbpMsgObs: {
+    case SbpMsgObs:
       sbp2rtcm_sbp_obs_cb(sender_id, &msg->obs, state);
       break;
-    }
-    case SbpMsgOsr: {
+    case SbpMsgOsr:
       sbp2rtcm_sbp_osr_cb(sender_id, &msg->osr, state);
       break;
-    }
-    case SbpMsgSsrOrbitClock: {
+    case SbpMsgSsrOrbitClock:
       sbp2rtcm_sbp_ssr_orbit_clock_cb(sender_id, &msg->ssr_orbit_clock, state);
       break;
-    }
-    case SbpMsgSsrPhaseBiases: {
+    case SbpMsgSsrOrbitClockBounds:
+      sbp2rtcm_sbp_ssr_orbit_clock_bounds_cb(
+          sender_id, &msg->ssr_orbit_clock_bounds, state);
+      break;
+    case SbpMsgSsrOrbitClockBoundsDegradation:
+      sbp2rtcm_sbp_ssr_orbit_clock_bounds_degradation_cb(
+          sender_id, &msg->ssr_orbit_clock_bounds_degradation, state);
+      break;
+    case SbpMsgSsrPhaseBiases:
       sbp2rtcm_sbp_ssr_phase_biases_cb(
           sender_id, &msg->ssr_phase_biases, state);
       break;
-    }
-    case SbpMsgSsrCodeBiases: {
+    case SbpMsgSsrCodeBiases:
       sbp2rtcm_sbp_ssr_code_biases_cb(sender_id, &msg->ssr_code_biases, state);
       break;
-    }
-    case SbpMsgSsrGriddedCorrectionDepA: {
-      sbp2rtcm_sbp_ssr_gridded_correction_cb(
+    case SbpMsgSsrCodePhaseBiasesBounds:
+      sbp2rtcm_sbp_ssr_code_phase_biases_bounds_cb(
+          sender_id, &msg->ssr_code_phase_biases_bounds, state);
+      break;
+    case SbpMsgSsrGriddedCorrectionDepA:
+      sbp2rtcm_sbp_ssr_gridded_correction_dep_a_cb(
           sender_id, &msg->ssr_gridded_correction_dep_a, state);
       break;
-    }
-    case SbpMsgSsrGridDefinitionDepA: {
-      sbp2rtcm_sbp_ssr_grid_definition_cb(
+    case SbpMsgSsrGriddedCorrectionBounds:
+      sbp2rtcm_sbp_ssr_gridded_correction_bounds_cb(
+          sender_id, &msg->ssr_gridded_correction_bounds, state);
+      break;
+    case SbpMsgSsrGridDefinitionDepA:
+      sbp2rtcm_sbp_ssr_grid_definition_dep_a_cb(
           sender_id, &msg->ssr_grid_definition_dep_a, state);
       break;
-    }
-    case SbpMsgSsrStecCorrectionDepA: {
-      sbp2rtcm_sbp_ssr_stec_correction_cb(
+    case SbpMsgSsrStecCorrectionDepA:
+      sbp2rtcm_sbp_ssr_stec_correction_dep_a_cb(
           sender_id, &msg->ssr_stec_correction_dep_a, state);
       break;
-    }
-    case SbpMsgEphemerisGps: {
+    case SbpMsgSsrStecCorrection:
+      sbp2rtcm_sbp_ssr_stec_correction_cb(
+          sender_id, &msg->ssr_stec_correction, state);
+      break;
+    case SbpMsgSsrTileDefinition:
+      sbp2rtcm_sbp_ssr_tile_definition_cb(
+          sender_id, &msg->ssr_tile_definition, state);
+      break;
+    case SbpMsgEphemerisGps:
       sbp2rtcm_sbp_gps_eph_cb(sender_id, &msg->ephemeris_gps, state);
       break;
-    }
-    case SbpMsgEphemerisGlo: {
+    case SbpMsgEphemerisGlo:
       sbp2rtcm_sbp_glo_eph_cb(sender_id, &msg->ephemeris_glo, state);
       break;
-    }
-    case SbpMsgEphemerisBds: {
+    case SbpMsgEphemerisBds:
       sbp2rtcm_sbp_bds_eph_cb(sender_id, &msg->ephemeris_bds, state);
       break;
-    }
-    case SbpMsgEphemerisGal: {
+    case SbpMsgEphemerisGal:
       sbp2rtcm_sbp_gal_eph_cb(sender_id, &msg->ephemeris_gal, state);
       break;
-    }
-    case SbpMsgLog: {
+    case SbpMsgSsrFlagHighLevel:
+      sbp2rtcm_sbp_ssr_flag_high_level_cb(
+          sender_id, &msg->ssr_flag_high_level, state);
+      break;
+    case SbpMsgSsrFlagSatellites:
+      sbp2rtcm_sbp_ssr_flag_satellites_cb(
+          sender_id, &msg->ssr_flag_satellites, state);
+      break;
+    case SbpMsgSsrFlagTropoGridPoints:
+      sbp2rtcm_sbp_ssr_flag_tropo_grid_points_cb(
+          sender_id, &msg->ssr_flag_tropo_grid_points, state);
+      break;
+    case SbpMsgSsrFlagIonoGridPoints:
+      sbp2rtcm_sbp_ssr_flag_iono_grid_points_cb(
+          sender_id, &msg->ssr_flag_iono_grid_points, state);
+      break;
+    case SbpMsgSsrFlagIonoTileSatLos:
+      sbp2rtcm_sbp_ssr_flag_iono_tile_sat_los_cb(
+          sender_id, &msg->ssr_flag_iono_tile_sat_los, state);
+      break;
+    case SbpMsgSsrFlagIonoGridPointSatLos:
+      sbp2rtcm_sbp_ssr_flag_iono_grid_point_sat_los_cb(
+          sender_id, &msg->ssr_flag_iono_grid_point_sat_los, state);
+      break;
+    case SbpMsgUtcLeapSecond:
+      sbp2rtcm_sbp_utc_leap_second_cb(sender_id, &msg->utc_leap_second, state);
+      break;
+    case SbpMsgReferenceFrameParam:
+      sbp2rtcm_sbp_reference_frame_cb(
+          sender_id, &msg->reference_frame_param, state);
+      break;
+    case SbpMsgLog:
       sbp2rtcm_sbp_log_cb(sender_id, &msg->log, state);
       break;
-    }
     default:
       break;
   }
