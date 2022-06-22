@@ -64,6 +64,8 @@ rtcm3_rc rtcm3_encode_1033_bitstream(swiftnav_out_bitstream_t *buff,
                                      const rtcm_msg_1033 *msg_1033);
 rtcm3_rc rtcm3_encode_1230_bitstream(swiftnav_out_bitstream_t *buff,
                                      const rtcm_msg_1230 *msg_1230);
+rtcm3_rc rtcm3_encode_msm1_bitstream(swiftnav_out_bitstream_t *buff,
+                                     const rtcm_msm_message *msg_msm1);
 rtcm3_rc rtcm3_encode_msm4_bitstream(swiftnav_out_bitstream_t *buff,
                                      const rtcm_msm_message *msg_msm4);
 rtcm3_rc rtcm3_encode_msm5_bitstream(swiftnav_out_bitstream_t *buff,
@@ -239,6 +241,17 @@ static inline uint16_t rtcm3_encode_1230(const rtcm_msg_1230 *msg_1230,
   swiftnav_out_bitstream_t bitstream;
   swiftnav_out_bitstream_init(&bitstream, buff, UINT32_MAX);
   rtcm3_rc ret = rtcm3_encode_1230_bitstream(&bitstream, msg_1230);
+
+  uint16_t encode_len = 0;
+  RTCM3_ENCODE_LEN(ret, bitstream, encode_len);
+  return encode_len;
+}
+static inline uint16_t rtcm3_encode_msm1(const rtcm_msm_message *msg_msm1,
+                                         uint8_t buff[]) {
+  assert(buff);
+  swiftnav_out_bitstream_t bitstream;
+  swiftnav_out_bitstream_init(&bitstream, buff, UINT32_MAX);
+  rtcm3_rc ret = rtcm3_encode_msm1_bitstream(&bitstream, msg_msm1);
 
   uint16_t encode_len = 0;
   RTCM3_ENCODE_LEN(ret, bitstream, encode_len);

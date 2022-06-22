@@ -34,6 +34,9 @@ Identical to 1010_single.rtcm except represented using 1012 RTCM frames rather t
 1012_multiple.rtcm
 Identical to 1012_multiple.rtcm except represented using 1012 RTCM frames rather than 1010
 
+msm1.rtcm
+Identical to msm4.rtcm except using the equivalent MSM1 messages
+
 msm4.rtcm
 Contains 5 separate RTCM frames. The first is a GPS ephemeris message in order to properly set leap seconds in rtcm2sbp. The following frames are of types 1074, 1084, 1091, 1124 in that order. Each MSM message contains 1 or 2 satellites with 1 or 2 signals. When processed should output an SBP GPS ephemeris message followed by a single SBP observation message containing 1 GPS, 2 GLONASS, 3 GAL, 1 BDS.
 

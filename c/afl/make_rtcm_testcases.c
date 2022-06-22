@@ -675,6 +675,34 @@ rtcm_msm_message make_bds_msm(void) {
   return msg;
 }
 
+void make_msm1(void) {
+  reset_output_buf();
+
+  // GPS ephemeris so that leap seconds gets set properly
+  rtcm_msg_eph eph = make_gps_eph();
+  add_eph_to_output(&eph, rtcm3_encode_gps_eph);
+
+  rtcm_msm_message msg;
+  msg = make_gps_msm();
+  msg.header.msg_num = 1071;
+  add_msm_to_output(&msg, rtcm3_encode_msm1);
+
+  msg = make_glo_msm();
+  msg.header.msg_num = 1081;
+  add_msm_to_output(&msg, rtcm3_encode_msm1);
+
+  msg = make_gal_msm();
+  msg.header.msg_num = 1091;
+  add_msm_to_output(&msg, rtcm3_encode_msm1);
+
+  msg = make_bds_msm();
+  msg.header.msg_num = 1121;
+  msg.header.multiple = 0;  // End of sequence
+  add_msm_to_output(&msg, rtcm3_encode_msm1);
+
+  write_output("msm1.rtcm");
+}
+
 void make_msm4(void) {
   reset_output_buf();
 
@@ -809,6 +837,7 @@ void make_rtcm_testcases(void) {
   make_1033();
   make_4062();
 
+  make_msm1();
   make_msm4();
   make_msm5();
 }

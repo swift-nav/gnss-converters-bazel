@@ -327,11 +327,11 @@ void sbp2rtcm_set_time_truth(TimeTruth *time_truth,
 /* Set RTCM output mode
  * \param value msm_enum value, valid values
  *        MSM_UNKNOWN - no MSM output, send legacy 1004/1012 messages
- *        MSM4, MSM5  - MSM output
+ *        MSM1, MSM4, MSM5  - MSM output
  * \param state RTCM output state struct
  */
 void sbp2rtcm_set_rtcm_out_mode(msm_enum value, struct rtcm3_out_state *state) {
-  if ((MSM4 == value) || (MSM5 == value)) {
+  if ((MSM1 == value) || (MSM4 == value) || (MSM5 == value)) {
     /* enable MSM output if valid MSM type given */
     state->send_msm_obs = true;
     state->msm_type = value;

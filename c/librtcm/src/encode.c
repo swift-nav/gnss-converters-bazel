@@ -1024,7 +1024,9 @@ static rtcm3_rc encode_msm_sat_data(swiftnav_out_bitstream_t *buff,
   uint8_t integer_ms[num_sats];
   for (uint8_t i = 0; i < num_sats; i++) {
     integer_ms[i] = (uint8_t)floor(msg->sats[i].rough_range_ms);
-    BITSTREAM_ENCODE_U8(buff, integer_ms[i], 8);
+    if (MSM4 == msm_type || MSM5 == msm_type) {
+      BITSTREAM_ENCODE_U8(buff, integer_ms[i], 8);
+    }
   }
   if (MSM5 == msm_type) {
     for (uint8_t i = 0; i < num_sats; i++) {
@@ -1156,6 +1158,13 @@ static rtcm3_rc encode_msm_fine_phaserangerates(
   return RC_OK;
 }
 
+/** MSM1/4/5 encoder
+ *
+ * \param buff Data buffer large enough to hold the message (at worst 742 bytes)
+ *             (see RTCM 10403.3 Table 3.5-71)
+ * \param msg The input RTCM message struct
+ * \return Number of bytes written or 0 on failure
+ */
 static rtcm3_rc rtcm3_encode_msm_internal(swiftnav_out_bitstream_t *buff,
                                           const rtcm_msm_message *msg) {
   rtcm3_rc ret = RC_INVALID_MESSAGE;
@@ -1163,7 +1172,7 @@ static rtcm3_rc rtcm3_encode_msm_internal(swiftnav_out_bitstream_t *buff,
   const rtcm_msm_header *header = &msg->header;
 
   msm_enum msm_type = to_msm_type(header->msg_num);
-  if ((MSM4 != msm_type) && (MSM5 != msm_type)) {
+  if ((MSM1 != msm_type) && (MSM4 != msm_type) && (MSM5 != msm_type)) {
     /* Unexpected message type. */
     return 0;
   }
@@ -1257,31 +1266,50 @@ static rtcm3_rc rtcm3_encode_msm_internal(swiftnav_out_bitstream_t *buff,
   if (ret != RC_OK) {
     return ret;
   }
-  ret = encode_msm_fine_phaseranges(buff, num_cells, fine_cp_ms, flags);
-  if (ret != RC_OK) {
-    return ret;
-  }
-  ret = encode_msm_lock_times(buff, num_cells, lock_time, flags);
-  if (ret != RC_OK) {
-    return ret;
-  }
-  ret = encode_msm_hca_indicators(buff, num_cells, hca_indicator);
-  if (ret != RC_OK) {
-    return ret;
-  }
-  ret = encode_msm_cnrs(buff, num_cells, cnr, flags);
-  if (ret != RC_OK) {
-    return ret;
-  }
-  if (MSM5 == msm_type) {
-    ret = encode_msm_fine_phaserangerates(
-        buff, num_cells, fine_range_rate_m_s, flags);
+  if (MSM4 == msm_type || MSM5 == msm_type) {
+    ret = encode_msm_fine_phaseranges(buff, num_cells, fine_cp_ms, flags);
     if (ret != RC_OK) {
       return ret;
+    }
+    ret = encode_msm_lock_times(buff, num_cells, lock_time, flags);
+    if (ret != RC_OK) {
+      return ret;
+    }
+    ret = encode_msm_hca_indicators(buff, num_cells, hca_indicator);
+    if (ret != RC_OK) {
+      return ret;
+    }
+    ret = encode_msm_cnrs(buff, num_cells, cnr, flags);
+    if (ret != RC_OK) {
+      return ret;
+    }
+    if (MSM5 == msm_type) {
+      ret = encode_msm_fine_phaserangerates(
+          buff, num_cells, fine_range_rate_m_s, flags);
+      if (ret != RC_OK) {
+        return ret;
+      }
     }
   }
 
   return RC_OK;
+}
+
+/** MSM1 encoder
+ *
+ * \param buff Data buffer large enough to hold the message (at worst 742 bytes)
+ *             (see RTCM 10403.3 Table 3.5-71)
+ * \param msg The input RTCM message struct
+ * \return Number of bytes written or 0 on failure
+ */
+rtcm3_rc rtcm3_encode_msm1_bitstream(swiftnav_out_bitstream_t *buff,
+                                     const rtcm_msm_message *msg_msm1) {
+  assert(msg_msm1);
+  if (MSM1 != to_msm_type(msg_msm1->header.msg_num)) {
+    return RC_MESSAGE_TYPE_MISMATCH;
+  }
+
+  return rtcm3_encode_msm_internal(buff, msg_msm1);
 }
 
 /** MSM4 encoder
@@ -1453,6 +1481,14 @@ rtcm3_rc rtcm3_encode_payload_bitstream(swiftnav_out_bitstream_t *buff,
       const rtcm_msg_1230 *msg_1230 = (const rtcm_msg_1230 *)rtcm_msg;
       ret = rtcm3_encode_1230_bitstream(buff, msg_1230);
       break;
+    }
+    case 1071:
+    case 1081:
+    case 1091:
+    case 1111:
+    case 1121: {
+      const rtcm_msm_message *msg_msm = (const rtcm_msm_message *)rtcm_msg;
+      return rtcm3_encode_msm1_bitstream(buff, msg_msm);
     }
     case 1074:
     case 1084:
