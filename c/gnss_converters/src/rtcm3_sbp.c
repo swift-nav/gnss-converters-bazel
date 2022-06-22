@@ -36,6 +36,8 @@
 #endif
 
 #include <assert.h>
+#include <gnss-converters/internal/rtcm3_sbp_internal.h>
+#include <gnss-converters/internal/rtcm3_utils.h>
 #include <gnss-converters/options.h>
 #include <gnss-converters/rtcm3_sbp.h>
 #include <libsbp/v4/gnss.h>
@@ -60,9 +62,6 @@
 #include <swiftnav/sid_set.h>
 #include <swiftnav/signal.h>
 #include <unistd.h>
-
-#include "rtcm3_sbp_internal.h"
-#include "rtcm3_utils.h"
 
 #define SBP_GLO_FCN_OFFSET 8
 #define SBP_GLO_FCN_UNKNOWN 0
@@ -2175,12 +2174,12 @@ static void reset_cons_meas_map(struct rtcm3_sbp_state *state) {
 
 // Check if the field_value matches the field_mask and its values are valid.
 // *band_valid returns the equivalent bit of L1/L2/L5.
-static uint8_t rtcm3_stgsv_fv_valid(uint8_t field_mask,
-                                    const rtcm_999_stgsv_fv *field_value) {
-  bool azel_valid = ((field_value->el != RTCM_STGSV_INT8_NOT_VALID) &&
-                     (field_value->az != RTCM_STGSV_UINT9_NOT_VALID));
+static uint8_t rtcm3_stgsv_num_signals(
+    uint8_t field_mask, const rtcm_999_stgsv_sat_signal *field_value) {
+  bool azel_valid = ((field_value->el != RTCM_STGSV_EL_NOT_VALID) &&
+                     (field_value->az != RTCM_STGSV_AZ_NOT_VALID));
   if (!azel_valid) {
-    return false;
+    return 0;
   }
 
   bool band_enable[3] = {false};
@@ -2189,11 +2188,11 @@ static uint8_t rtcm3_stgsv_fv_valid(uint8_t field_mask,
   band_enable[2] = (field_mask & RTCM_STGSV_FIELDMASK_CN0_B3);
 
   band_enable[0] =
-      (band_enable[0] && (field_value->cn0_b1 != RTCM_STGSV_UINT8_NOT_VALID));
+      (band_enable[0] && (field_value->cn0_b1 != RTCM_STGSV_CN0_NOT_VALID));
   band_enable[1] =
-      (band_enable[1] && (field_value->cn0_b2 != RTCM_STGSV_UINT8_NOT_VALID));
+      (band_enable[1] && (field_value->cn0_b2 != RTCM_STGSV_CN0_NOT_VALID));
   band_enable[2] =
-      (band_enable[2] && (field_value->cn0_b3 != RTCM_STGSV_UINT8_NOT_VALID));
+      (band_enable[2] && (field_value->cn0_b3 != RTCM_STGSV_CN0_NOT_VALID));
 
   uint8_t n_signal_valid = 0;
   for (size_t i = 0; i < ARRAY_SIZE(band_enable); i++) {
@@ -2202,21 +2201,23 @@ static uint8_t rtcm3_stgsv_fv_valid(uint8_t field_mask,
   return n_signal_valid;
 }
 
-/* Check valid condition for each satellite: valid constellation, valid
- * field_value, valid decoded satellite id, #signal in map == #signal in stgsv
- */
-static bool rtcm_stgsv_to_sbp_fv_valid(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
-                                       uint8_t fv_id,
-                                       const struct rtcm3_sbp_state *state,
-                                       rtcm_constellation_t *rtcm_cons,
-                                       uint8_t *sid) {
+// Check valid condition for each satellite: valid constellation, valid
+// field_value, valid decoded satellite id, #signal in map == #signal in stgsv.
+static bool rtcm3_stgsv_signal_valid(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
+                                     uint8_t field_id,
+                                     const struct rtcm3_sbp_state *state,
+                                     rtcm_constellation_t *rtcm_cons,
+                                     uint8_t *sid) {
   assert(rtcm_cons);
   assert(sid);
-  assert(fv_id < rtcm_999_stgsv->n_sat);
+
+  if (field_id >= rtcm_999_stgsv->n_sat) {
+    return false;
+  }
 
   if ((!teseov_constellation_valid(rtcm_999_stgsv->constellation)) ||
       (!teseov_sid_valid(rtcm_999_stgsv->constellation,
-                         rtcm_999_stgsv->field_value[fv_id].sat_id))) {
+                         rtcm_999_stgsv->field_value[field_id].sat_id))) {
     return false;
   }
 
@@ -2225,14 +2226,14 @@ static bool rtcm_stgsv_to_sbp_fv_valid(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
     false;
   }
 
-  uint8_t n_signal_valid = rtcm3_stgsv_fv_valid(
-      rtcm_999_stgsv->field_mask, &rtcm_999_stgsv->field_value[fv_id]);
+  uint8_t n_signal_valid = rtcm3_stgsv_num_signals(
+      rtcm_999_stgsv->field_mask, &rtcm_999_stgsv->field_value[field_id]);
   if (n_signal_valid == 0) {
     return false;  // Check if the field value is valid.
   }
 
   *sid = satellite_id_teseov2rtcm(rtcm_999_stgsv->constellation,
-                                  rtcm_999_stgsv->field_value[fv_id].sat_id);
+                                  rtcm_999_stgsv->field_value[field_id].sat_id);
   if (!rtcm_sid_valid(*rtcm_cons, *sid)) {
     return false;  // Check if the decoded sid is valid.
   }
@@ -2261,7 +2262,7 @@ void rtcm3_stgsv_azel_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
     rtcm_constellation_t cons = RTCM_CONSTELLATION_INVALID;
     uint8_t sid = 0;
 
-    if (!rtcm_stgsv_to_sbp_fv_valid(
+    if (!rtcm3_stgsv_signal_valid(
             rtcm_999_stgsv, (uint8_t)id, state, &cons, &sid)) {
       continue;
     }
@@ -2308,7 +2309,7 @@ void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
     rtcm_constellation_t cons = RTCM_CONSTELLATION_INVALID;
     uint8_t sid = 0;
 
-    if (!rtcm_stgsv_to_sbp_fv_valid(
+    if (!rtcm3_stgsv_signal_valid(
             rtcm_999_stgsv, (uint8_t)id, state, &cons, &sid)) {
       continue;
     }
@@ -2342,9 +2343,9 @@ void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
 
 /* Dealing with multiple_msg_indicator of STGSV msg
  * Merge all on a single msg */
-static bool expand_multi_msg(sbp_msg_t *msg_full,
-                             const sbp_msg_t *msg,
-                             sbp_msg_type_t msg_type) {
+static bool rtcm3_expand_multi_msg(sbp_msg_t *msg_full,
+                                   const sbp_msg_t *msg,
+                                   sbp_msg_type_t msg_type) {
   if (msg_type == SbpMsgSvAzEl) {
     uint8_t n_sat_pre = msg_full->sv_az_el.n_azel;
     uint8_t n_sat_stack =
@@ -2429,7 +2430,7 @@ static void rtcm3_stgsv_azel_to_sbp_update(const rtcm_msg_999 *msg_999,
   msg.sv_az_el = sbp_az_el;
 
   if (state->msg_azel_full.sv_az_el.n_azel < SBP_MSG_SV_AZ_EL_AZEL_MAX) {
-    expand_multi_msg(&state->msg_azel_full, &msg, SbpMsgSvAzEl);
+    rtcm3_expand_multi_msg(&state->msg_azel_full, &msg, SbpMsgSvAzEl);
     state->tow_ms_azel = msg_999->data.stgsv.tow_ms;
   }
 
@@ -2454,7 +2455,7 @@ static void rtcm3_stgsv_meas_to_sbp_update(const rtcm_msg_999 *msg_999,
 
   if (state->msg_meas_full.measurement_state.n_states <
       SBP_MSG_MEASUREMENT_STATE_STATES_MAX) {
-    expand_multi_msg(&state->msg_meas_full, &msg, SbpMsgMeasurementState);
+    rtcm3_expand_multi_msg(&state->msg_meas_full, &msg, SbpMsgMeasurementState);
     state->tow_ms_meas = msg_999->data.stgsv.tow_ms;
   }
 

@@ -463,7 +463,7 @@ typedef struct {
   uint8_t cn0_b1; /* Signal Strength (CN0) – 1st band (8) */
   uint8_t cn0_b2; /* Signal Strength (CN0) – 2nd band (8) */
   uint8_t cn0_b3; /* Signal Strength (CN0) – 3rd band (8) */
-} rtcm_999_stgsv_fv;
+} rtcm_999_stgsv_sat_signal;
 
 /* Encodes STGSV message 999 subtype 28 */
 typedef struct {
@@ -472,7 +472,7 @@ typedef struct {
   uint8_t field_mask;    /* Fields mask (8) */
   bool mul_msg_ind;      /* Multiple Message Indicator DF23P (1) */
   uint8_t n_sat;         /* Number of satellites */
-  rtcm_999_stgsv_fv field_value[RTCM_TESEOV_SATELLITE_MASK_SIZE];
+  rtcm_999_stgsv_sat_signal field_value[RTCM_TESEOV_SATELLITE_MASK_SIZE];
 } rtcm_msg_999_stgsv;
 
 #define RTCM_TESEOV_RST_DEL_ALM_BIT (1 << 0)

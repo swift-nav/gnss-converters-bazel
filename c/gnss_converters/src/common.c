@@ -10,7 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "common.h"
+#include <gnss-converters/internal/common.h>
 
 void pack_ephemeris_common_content(const ephemeris_t *e,
                                    sbp_ephemeris_common_content_t *common) {

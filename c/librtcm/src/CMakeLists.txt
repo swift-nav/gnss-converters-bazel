@@ -28,10 +28,9 @@ swift_add_library(rtcm
     -Wconversion -Wstack-protector
   )
 add_library(swiftnav::rtcm ALIAS rtcm)
-target_include_directories(rtcm
-  PUBLIC ${PROJECT_SOURCE_DIR}/librtcm/include
-  PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-  )
+target_include_directories(rtcm PUBLIC ${PROJECT_SOURCE_DIR}/librtcm/include)
+target_include_directories(rtcm PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 target_link_libraries(rtcm PUBLIC swiftnav)
 
 install(TARGETS rtcm DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})

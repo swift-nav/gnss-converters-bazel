@@ -11,19 +11,18 @@
  */
 
 #include <assert.h>
-#include <encode_helpers.h>
+#include <librtcm/internal/encode_helpers.h>
 #include <math.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/constants.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_encode.h>
+#include <rtcm3/msm_utils.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <swiftnav/edc.h>
 #include <swiftnav/logging.h>
-
-#include "rtcm3/bits.h"
-#include "rtcm3/constants.h"
-#include "rtcm3/msm_utils.h"
 
 /** Convert a lock time in seconds into 7-bit RTCMv3 Lock Time Indicator value.
  * See RTCM 10403.1, Table 3.4-2.
@@ -133,26 +132,26 @@ static int32_t encode_diff_phaserange(double cp_pr, double freq) {
 }
 
 /** Encode STGSV msg field values */
-static rtcm3_rc rtcm3_encode_999_stgsv_fv_base(
+static rtcm3_rc rtcm3_encode_999_stgsv_field_value_base(
     swiftnav_out_bitstream_t *buff,
-    const rtcm_999_stgsv_fv *msg_999_stgsv_fv,
+    const rtcm_999_stgsv_sat_signal *msg_999_stgsv_sat,
     const uint8_t field_mask) {
   assert(buff);
 
   if (field_mask & RTCM_STGSV_FIELDMASK_EL) {
-    BITSTREAM_ENCODE_S8(buff, msg_999_stgsv_fv->el, 8);
+    BITSTREAM_ENCODE_S8(buff, msg_999_stgsv_sat->el, 8);
   }
   if (field_mask & RTCM_STGSV_FIELDMASK_AZ) {
-    BITSTREAM_ENCODE_U16(buff, msg_999_stgsv_fv->az, 9);
+    BITSTREAM_ENCODE_U16(buff, msg_999_stgsv_sat->az, 9);
   }
   if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B1) {
-    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_fv->cn0_b1, 8);
+    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_sat->cn0_b1, 8);
   }
   if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B2) {
-    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_fv->cn0_b2, 8);
+    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_sat->cn0_b2, 8);
   }
   if (field_mask & RTCM_STGSV_FIELDMASK_CN0_B3) {
-    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_fv->cn0_b3, 8);
+    BITSTREAM_ENCODE_U8(buff, msg_999_stgsv_sat->cn0_b3, 8);
   }
 
   return RC_OK;
@@ -179,7 +178,7 @@ static rtcm3_rc rtcm3_encode_999_stgsv_base(
   BITSTREAM_ENCODE_U8(buff, msg_999_stgsv->mul_msg_ind, 1);
 
   for (size_t i = 0; i < max_n_sat; i++) {
-    rtcm3_encode_999_stgsv_fv_base(
+    rtcm3_encode_999_stgsv_field_value_base(
         buff, &msg_999_stgsv->field_value[i], msg_999_stgsv->field_mask);
   }
 

@@ -10,6 +10,9 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#ifndef GNSS_CONVERTERS_INTERNAL_SBP_NMEA_INTERNAL_H
+#define GNSS_CONVERTERS_INTERNAL_SBP_NMEA_INTERNAL_H
+
 #include <gnss-converters/nmea.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -29,3 +32,5 @@ void get_utc_time_string(bool time,
                          const sbp_msg_utc_time_t *sbp_utc_time,
                          char *utc_str,
                          u8 size);
+
+#endif /* GNSS_CONVERTERS_INTERNAL_SBP_NMEA_INTERNAL_H */

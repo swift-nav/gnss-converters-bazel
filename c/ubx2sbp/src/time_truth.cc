@@ -10,7 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "time_truth.h"
+#include <ubx2sbp/internal/time_truth.h>
 
 static TimeTruth singleton_time_truth;
 static TimeTruthCache singleton_time_truth_cache;

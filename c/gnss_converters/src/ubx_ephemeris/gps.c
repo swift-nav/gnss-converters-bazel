@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <gnss-converters/internal/common.h>
 #include <gnss-converters/ubx_sbp.h>
 #include <libsbp/v4/gnss.h>
 #include <libsbp/v4/observation.h>
@@ -17,8 +18,6 @@
 #include <swiftnav/common.h>
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/signal.h>
-
-#include "common.h"
 
 #define GPS_L1CA_PREAMBLE 0x8b
 

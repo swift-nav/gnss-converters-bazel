@@ -11,9 +11,9 @@
  */
 
 #include <check.h>
+#include <gnss-converters/internal/rtcm3_sbp_internal.h>
 #include <gnss-converters/rtcm3_sbp.h>
 #include <gnss-converters/sbp_rtcm3.h>
-#include <gnss_converters/src/rtcm3_sbp_internal.h>
 #include <libsbp/sbp.h>
 #include <libsbp/v4/observation.h>
 #include <math.h>

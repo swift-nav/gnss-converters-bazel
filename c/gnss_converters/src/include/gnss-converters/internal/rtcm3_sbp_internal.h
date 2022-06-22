@@ -10,18 +10,17 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H
-#define GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H
+#ifndef GNSS_CONVERTERS_INTERNAL_RTCM3_SBP_INTERNAL_H
+#define GNSS_CONVERTERS_INTERNAL_RTCM3_SBP_INTERNAL_H
 
+#include <gnss-converters/internal/common.h>
+#include <gnss-converters/rtcm3_sbp.h>
 #include <rtcm3/messages.h>
 #include <rtcm3/msm_utils.h>
 #include <swiftnav/bitstream.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
-
-#include "common.h"
-#include "gnss-converters/rtcm3_sbp.h"
 
 /* message type range reserved for MSM */
 #define MSM_MSG_TYPE_MIN 1070
@@ -275,4 +274,4 @@ void rtcm3_stgsv_meas_to_sbp(const rtcm_msg_999_stgsv *rtcm_999_stgsv,
                              sbp_msg_measurement_state_t *sbp_meas_state,
                              const struct rtcm3_sbp_state *state);
 
-#endif /* GNSS_CONVERTERS_RTCM3_SBP_INTERNAL_H */
+#endif /* GNSS_CONVERTERS_INTERNAL_RTCM3_SBP_INTERNAL_H */

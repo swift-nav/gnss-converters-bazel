@@ -10,20 +10,18 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <gnss-converters/internal/sbp_nmea_internal.h>
+#include <gnss-converters/nmea.h>
+#include <gnss-converters/sbp_nmea.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <gnss-converters/nmea.h>
-#include <gnss-converters/sbp_nmea.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/memcpy_s.h>
 #include <swiftnav/pvt_result.h>
 #include <swiftnav/signal.h>
-
-#include "sbp_nmea_internal.h"
 
 /* Based on testing calculated Course Over Ground starts deviating noticeably
  * below this limit. */

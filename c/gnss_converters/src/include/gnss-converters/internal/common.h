@@ -10,14 +10,14 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_COMMON_H
-#define GNSS_CONVERTERS_COMMON_H
+#ifndef GNSS_CONVERTERS_INTERNAL_COMMON_H
+#define GNSS_CONVERTERS_INTERNAL_COMMON_H
 
-#include "libsbp/v4/gnss.h"
-#include "libsbp/v4/observation.h"
-#include "swiftnav/common.h"
-#include "swiftnav/ephemeris.h"
-#include "swiftnav/signal.h"
+#include <libsbp/v4/gnss.h>
+#include <libsbp/v4/observation.h>
+#include <swiftnav/common.h>
+#include <swiftnav/ephemeris.h>
+#include <swiftnav/signal.h>
 
 #define MSG_OBS_P_MULTIPLIER ((double)5e1)
 #define MSG_OBS_CN0_MULTIPLIER ((float)4)
@@ -32,4 +32,4 @@
 void pack_ephemeris_common_content(const ephemeris_t *e,
                                    sbp_ephemeris_common_content_t *common);
 
-#endif /* #ifndef GNSS_CONVERTERS_COMMON_H */
+#endif /* #ifndef GNSS_CONVERTERS_INTERNAL_COMMON_H */

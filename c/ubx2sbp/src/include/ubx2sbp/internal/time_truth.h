@@ -10,8 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef UBX2SBP_TIME_TRUTH_H
-#define UBX2SBP_TIME_TRUTH_H
+#ifndef UBX2SBP_INTERNAL_TIME_TRUTH_H
+#define UBX2SBP_INTERNAL_TIME_TRUTH_H
 
 #include <gnss-converters/time_truth_v2.h>
 
@@ -25,4 +25,4 @@ extern TimeTruth *ubx_time_truth;
 }
 #endif
 
-#endif  // UBX2SBP_TIME_TRUTH_H
+#endif  // UBX2SBP_INTERNAL_TIME_TRUTH_H

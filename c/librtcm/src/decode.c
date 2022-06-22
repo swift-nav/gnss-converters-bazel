@@ -10,17 +10,15 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "rtcm3/decode.h"
-
 #include <assert.h>
+#include <librtcm/internal/decode_helpers.h>
 #include <math.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/decode.h>
+#include <rtcm3/eph_decode.h>
+#include <rtcm3/msm_utils.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "decode_helpers.h"
-#include "rtcm3/bits.h"
-#include "rtcm3/eph_decode.h"
-#include "rtcm3/msm_utils.h"
 
 static void init_sat_data(rtcm_sat_data *sat_data) {
   for (uint8_t freq = 0; freq < NUM_FREQS; ++freq) {
@@ -1591,9 +1589,9 @@ rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_in_bitstream_t *buff,
   return RC_OK;
 }
 
-static rtcm3_rc rtcm3_decode_999_stgsv_fv_base(
+static rtcm3_rc rtcm3_decode_999_stgsv_field_value_base(
     swiftnav_in_bitstream_t *buff,
-    rtcm_999_stgsv_fv *msg_999_stgsv_fv,
+    rtcm_999_stgsv_sat_signal *msg_999_stgsv_fv,
     const uint8_t field_mask) {
   if (field_mask & RTCM_STGSV_FIELDMASK_EL) {
     BITSTREAM_DECODE_S8(buff, msg_999_stgsv_fv->el, 8);
@@ -1614,9 +1612,9 @@ static rtcm3_rc rtcm3_decode_999_stgsv_fv_base(
   return RC_OK;
 }
 
-static uint8_t count_sat_active(uint64_t sat_mask,
-                                uint8_t sat_mask_size,
-                                uint8_t sat_active[]) {
+static uint8_t rtcm3_teseov_count_sat_active(uint64_t sat_mask,
+                                             uint8_t sat_mask_size,
+                                             uint8_t sat_active[]) {
   uint8_t n_sat = 0;
   for (uint8_t i = 0; i < sat_mask_size; i++) {
     if (sat_mask & (INT64_C(1) << (RTCM_TESEOV_SATELLITE_MASK_SIZE - i - 1))) {
@@ -1643,13 +1641,13 @@ static rtcm3_rc rtcm3_decode_999_stgsv_base(swiftnav_in_bitstream_t *buff,
 
   uint8_t sat_active_arr[RTCM_TESEOV_SATELLITE_MASK_SIZE] = {0};
   msg_999_stgsv->n_sat =
-      count_sat_active(sat_mask_64, sat_mask_size, sat_active_arr);
+      rtcm3_teseov_count_sat_active(sat_mask_64, sat_mask_size, sat_active_arr);
 
   rtcm3_rc rc_status_fv_base = RC_OK;
   for (uint8_t i = 0; i < msg_999_stgsv->n_sat; i++) {
     msg_999_stgsv->field_value[i].sat_id = sat_active_arr[i];
 
-    rc_status_fv_base = rtcm3_decode_999_stgsv_fv_base(
+    rc_status_fv_base = rtcm3_decode_999_stgsv_field_value_base(
         buff, &msg_999_stgsv->field_value[i], msg_999_stgsv->field_mask);
     if (rc_status_fv_base != RC_OK) {
       return rc_status_fv_base;

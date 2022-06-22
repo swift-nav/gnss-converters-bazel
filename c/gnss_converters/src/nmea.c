@@ -10,15 +10,13 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "sbp_nmea_internal.h"
-
 #include <assert.h>
+#include <gnss-converters/internal/sbp_nmea_internal.h>
+#include <gnss-converters/nmea.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <gnss-converters/nmea.h>
 #include <swiftnav/array_tools.h>
 #include <swiftnav/common.h>
 #include <swiftnav/constants.h>

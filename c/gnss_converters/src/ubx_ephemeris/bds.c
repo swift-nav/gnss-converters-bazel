@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <gnss-converters/internal/common.h>
 #include <gnss-converters/ubx_sbp.h>
 #include <libsbp/v4/gnss.h>
 #include <libsbp/v4/observation.h>
@@ -18,8 +19,6 @@
 #include <swiftnav/ephemeris.h>
 #include <swiftnav/gnss_capabilities.h>
 #include <swiftnav/signal.h>
-
-#include "common.h"
 
 static void pack_ephemeris_bds(const ephemeris_t *e,
                                sbp_msg_ephemeris_bds_t *msg) {

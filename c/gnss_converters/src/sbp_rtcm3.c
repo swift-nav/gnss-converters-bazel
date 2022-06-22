@@ -11,7 +11,10 @@
  */
 
 #include <assert.h>
+#include <gnss-converters/internal/rtcm3_utils.h>
+#include <gnss-converters/internal/sbp_rtcm3_internal.h>
 #include <gnss-converters/sbp_rtcm3.h>
+#include <gnss-converters/utils.h>
 #include <math.h>
 #include <rtcm3/bits.h>
 #include <rtcm3/decode.h>
@@ -31,10 +34,6 @@
 #include <swiftnav/sid_set.h>
 #include <swiftnav/signal.h>
 #include <swiftnav/swift_strnlen.h>
-
-#include "gnss-converters/utils.h"
-#include "rtcm3_utils.h"
-#include "sbp_rtcm3_internal.h"
 
 #define SBP_GLO_FCN_OFFSET 8
 #define SBP_GLO_FCN_UNKNOWN 0

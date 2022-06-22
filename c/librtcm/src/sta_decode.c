@@ -10,14 +10,12 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "rtcm3/sta_decode.h"
-
 #include <assert.h>
+#include <librtcm/internal/decode_helpers.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/sta_decode.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "decode_helpers.h"
-#include "rtcm3/bits.h"
 
 #define RCC_FW_CONFIG_START_BIT 58
 rtcm3_rc sta_decode_rcc_config(const uint8_t buff[],

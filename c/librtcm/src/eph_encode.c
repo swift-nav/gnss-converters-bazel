@@ -10,13 +10,11 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "rtcm3/eph_encode.h"
-
 #include <assert.h>
-#include <encode_helpers.h>
+#include <librtcm/internal/encode_helpers.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/eph_encode.h>
 #include <string.h>
-
-#include "rtcm3/bits.h"
 
 rtcm3_rc rtcm3_encode_gps_eph_bitstream(swiftnav_out_bitstream_t *buff,
                                         const rtcm_msg_eph *msg_1019) {

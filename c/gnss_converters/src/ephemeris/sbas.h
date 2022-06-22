@@ -10,8 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_SBAS_H
-#define GNSS_CONVERTERS_SBAS_H
+#ifndef GNSS_CONVERTERS_EPHEMERIS_SBAS_H
+#define GNSS_CONVERTERS_EPHEMERIS_SBAS_H
 
 #include <gnss-converters/eph_sat_data.h>
 #include <libsbp/v4/sbas.h>
@@ -29,4 +29,4 @@ void sbas_decode_subframe(struct eph_sat_data *data,
                                          const sbp_msg_t *msg,
                                          void *context));
 
-#endif /* #ifndef GNSS_CONVERTERS_SBAS_H */
+#endif /* #ifndef GNSS_CONVERTERS_EPHEMERIS_SBAS_H */

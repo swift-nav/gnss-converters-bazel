@@ -11,12 +11,11 @@
  */
 
 #include <assert.h>
+#include <gnss-converters/internal/common.h>
+#include <gnss-converters/internal/rtcm3_utils.h>
+#include <gnss-converters/internal/sbp_rtcm3_internal.h>
 #include <gnss-converters/sbp_rtcm3.h>
 #include <math.h>
-
-#include "common.h"
-#include "rtcm3_utils.h"
-#include "sbp_rtcm3_internal.h"
 
 static gps_time_t sbp_gps_time_2_gps_time(const sbp_gps_time_sec_t *s) {
   gps_time_t t;

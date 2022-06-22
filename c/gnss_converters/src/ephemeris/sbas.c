@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <gnss-converters/internal/common.h>
 #include <gnss-converters/ubx_sbp.h>
 #include <libsbp/v4/gnss.h>
 #include <libsbp/v4/sbas.h>
@@ -19,8 +20,6 @@
 #include <swiftnav/edc.h>
 #include <swiftnav/logging.h>
 #include <swiftnav/signal.h>
-
-#include "common.h"
 
 /** SBAS preamble 1 0x53 */
 #define SBAS_PREAMBLE1 (0x53u)

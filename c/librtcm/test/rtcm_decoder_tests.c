@@ -13,17 +13,16 @@
 #include "rtcm_decoder_tests.h"
 
 #include <math.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/decode.h>
+#include <rtcm3/encode.h>
+#include <rtcm3/eph_decode.h>
+#include <rtcm3/eph_encode.h>
 #include <rtcm3/messages.h>
+#include <rtcm3/msm_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "rtcm3/bits.h"
-#include "rtcm3/decode.h"
-#include "rtcm3/encode.h"
-#include "rtcm3/eph_decode.h"
-#include "rtcm3/eph_encode.h"
-#include "rtcm3/msm_utils.h"
 
 #define LIBRTCM_LOG_INTERNAL
 #include "rtcm3/logging.h"
@@ -1270,8 +1269,9 @@ bool msgobs_glo_equals(const rtcm_obs_message *msg_in,
   return true;
 }
 
-static bool msg999stgsv_fv_equals(const rtcm_999_stgsv_fv *lhs,
-                                  const rtcm_999_stgsv_fv *rhs) {
+static bool msg999stgsv_field_value_equals(
+    const rtcm_999_stgsv_sat_signal *lhs,
+    const rtcm_999_stgsv_sat_signal *rhs) {
   if ((lhs->sat_id != rhs->sat_id) || (lhs->el != rhs->el) ||
       (lhs->az != rhs->az) || (lhs->cn0_b1 != rhs->cn0_b1) ||
       (lhs->cn0_b2 != rhs->cn0_b2)) {
@@ -1290,7 +1290,8 @@ bool msg999stgsv_equals(const rtcm_msg_999_stgsv *lhs,
   }
 
   for (uint8_t i = 0; i < lhs->n_sat; i++) {
-    if (!msg999stgsv_fv_equals(&lhs->field_value[i], &rhs->field_value[i]))
+    if (!msg999stgsv_field_value_equals(&lhs->field_value[i],
+                                        &rhs->field_value[i]))
       return false;
   }
   return true;

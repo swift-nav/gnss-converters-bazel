@@ -12,6 +12,7 @@
 
 #include <assert.h>
 #include <check.h>
+#include <gnss-converters/internal/sbp_nmea_internal.h>
 #include <gnss-converters/sbp_nmea.h>
 #include <libsbp/sbp.h>
 #include <math.h>
@@ -19,7 +20,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../src/sbp_nmea_internal.h"
 #include "config.h"
 #include "nmea_truth.h"
 

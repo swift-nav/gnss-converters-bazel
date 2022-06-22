@@ -13,8 +13,10 @@ set(TEST_SOURCE_FILES
 swift_add_test(test-rtcm3tosbp
   UNIT_TEST
   SRCS ${TEST_SOURCE_FILES}
-  INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK gnss_converters check Threads::Threads
+  INCLUDE
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${PROJECT_SOURCE_DIR}/gnss_converters/src/include
+  LINK gnss_converters check Threads::Threads swiftnav::sbp swiftnav::swiftnav
   )
 
 swift_set_compile_options(test-rtcm3tosbp REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)

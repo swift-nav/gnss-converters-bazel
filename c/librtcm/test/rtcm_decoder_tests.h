@@ -10,17 +10,17 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef PIKSI_BUILDROOT_RTCM_DECODER_TESTS_H
-#define PIKSI_BUILDROOT_RTCM_DECODER_TESTS_H
+#ifndef LIBRTCM_RTCM_DECODER_TESTS_H
+#define LIBRTCM_RTCM_DECODER_TESTS_H
 
 #include <rtcm3/messages.h>
 
-void test_rtcm_999_stgsv_en_de(void);
-void test_rtcm_999_stgsv_de_en(void);
-void test_rtcm_999_restart_en_de(void);
-void test_rtcm_999_restart_de_en(void);
-void test_rtcm_999_aux_ttff_en_de(void);
-void test_rtcm_999_aux_ttff_de_en(void);
+static void test_rtcm_999_stgsv_en_de(void);
+static void test_rtcm_999_stgsv_de_en(void);
+static void test_rtcm_999_restart_en_de(void);
+static void test_rtcm_999_restart_de_en(void);
+static void test_rtcm_999_aux_ttff_en_de(void);
+static void test_rtcm_999_aux_ttff_de_en(void);
 static void test_rtcm_1001(void);
 static void test_rtcm_1002(void);
 static void test_rtcm_1003(void);
@@ -213,4 +213,4 @@ static const rtcm_msm_signal_data msm7_expected_sig_data[] = {
     {77.44058551, 77.44058311, 671.744, 0, 46.8, {31}, -461.9480397},
     {77.44057831, 77.44058433, 671.744, 0, 52, {31}, -461.9522868}};
 
-#endif /* PIKSI_BUILDROOT_RTCM_DECODER_TESTS_H */
+#endif /* LIBRTCM_RTCM_DECODER_TESTS_H */

@@ -14,6 +14,8 @@ swift_add_tool(ubx2sbp
 
 target_link_libraries(ubx2sbp_main PUBLIC gnss_converters)
 target_link_libraries(ubx2sbp PRIVATE ubx2sbp_main)
+target_include_directories(ubx2sbp_main PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_include_directories(ubx2sbp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 
 install(TARGETS ubx2sbp_main DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(TARGETS ubx2sbp DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})

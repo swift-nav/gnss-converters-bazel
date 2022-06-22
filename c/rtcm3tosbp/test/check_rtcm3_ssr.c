@@ -11,11 +11,13 @@
  */
 
 #include <check.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/v4/ssr.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <swiftnav/signal.h>
 
 #include "check_rtcm3.h"
 #include "config.h"

@@ -10,16 +10,16 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_SBP_RTCM3_INTERNAL_H
-#define GNSS_CONVERTERS_SBP_RTCM3_INTERNAL_H
+#ifndef GNSS_CONVERTERS_INTERNAL_SBP_RTCM3_INTERNAL_H
+#define GNSS_CONVERTERS_INTERNAL_SBP_RTCM3_INTERNAL_H
 
+#include <gnss-converters/internal/common.h>
+#include <gnss-converters/sbp_rtcm3.h>
 #include <rtcm3/messages.h>
 #include <rtcm3/msm_utils.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>
 #include <swiftnav/signal.h>
-#include "common.h"
-#include "gnss-converters/sbp_rtcm3.h"
 
 /* Multiplier for glonass bias resolution scaling */
 #define GLO_BIAS_RESOLUTION 50.0
@@ -153,4 +153,4 @@ void gps_tow_to_beidou_tow(u32 *tow_ms);
 double sbp_diff_time(const sbp_v4_gps_time_t *end,
                      const sbp_v4_gps_time_t *beginning);
 
-#endif /* GNSS_CONVERTERS_SBP_RTCM3_INTERNAL_H */
+#endif /* GNSS_CONVERTERS_INTERNAL_SBP_RTCM3_INTERNAL_H */

@@ -10,8 +10,8 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifndef GNSS_CONVERTERS_RTCM3_UTILS_H
-#define GNSS_CONVERTERS_RTCM3_UTILS_H
+#ifndef GNSS_CONVERTERS_INTERNAL_RTCM3_UTILS_H
+#define GNSS_CONVERTERS_INTERNAL_RTCM3_UTILS_H
 
 #include <rtcm3/messages.h>
 #include <stdbool.h>
@@ -120,4 +120,4 @@ this function ensures the consistency against any unintended change. */
 rtcm_constellation_t constellation_sbp2rtcm(constellation_t sbp_cons);
 constellation_t constellation_rtcm2sbp(rtcm_constellation_t rtcm_cons);
 
-#endif /* GNSS_CONVERTERS_RTCM3_UTILS_H */
+#endif /* GNSS_CONVERTERS_INTERNAL_RTCM3_UTILS_H */

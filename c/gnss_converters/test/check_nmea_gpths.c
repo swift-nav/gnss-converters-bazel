@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <check.h>
+#include <gnss-converters/internal/sbp_nmea_internal.h>
 #include <gnss-converters/sbp_nmea.h>
 #include <libsbp/sbp.h>
 #include <math.h>
@@ -8,7 +9,6 @@
 #include <string.h>
 #include <swiftnav/pvt_result.h>
 
-#include "../src/sbp_nmea_internal.h"
 #include "config.h"
 
 #define MAX_NMEA_LEN 100

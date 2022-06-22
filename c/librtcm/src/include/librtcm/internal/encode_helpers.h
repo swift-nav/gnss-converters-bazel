@@ -1,5 +1,5 @@
-#ifndef RTCM_PRIVATE_ENCODE_HELPERS_H
-#define RTCM_PRIVATE_ENCODE_HELPERS_H
+#ifndef LIBRTCM_INTERNAL_ENCODE_HELPERS_H
+#define LIBRTCM_INTERNAL_ENCODE_HELPERS_H
 
 #define BITSTREAM_ENCODE_BOOL(bitstream, field, n_bits) \
   do {                                                  \
@@ -135,4 +135,4 @@
     }                                                     \
   } while (false);
 
-#endif
+#endif /* LIBRTCM_INTERNAL_ENCODE_HELPERS_H */

@@ -10,23 +10,15 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <math.h>
+#include <rtcm3/messages.h>
+#include <rtcm3/sta_decode.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "rtcm3/bits.h"
-#include "rtcm3/decode.h"
-#include "rtcm3/encode.h"
-#include "rtcm3/eph_decode.h"
-#include "rtcm3/messages.h"
-#include "rtcm3/msm_utils.h"
-#include "rtcm3/sta_decode.h"
-
 #define DEBUG 0
 #define LIBRTCM_LOG_INTERNAL
 #include "rtcm3/logging.h"
-
 #include "test_assert.h"
 
 static uint8_t fw_ver_array[] = {

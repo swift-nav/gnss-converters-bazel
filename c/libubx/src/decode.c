@@ -10,10 +10,9 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <libubx/internal/decode_helpers.h>
 #include <swiftnav/bits.h>
 #include <ubx/decode.h>
-
-#include "decode_helpers.h"
 
 // UBX protocol is little-endian. This file assumes that the host system is also
 // little endian.

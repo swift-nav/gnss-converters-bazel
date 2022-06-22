@@ -23,6 +23,7 @@
 #include <libsbp/edc.h>
 #include <libsbp/sbp.h>
 #include <math.h>
+#include <rtcm3tosbp/internal/time_truth.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +32,6 @@
 #include <swiftnav/gnss_time.h>
 #include <time.h>
 #include <unistd.h>
-
-#include "time_truth.h"
 
 #define SBP_PREAMBLE 0x55
 #define STRCMP_EQ 0

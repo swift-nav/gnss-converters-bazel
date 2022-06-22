@@ -10,13 +10,11 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include "rtcm3/eph_decode.h"
-
 #include <assert.h>
+#include <librtcm/internal/decode_helpers.h>
+#include <rtcm3/bits.h>
+#include <rtcm3/eph_decode.h>
 #include <string.h>
-
-#include "decode_helpers.h"
-#include "rtcm3/bits.h"
 
 /** Decode an RTCMv3 GPS Ephemeris Message
  *

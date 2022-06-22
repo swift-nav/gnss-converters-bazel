@@ -14,9 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <ubx2sbp/internal/ubx2sbp_main.h>
 #include <unistd.h>
-
-#include "ubx2sbp_main.h"
 
 static int readfn(uint8_t *buf, size_t len, void *context) {
   (void)context;
