@@ -1,58 +1,12 @@
-[package]
-name = "gnss-converters"
-version = "1.0.0"
-authors = ["Swift Navigation <dev@swiftnav.com>"]
-edition = "2018"
-build = "rust/build.rs"
-
-[[bin]]
-name = "rtcm3tosbp"
-path = "rust/rtcm3tosbp.rs"
-
-[[bin]]
-name = "ubx2sbp"
-path = "rust/ubx2sbp.rs"
-
-[[bin]]
-name = "sbp2rtcm"
-path = "rust/sbp2rtcm.rs"
-
-[[bin]]
-name = "ixcom2sbp"
-path = "rust/ixcom2sbp.rs"
-
-[[bin]]
-name = "nov2sbp"
-path = "rust/nov2sbp.rs"
-required-features = ["nov2sbp"]
-
-[[test]]
-name = "integration"
-path = "rust/tests/lib.rs"
-
-[lib]
-name = "gnss_converters"
-path = "rust/lib.rs"
-
-[features]
-default = []
-nov2sbp = []
-
-[dependencies]
-libc = "0.2"
-lazy_static = "1"
-if_chain = "1"
-
-[build-dependencies]
-num_cpus = "1"
-cmake = "0.1"
-cc = "1.0"
-
-[dev-dependencies]
-assert_cmd = "2.0.1"
-predicates = "2.0.2"
-sbp = "4.0"
-tempfile = "3.2"
+[workspace]
+members = [
+    "rust",
+    "rust/rtcm2json/rtcm",
+    "rust/rtcm2json/rtcm_cli",
+]
+exclude = [
+    "c/afl/afl-runner",
+]
 
 [profile.dev]
 panic = "abort"
@@ -62,3 +16,4 @@ panic = "abort"
 opt-level = "z"
 lto = true
 codegen-units = 1
+

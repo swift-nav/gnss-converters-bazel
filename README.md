@@ -25,19 +25,14 @@ Then build and install with `cargo`:
 ```
 git clone --recursive git@github.com:swift-nav/gnss-converters-private.git
 cd gnss-converters-private
-cargo install --path .
+cargo install --path ./rust
+cargo install --path ./rust/rtcm2json/rtcm_cli
 ```
 
 To build and install the `nov2sbp` tool as well, also run:
 
 ```
-cargo install --path . --bin nov2sbp --features nov2sbp
-```
-
-Or to build and install everything at once, run:
-
-```
-cargo install --path . --all-features
+cargo install --path ./rust --bin nov2sbp --features nov2sbp
 ```
 
 The following tools will be installed in `~/.cargo/bin` (which should be in the path):
@@ -47,6 +42,7 @@ The following tools will be installed in `~/.cargo/bin` (which should be in the 
 - ubx2sbp
 - ixcom2sbp
 - nov2sbp
+- rtcm2json
 
 ## Build locally
 

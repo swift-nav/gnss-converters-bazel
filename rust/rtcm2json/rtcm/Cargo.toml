@@ -1,0 +1,38 @@
+[package]
+name = "rtcm"
+version = "0.0.1"
+authors = ["Swift Navigation <dev@swiftnav.com>"]
+edition = "2018"
+repository = "https://github.com/swift-nav/rtcm"
+license = "MIT"
+description = "RTCM parsing utilities"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+deku = "0.13"
+bitvec = "^0.22"
+dencode = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", optional = true }
+serde_with = "1"
+thiserror = "1"
+base64 = "0.13.0"
+
+[dependencies.sbp_master]
+package = "sbp"
+version = "4.4.0"
+optional = true
+features = ["json"]
+
+[dependencies.sbp_staging]
+package = "sbp"
+git = "https://github.com/swift-nav/libsbp.git"
+branch = "staging"
+optional = true
+features = ["json"]
+
+[features]
+debug_deku = []
+default = ["dep:sbp_master"]
+sbp_staging = ["dep:sbp_staging"]

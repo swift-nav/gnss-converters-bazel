@@ -17,7 +17,7 @@ fn rtcm3tosbp_convert() {
     cmd.arg("-o")
         .arg("-w")
         .arg("2080:123")
-        .arg("c/rtcm3tosbp/test/data/piksi-5Hz.rtcm3")
+        .arg("../c/rtcm3tosbp/test/data/piksi-5Hz.rtcm3")
         .arg(tempfile.path())
         .assert()
         .success();
@@ -32,7 +32,7 @@ fn rtcm3tosbp_convert() {
 fn sbp2rtcm_convert() {
     let tempfile = tempfile::NamedTempFile::new().unwrap();
     let mut cmd = Command::cargo_bin("sbp2rtcm").unwrap();
-    cmd.arg("c/rtcm3tosbp/test/data/piksi-gps-glo.sbp")
+    cmd.arg("../c/rtcm3tosbp/test/data/piksi-gps-glo.sbp")
         .arg(tempfile.path())
         .assert()
         .success();

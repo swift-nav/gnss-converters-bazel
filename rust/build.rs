@@ -113,7 +113,7 @@ fn main() -> Result<(), Error> {
         }
     };
 
-    let mut cmake_c_dir = invoke_cmake(&c_compiler, &cpp_compiler, "c")?;
+    let mut cmake_c_dir = invoke_cmake(&c_compiler, &cpp_compiler, "../c")?;
     let dst_c = cmake_c_dir.build();
 
     env::set_var("NUM_JOBS", num_cpus::get().to_string());

@@ -1,0 +1,55 @@
+[package]
+name = "gnss-converters"
+version = "1.0.0"
+authors = ["Swift Navigation <dev@swiftnav.com>"]
+edition = "2018"
+build = "build.rs"
+
+[[bin]]
+name = "rtcm3tosbp"
+path = "rtcm3tosbp.rs"
+
+[[bin]]
+name = "ubx2sbp"
+path = "ubx2sbp.rs"
+
+[[bin]]
+name = "sbp2rtcm"
+path = "sbp2rtcm.rs"
+
+[[bin]]
+name = "ixcom2sbp"
+path = "ixcom2sbp.rs"
+
+[[bin]]
+name = "nov2sbp"
+path = "nov2sbp.rs"
+required-features = ["nov2sbp"]
+
+[[test]]
+name = "integration"
+path = "tests/lib.rs"
+
+[lib]
+name = "gnss_converters"
+path = "lib.rs"
+
+[features]
+default = []
+nov2sbp = []
+
+[dependencies]
+libc = "0.2"
+lazy_static = "1"
+if_chain = "1"
+
+[build-dependencies]
+num_cpus = "1"
+cmake = "0.1"
+cc = "1.0"
+
+[dev-dependencies]
+assert_cmd = "2.0.1"
+predicates = "2.0.2"
+sbp = "4.0"
+tempfile = "3.2"

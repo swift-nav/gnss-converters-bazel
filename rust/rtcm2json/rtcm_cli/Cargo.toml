@@ -1,0 +1,21 @@
+[package]
+name = "rtcm-cli"
+version = "0.0.1"
+authors = ["Swift Navigation <dev@swiftnav.com>"]
+edition = "2018"
+repository = "https://github.com/swift-nav/rtcm"
+
+[[bin]]
+name = "rtcm2json"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.58"
+clap = { version = "3", features = ["derive"] }
+rtcm = { path = "../rtcm", features = ["serde_json"] }
+serde_json = "1"
+if_chain = "1"
+
+[dev-dependencies]
+assert_cmd = "2.0.4"
+predicates = "2.1.1"
