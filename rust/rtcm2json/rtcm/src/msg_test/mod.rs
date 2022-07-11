@@ -5,6 +5,7 @@ mod observations;
 mod ssr;
 mod system;
 
+use crate::Frame;
 use crate::*;
 use dencode::{BytesMut, Decoder as _};
 use std::{

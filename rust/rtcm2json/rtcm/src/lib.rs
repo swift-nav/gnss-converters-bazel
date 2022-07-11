@@ -11,7 +11,7 @@
 
 mod base64;
 mod crc;
-mod msg;
+pub mod msg;
 
 use std::io;
 

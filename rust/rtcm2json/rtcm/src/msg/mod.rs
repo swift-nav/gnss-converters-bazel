@@ -3,7 +3,7 @@ mod data_types;
 mod ephemeris;
 mod msm;
 mod observations;
-mod sbp;
+mod sbp_msg;
 mod ssr;
 mod system;
 
@@ -12,6 +12,7 @@ pub use data_types::*;
 pub use ephemeris::*;
 pub use msm::*;
 pub use observations::*;
+pub use sbp_msg::*;
 pub use ssr::*;
 pub use system::*;
 
@@ -174,7 +175,7 @@ pub enum Message {
     SbpMessage {
         #[deku(bits = 4)]
         reserved: u8,
-        sbp: self::sbp::Sbp,
+        sbp: SbpFrame,
     },
     #[deku(id_pat = "_")]
     Unknown {
