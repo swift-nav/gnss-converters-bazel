@@ -9,7 +9,7 @@ use crate::*;
 use dencode::{BytesMut, Decoder as _};
 use std::{
     fs::{self, File},
-    io,
+    io::{self, Read},
 };
 
 const MSG_UNKNOWN_900_RAW: [u8; 25] = [
@@ -174,5 +174,49 @@ fn check_payload() -> Result<(), io::Error> {
         frame.payload,
         &raw_msg[FRAME_HEADER_LEN..frame.msg_length as usize + FRAME_HEADER_LEN]
     );
+    Ok(())
+}
+
+/// Reads a single byte at a time
+struct SlowReader {
+    inner: Box<dyn Read>,
+}
+
+impl Read for SlowReader {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self.inner.read_exact(buf[..1].as_mut()) {
+            Ok(_) => Ok(1),
+            Err(e) => {
+                if e.kind() == io::ErrorKind::UnexpectedEof {
+                    Ok(0)
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+}
+
+/// Test that the decoder can work when the underlying reader doesn't spit out
+/// many bytes at a time
+#[test]
+fn slow_reader() -> Result<(), io::Error> {
+    let msg_file = File::open("test_data/1005.rtcm")?;
+
+    let reader = SlowReader {
+        inner: Box::new(msg_file),
+    };
+    let fr = FramedRead::new(reader, Decoder);
+    let frames: Vec<Result<Frame, Error>> = fr.collect();
+
+    assert_eq!(frames.len(), 1);
+    assert!(matches!(
+        frames[0],
+        Ok(Frame {
+            message: Message::Msg1005(_),
+            ..
+        })
+    ));
+
     Ok(())
 }

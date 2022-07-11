@@ -94,9 +94,11 @@ impl Frame {
         rest: &BitSlice<Msb0, u8>,
         msg_length: u16,
     ) -> Result<(&BitSlice<Msb0, u8>, Vec<u8>), DekuError> {
-        if rest.len() < msg_length as usize {
+        let wanted_bits = (msg_length * 8) as usize;
+        let readable_bits = rest.len();
+        if wanted_bits > readable_bits {
             return Err(DekuError::Incomplete(NeedSize::new(
-                (msg_length as usize - rest.len()) * 8,
+                wanted_bits - readable_bits,
             )));
         }
         let mut ret = Vec::new();
