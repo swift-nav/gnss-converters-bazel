@@ -68,9 +68,28 @@ rtcm3_rc rtcm3_decode_4075_bitstream(swiftnav_in_bitstream_t *buff,
 
 double rtcm3_decode_lock_time(uint8_t lock);
 
+/**
+ * Decode RTCM3 message/payload in bitstream format.
+ * @param buff RTCM message/payload in bitstream format
+ * @param rtcm_msg (Output) RTCM msg results (msg + msg_type)
+ * @return Decoding status
+ */
+rtcm3_rc rtcm3_decode_payload_bitstream(swiftnav_in_bitstream_t *buff,
+                                        rtcm_msg_data_t *rtcm_msg);
+
+/**
+ * Decode RTCM3 frame in bitstream format.
+ * @param buff RTCM frame in bitstream format
+ * @param rtcm_frame (Output) RTCM msg containing decoding results
+ * @return Decoding status
+ * Note: This function only decodes the content of the frame. CRC verification
+ * must be called separately.
+ */
+rtcm3_rc rtcm3_decode_frame_bitstream(swiftnav_in_bitstream_t *buff,
+                                      rtcm_frame_t *rtcm_frame);
+
 /* Backwards compatibility versions, these are all susceptible to buffer
  * overflows */
-
 static inline rtcm3_rc rtcm3_decode_999(const uint8_t buff[],
                                         rtcm_msg_999 *msg_999) {
   swiftnav_in_bitstream_t bitstream;
@@ -210,6 +229,115 @@ static inline rtcm3_rc rtcm3_decode_4075(const uint8_t buff[],
   swiftnav_in_bitstream_init(&bitstream, buff, UINT32_MAX);
   return rtcm3_decode_4075_bitstream(&bitstream, msg);
 }
+
+/**
+ * Decode RTCM3 message/payload in byte buffer format.
+ * @param payload_buff RTCM payload/message
+ * @param payload_len RTCM message length (not frame length)
+ * @param rtcm_msg (Output) RTCM msg which contains decoding results
+ * @return Decoding status
+ * Note: Wrapper of rtcm3_decode_payload_bitstream().
+ */
+static inline rtcm3_rc rtcm3_decode_payload(const uint8_t payload_buff[],
+                                            uint32_t payload_len,
+                                            rtcm_msg_data_t *rtcm_msg) {
+  assert(payload_buff);
+  assert(rtcm_msg);
+
+  if (payload_len < RTCM3_MIN_MSG_LEN) {
+    return RC_INVALID_MESSAGE;
+  }
+  swiftnav_in_bitstream_t bitstream;
+  swiftnav_in_bitstream_init(&bitstream, payload_buff, payload_len * 8);
+  return rtcm3_decode_payload_bitstream(&bitstream, rtcm_msg);
+}
+
+/**
+ * Decode RTCM3 frame in byte buffer format.
+ * @param frame_buff RTCM frame
+ * @param frame_len RTCM frame length
+ * @param rtcm_frame (Output) RTCM msg which contains decoding results
+ * @return Decoding status
+ * Note: Wrapper of rtcm3_decode_frame_bitstream()
+ */
+static inline rtcm3_rc rtcm3_decode_frame(const uint8_t frame_buff[],
+                                          uint32_t frame_len,
+                                          rtcm_frame_t *rtcm_frame) {
+  assert(frame_buff);
+  assert(rtcm_frame);
+
+  if (frame_len < (RTCM3_MSG_OVERHEAD + RTCM3_MIN_MSG_LEN)) {
+    return RC_INVALID_MESSAGE;
+  }
+  swiftnav_in_bitstream_t bitstream;
+  swiftnav_in_bitstream_init(&bitstream, frame_buff, frame_len * 8);
+  return rtcm3_decode_frame_bitstream(&bitstream, rtcm_frame);
+}
+
+/**
+ * Extract RTCM message length from RTCM buffer
+ * @param frame_buff RTCM buffer (frame)
+ * @param frame_len RTCM buffer length (not RTCM frame length)
+ * @param payload_len (Output) Exact length of RTCM message
+ * @return Decoding status
+ */
+static inline rtcm3_rc rtcm3_decode_payload_len(const uint8_t frame_buff[],
+                                                uint32_t frame_len,
+                                                uint16_t *payload_len) {
+  if (frame_len < 3) {
+    return RC_INVALID_MESSAGE;
+  }
+  *payload_len = (uint16_t)(((frame_buff[1] & 0x3) << 8) | frame_buff[2]);
+  return RC_OK;
+}
+
+/**
+ * Extract RTCM message type from RTCM frame
+ * @param frame_buff RTCM frame
+ * @param frame_len RTCM frame length
+ * @param msg_type (Output) RTCM message type
+ * @return Decoding status
+ */
+static inline rtcm3_rc rtcm3_decode_msg_type(const uint8_t frame_buff[],
+                                             uint32_t frame_len,
+                                             uint16_t *msg_type) {
+  if (frame_len < 5) {
+    return RC_INVALID_MESSAGE;
+  }
+  *msg_type = (uint16_t)((frame_buff[3] << 4) | ((frame_buff[4] >> 4) & 0xf));
+  return RC_OK;
+}
+
+/**
+ * Get CRC of RTCM3 frame
+ * @param frame_buff RTCM frame
+ * @param frame_len RTCM frame length
+ * @param crc (output)
+ * @return Decoding status
+ */
+static inline rtcm3_rc rtcm3_decode_crc(const uint8_t frame_buff[],
+                                        uint32_t frame_len,
+                                        uint32_t *crc) {
+  uint16_t payload_len = 0;
+  rtcm3_rc ret = rtcm3_decode_payload_len(frame_buff, frame_len, &payload_len);
+  if (RC_OK != ret) {
+    return ret;
+  }
+
+  // Minimum condition to extract CRC
+  if (frame_len < (RTCM3_MSG_OVERHEAD + payload_len)) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  uint32_t crc_offset = payload_len + 3;
+  *crc = (uint32_t)((frame_buff[crc_offset] << 16) |
+                    (frame_buff[crc_offset + 1] << 8) |
+                    (frame_buff[crc_offset + 2]));
+
+  return RC_OK;
+}
+
+rtcm_msg_type_t rtcm3_msg_num_to_msg_type(uint16_t msg_num);
 
 #ifdef __cplusplus
 }

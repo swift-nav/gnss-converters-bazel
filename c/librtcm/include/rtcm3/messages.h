@@ -475,6 +475,9 @@ typedef struct {
   rtcm_999_stgsv_sat_signal field_value[RTCM_TESEOV_SATELLITE_MASK_SIZE];
 } rtcm_msg_999_stgsv;
 
+/**
+ * Bitmask of sub message RST - Proprietary message 999
+ */
 #define RTCM_TESEOV_RST_DEL_ALM_BIT (1 << 0)
 #define RTCM_TESEOV_RST_DEL_EPH_BIT (1 << 1)
 #define RTCM_TESEOV_RST_DEL_USR_POS_BIT (1 << 2)
@@ -540,6 +543,84 @@ typedef struct {
   uint8_t frame_count; /* Frame Count uint8 6 */
   rtcm_ndf_frame frames[MAX_NDF_FRAMES];
 } rtcm_msg_ndf;
+
+/**
+ * Union type for all RTCM message
+ */
+typedef union {
+  rtcm_msg_999 msg_999;
+  rtcm_obs_message msg_obs;  // msg 1001-1004, 1010, 1012
+  rtcm_msg_1005 msg_1005;
+  rtcm_msg_1006 msg_1006;
+  rtcm_msg_1007 msg_1007;
+  rtcm_msg_1008 msg_1008;
+  rtcm_msg_1013 msg_1013;
+  rtcm_msg_eph msg_eph;  // 1019-gps, 1020-glo, 1042-bds, 1044-qzss,
+                         // 1045-gal_fnav, 1046-gal_inav
+  rtcm_msg_1029 msg_1029;
+  rtcm_msg_1033 msg_1033;
+  rtcm_msg_1230 msg_1230;
+  rtcm_msm_message msg_msm;  // Equiv MSM4-MSM7 for GPS, GLO, GAL, BDS
+                             // MSM4 (1074,1084,1094,1124);
+                             // MSM5 (1075,1085,1095,1125);
+                             // MSM6 (1076,1086,1096,1126);
+                             // MSM7 (1077,1087,1097,1127);
+  // Not supported MSM4 - MSM7 of SBAS (1104-1107), QZSS (1114-1117)
+  // Not supported MSM1 - MSM3:
+  //    GPS (1071 - 1073), GLO (1081-1083), GAL (1091-1093),
+  //    SBAS (1101-1103), QZSS (1111-1113), BDS (1121-1124)
+
+  rtcm_msg_orbit msg_orbit;              // 1057,1063,1240,1246,1258
+  rtcm_msg_clock msg_clock;              // 1058,1064,1241,1247,1259
+  rtcm_msg_code_bias msg_code_bias;      // 1059,1065,1242,1248,1260
+  rtcm_msg_orbit_clock msg_orbit_clock;  // 1060,1066,1243,1249,1261
+  rtcm_msg_phase_bias msg_phase_bias;    // 1265,1266,1267,1268,1269,1270
+  rtcm_msg_swift_proprietary msg_swift_prop;
+  rtcm_msg_ndf msg_ndf;
+} rtcm_msg_t;
+
+typedef enum {
+  RtcmUnsupported,
+  Rtcm999,
+  RtcmObs,
+  Rtcm1005,
+  Rtcm1006,
+  Rtcm1007,
+  Rtcm1008,
+  Rtcm1013,
+  RtcmEph,
+  Rtcm1029,
+  Rtcm1033,
+  Rtcm1230,
+  RtcmMSM,
+  RtcmOrbit,
+  RtcmClock,
+  RtcmCodeBias,
+  RtcmOrbitClock,
+  RtcmPhaseBias,
+  RtcmSwiftProp,
+  RtcmNdf,
+} rtcm_msg_type_t;
+
+/**
+ * Extract from "Data message" field of RTCM frame - including msg type and msg
+ * content (Refer to Table 4-1 Version 3 Frame Structure).
+ */
+typedef struct {
+  uint16_t msg_num;  // Message type (12)
+  rtcm_msg_type_t msg_type;
+  rtcm_msg_t message;  // Message content
+} rtcm_msg_data_t;
+
+/**
+ * All content extracted from RTCM frame (Ignore Preamble & Reserved bits)
+ */
+typedef struct {
+  uint8_t reserve;       // Reserved bits
+  uint16_t payload_len;  // Message length / payload length (10)
+  rtcm_msg_data_t data;  // Data message field
+  uint32_t crc;          // Message CRC (24)
+} rtcm_frame_t;
 
 #ifdef __cplusplus
 }

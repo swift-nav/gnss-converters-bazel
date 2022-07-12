@@ -29,6 +29,8 @@
 #include "test_assert.h"
 
 int main(void) {
+  test_rtcm_msg_num_to_msg_type();
+  test_rtcm_content_decode();
   test_msm_bit_utils();
   test_lock_time_decoding();
   test_rtcm_999_stgsv_en_de();
@@ -74,6 +76,172 @@ void set_valid(
   msg->sats[sat].obs[0].flags.fields.valid_pr = pr;
   msg->sats[sat].obs[0].flags.fields.valid_cp = cp;
   msg->sats[sat].obs[0].flags.fields.valid_lock = lock;
+}
+
+static void get_sample_rtcm_msg(rtcm_frame_t *msg) {
+  msg->payload_len = 50;
+  msg->data.msg_num = 999;
+  rtcm_msg_999 *msg_999 = &msg->data.message.msg_999;
+  msg_999->sub_type_id = RTCM_TESEOV_STGSV;
+  msg_999->data.stgsv.tow_ms = 91743000;  // (0x15DF8C6<<2 | 0)
+  msg_999->data.stgsv.constellation = 0;  // 0x0
+  msg_999->data.stgsv.field_mask = 15;    // 0x0F
+  msg_999->data.stgsv.mul_msg_ind = true;
+  msg_999->data.stgsv.n_sat = 9;
+  int16_t field_value[9][5] = {{10, 47, 305, 23, 255},
+                               {13, 16, 134, 26, 255},
+                               {15, 38, 110, 255, 255},
+                               {16, 29, 254, 255, 255},
+                               {18, 62, 136, 20, 255},
+                               {23, 82, 265, 16, 255},
+                               {26, 25, 296, 255, 255},
+                               {27, 21, 224, 255, 255},
+                               {29, 31, 38, 47, 255}};
+
+  for (size_t i = 0; i < msg_999->data.stgsv.n_sat; i++) {
+    msg_999->data.stgsv.field_value[i].sat_id = (uint8_t)field_value[i][0];
+    msg_999->data.stgsv.field_value[i].el = (int8_t)field_value[i][1];
+    msg_999->data.stgsv.field_value[i].az = (uint16_t)field_value[i][2];
+    msg_999->data.stgsv.field_value[i].cn0_b1 = (uint8_t)field_value[i][3];
+    msg_999->data.stgsv.field_value[i].cn0_b2 = (uint8_t)field_value[i][4];
+  }
+}
+
+void test_rtcm_msg_num_to_msg_type() {
+  struct rtcm_msgnum_test {
+    uint16_t msg_num;
+    rtcm_msg_type_t msg_type;
+  };
+
+  struct rtcm_msgnum_test msg_table[] = {
+      {999, Rtcm999},         {1001, RtcmObs},        {1002, RtcmObs},
+      {1003, RtcmObs},        {1004, RtcmObs},        {1005, Rtcm1005},
+      {1006, Rtcm1006},       {1007, Rtcm1007},       {1008, Rtcm1008},
+      {1010, RtcmObs},        {1012, RtcmObs},        {1013, Rtcm1013},
+      {1019, RtcmEph},        {1020, RtcmEph},        {1042, RtcmEph},
+      {1044, RtcmEph},        {1045, RtcmEph},        {1046, RtcmEph},
+      {1029, Rtcm1029},       {1033, Rtcm1033},       {1230, Rtcm1230},
+      {1071, RtcmMSM},        {1072, RtcmMSM},        {1073, RtcmMSM},
+      {1074, RtcmMSM},        {1075, RtcmMSM},        {1076, RtcmMSM},
+      {1077, RtcmMSM},        {1081, RtcmMSM},        {1082, RtcmMSM},
+      {1083, RtcmMSM},        {1084, RtcmMSM},        {1085, RtcmMSM},
+      {1086, RtcmMSM},        {1087, RtcmMSM},        {1091, RtcmMSM},
+      {1092, RtcmMSM},        {1093, RtcmMSM},        {1094, RtcmMSM},
+      {1095, RtcmMSM},        {1096, RtcmMSM},        {1097, RtcmMSM},
+      {1101, RtcmMSM},        {1102, RtcmMSM},        {1103, RtcmMSM},
+      {1104, RtcmMSM},        {1105, RtcmMSM},        {1106, RtcmMSM},
+      {1107, RtcmMSM},        {1111, RtcmMSM},        {1112, RtcmMSM},
+      {1113, RtcmMSM},        {1114, RtcmMSM},        {1115, RtcmMSM},
+      {1116, RtcmMSM},        {1117, RtcmMSM},        {1121, RtcmMSM},
+      {1122, RtcmMSM},        {1123, RtcmMSM},        {1124, RtcmMSM},
+      {1125, RtcmMSM},        {1126, RtcmMSM},        {1127, RtcmMSM},
+      {1057, RtcmOrbit},      {1063, RtcmOrbit},      {1240, RtcmOrbit},
+      {1246, RtcmOrbit},      {1258, RtcmOrbit},      {1058, RtcmClock},
+      {1064, RtcmClock},      {1241, RtcmClock},      {1247, RtcmClock},
+      {1259, RtcmClock},      {1059, RtcmCodeBias},   {1065, RtcmCodeBias},
+      {1242, RtcmCodeBias},   {1248, RtcmCodeBias},   {1260, RtcmCodeBias},
+      {1060, RtcmOrbitClock}, {1066, RtcmOrbitClock}, {1243, RtcmOrbitClock},
+      {1249, RtcmOrbitClock}, {1261, RtcmOrbitClock}, {1265, RtcmPhaseBias},
+      {1266, RtcmPhaseBias},  {1267, RtcmPhaseBias},  {1268, RtcmPhaseBias},
+      {1269, RtcmPhaseBias},  {1270, RtcmPhaseBias},  {4062, RtcmSwiftProp},
+      {4075, RtcmNdf}};
+
+  const uint16_t msg_table_size = ARRAY_SIZE(msg_table);
+
+  for (uint16_t i = 0; i < UINT16_MAX; i++) {
+    for (uint16_t id = 0; id < msg_table_size; id++) {
+      if (msg_table[id].msg_num == i) {
+        assert(rtcm3_msg_num_to_msg_type(i) == msg_table[id].msg_type);
+        break;
+      }
+
+      if (id == (msg_table_size - 1)) {  // Scanned whole table
+        assert(rtcm3_msg_num_to_msg_type(i) == RtcmUnsupported);
+      }
+    }
+  }
+}
+
+/* Test rtcm decode of general information. */
+void test_rtcm_content_decode() {
+  // Use RTCM msg as sample data
+  rtcm_frame_t msg_ev = {0};
+  get_sample_rtcm_msg(&msg_ev);
+
+  uint8_t buff[RTCM3_MAX_FRAME_LEN] = {0};
+  uint16_t encode_len = 0;
+  assert(
+      RC_OK ==
+      rtcm3_encode_frame(
+          &msg_ev.data.message.msg_999, buff, sizeof(buff), 999, &encode_len));
+
+  // Output
+  rtcm_frame_t msg_out = {0};
+  assert(RC_OK ==
+         rtcm3_decode_payload_len(buff, sizeof(buff), &msg_out.payload_len));
+  assert(RC_OK ==
+         rtcm3_decode_msg_type(buff, sizeof(buff), &msg_out.data.msg_num));
+  assert(RC_OK == rtcm3_decode_crc(buff, sizeof(buff), &msg_out.crc));
+  assert(msg_out.payload_len == msg_ev.payload_len);
+  assert(msg_out.data.msg_num == msg_ev.data.msg_num);
+
+  const uint16_t payload_size = msg_out.payload_len;
+  const uint16_t frame_size = msg_out.payload_len + RTCM3_MSG_OVERHEAD;
+
+  msg_out.data.msg_num = 0;
+  msg_out.data.msg_type = RtcmUnsupported;
+  msg_out.payload_len = 0;
+  msg_out.crc = 0;
+  assert(RC_OK == rtcm3_decode_payload(buff + 3, payload_size, &msg_out.data));
+  assert(msg_out.data.msg_num == msg_ev.data.msg_num);
+  assert(msg_out.data.msg_type == Rtcm999);
+  assert(msg999stgsv_equals(&msg_out.data.message.msg_999.data.stgsv,
+                            &msg_ev.data.message.msg_999.data.stgsv));
+
+  msg_out.data.msg_num = 0;
+  msg_out.data.msg_type = RtcmUnsupported;
+  msg_out.payload_len = 0;
+  msg_out.crc = 0;
+  assert(RC_OK == rtcm3_decode_frame(buff, sizeof(buff), &msg_out));
+  assert(msg_out.payload_len == msg_ev.payload_len);
+  assert(msg_out.data.msg_num == msg_ev.data.msg_num);
+  assert(msg_out.data.msg_type == Rtcm999);
+  assert(msg999stgsv_equals(&msg_out.data.message.msg_999.data.stgsv,
+                            &msg_ev.data.message.msg_999.data.stgsv));
+
+  // Check insufficient buffer length
+  assert(RC_INVALID_MESSAGE ==
+         rtcm3_decode_payload_len(buff, 2, &msg_out.payload_len));
+  assert(RC_INVALID_MESSAGE ==
+         rtcm3_decode_msg_type(buff, 4, &msg_out.payload_len));
+
+  for (size_t i = 0; i < frame_size; i++) {
+    msg_out.data.msg_num = 0;
+    msg_out.data.msg_type = RtcmUnsupported;
+    msg_out.payload_len = 0;
+    msg_out.crc = 0;
+    assert(RC_INVALID_MESSAGE == rtcm3_decode_crc(buff, i, &msg_out.crc));
+  }
+  for (size_t i = 0; i < payload_size; i++) {
+    msg_out.data.msg_num = 0;
+    msg_out.data.msg_type = RtcmUnsupported;
+    msg_out.payload_len = 0;
+    msg_out.crc = 0;
+    assert(RC_INVALID_MESSAGE ==
+           rtcm3_decode_payload(buff + 3, i, &msg_out.data));
+  }
+  for (size_t i = 0; i < frame_size; i++) {
+    msg_out.data.msg_num = 0;
+    msg_out.data.msg_type = RtcmUnsupported;
+    msg_out.payload_len = 0;
+    msg_out.crc = 0;
+    assert(RC_INVALID_MESSAGE == rtcm3_decode_frame(buff, i, &msg_out));
+  }
+
+  // Check incorrect Preamble
+  buff[0]--;  // Fake Preamble to 0xD2
+  assert(RC_INVALID_MESSAGE ==
+         rtcm3_decode_frame(buff, sizeof(buff), &msg_out));
 }
 
 /* Test rtcm 999 stgsv message encode -> decode */

@@ -125,6 +125,9 @@ struct rtcm3_sbp_state {
   void (*cb_base_obs_invalid)(double time_diff, void *context);
   void *context;
 
+  /* Track multi obs msg. SBP msgs are sent once this flag is true */
+  bool send_observation_flag;
+
   ObservationTimeEstimator *observation_time_estimator;
   EphemerisTimeEstimator *ephemeris_time_estimator;
   Rtcm1013TimeEstimator *rtcm_1013_time_estimator;
@@ -160,13 +163,35 @@ struct rtcm3_sbp_state {
   struct rtcm_gnss_signal cons_meas_map[RTCM_CONSTELLATION_COUNT];
 };
 
+/**
+ * This is the combination of decoder & converter. The whole RTCM frame is
+ * decoded, before output of the decoder is converted into SBP message.
+ * @param frame RTCM frame
+ * @param frame_length Length of RTCM frame
+ * @param state Pointer to converter state
+ */
 void rtcm2sbp_decode_frame(const uint8_t *frame,
                            uint32_t frame_length,
                            struct rtcm3_sbp_state *state);
 
+/**
+ * This is the combination of decoder & converter. The RTCM message/payload is
+ * decoded, before output of the decoder is converted into SBP message.
+ * @param payload RTCM message/payload
+ * @param payload_length Length of RTCM message
+ * @param state Pointer to converter state
+ */
 void rtcm2sbp_decode_payload(const uint8_t *payload,
                              uint32_t payload_length,
                              struct rtcm3_sbp_state *state);
+
+/**
+ * The converter converts RTCM message in form of RTCM data struct to SBP msg.
+ * @param rtcm_msg Pointer to RTCM message (struct)
+ * @param state Pointer to converter state
+ */
+void rtcm2sbp_convert(const rtcm_msg_data_t *rtcm_msg,
+                      struct rtcm3_sbp_state *state);
 
 void rtcm2sbp_set_glo_fcn(sbp_v4_gnss_signal_t sid,
                           u8 sbp_fcn,

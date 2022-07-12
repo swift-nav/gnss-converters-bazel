@@ -15,6 +15,8 @@
 
 #include <rtcm3/messages.h>
 
+static void test_rtcm_msg_num_to_msg_type(void);
+static void test_rtcm_content_decode(void);
 static void test_rtcm_999_stgsv_en_de(void);
 static void test_rtcm_999_stgsv_de_en(void);
 static void test_rtcm_999_restart_en_de(void);

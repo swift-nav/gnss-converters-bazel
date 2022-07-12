@@ -142,7 +142,7 @@ gps_time_t week_rollover_adjustment(gps_time_t constellation_time,
   return adjusted_time;
 }
 
-bool rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
+bool rtcm3_gps_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           struct rtcm3_sbp_state *state) {
   assert(msg_eph);
@@ -213,7 +213,7 @@ bool rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
   return gps_time_sec_match_weeks(&sbp_gps_eph->toc, &rover_time);
 }
 
-void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
+void rtcm3_qzss_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                            sbp_msg_ephemeris_qzss_t *sbp_qzss_eph,
                            struct rtcm3_sbp_state *state) {
   (void)state;
@@ -263,7 +263,7 @@ void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
   sbp_qzss_eph->toc.tow = msg_eph->data.kepler.toc * GPS_TOC_RESOLUTION;
 }
 
-bool rtcm3_glo_eph_to_sbp(rtcm_msg_eph *msg_eph,
+bool rtcm3_glo_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           struct rtcm3_sbp_state *state) {
   assert(msg_eph);
@@ -398,7 +398,7 @@ bool rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
   return gps_time_sec_match_weeks(&sbp_gal_eph->toc, &rover_time);
 }
 
-void rtcm3_bds_eph_to_sbp(rtcm_msg_eph *msg_eph,
+void rtcm3_bds_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_bds_t *sbp_bds_eph,
                           struct rtcm3_sbp_state *state) {
   (void)state;

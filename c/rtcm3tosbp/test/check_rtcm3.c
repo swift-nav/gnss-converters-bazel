@@ -842,7 +842,8 @@ void test_RTCM3(const char *filename,
       continue;
     }
 
-    rtcm2sbp_decode_frame(&buffer[buffer_index], message_size, &state);
+    rtcm2sbp_decode_frame(
+        &buffer[buffer_index], message_size + RTCM3_MSG_OVERHEAD, &state);
     /* skip pointer to the end of this message */
     buffer_index += message_size + 6;
   }

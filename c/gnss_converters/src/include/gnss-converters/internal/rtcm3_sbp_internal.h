@@ -147,7 +147,7 @@ void send_observations(struct rtcm3_sbp_state *state);
 
 bool no_1230_received(struct rtcm3_sbp_state *state);
 
-void send_1029(rtcm_msg_1029 *msg_1029, struct rtcm3_sbp_state *state);
+void send_1029(const rtcm_msg_1029 *msg_1029, struct rtcm3_sbp_state *state);
 
 void send_sbp_log_message(uint8_t level,
                           const uint8_t *message,
@@ -155,7 +155,7 @@ void send_sbp_log_message(uint8_t level,
                           uint16_t stn_id,
                           const struct rtcm3_sbp_state *state);
 
-void send_MSM_warning(const swiftnav_in_bitstream_t *bitstream,
+void send_msm_warning(const rtcm_msg_t *rtcm_msg,
                       struct rtcm3_sbp_state *state);
 
 void send_buffer_full_error(const struct rtcm3_sbp_state *state);
@@ -227,31 +227,31 @@ gps_time_t week_rollover_adjustment(gps_time_t constellation_time,
                                     uint8_t constellation_wn_resolution,
                                     gps_time_t gps_constellation_offset);
 
-bool rtcm3_gps_eph_to_sbp(rtcm_msg_eph *msg_eph,
+bool rtcm3_gps_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           struct rtcm3_sbp_state *state);
-void rtcm3_qzss_eph_to_sbp(rtcm_msg_eph *msg_eph,
+void rtcm3_qzss_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                            sbp_msg_ephemeris_qzss_t *sbp_qzss_eph,
                            struct rtcm3_sbp_state *state);
-bool rtcm3_glo_eph_to_sbp(rtcm_msg_eph *msg_eph,
+bool rtcm3_glo_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_glo_t *sbp_glo_eph,
                           struct rtcm3_sbp_state *state);
 bool rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           u8 source,
                           sbp_msg_ephemeris_gal_t *sbp_gal_eph,
                           struct rtcm3_sbp_state *state);
-void rtcm3_bds_eph_to_sbp(rtcm_msg_eph *msg_eph,
+void rtcm3_bds_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_bds_t *sbp_bds_eph,
                           struct rtcm3_sbp_state *state);
 
-void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
-                                           rtcm_msg_orbit *msg_orbit,
+void rtcm3_ssr_separate_orbit_clock_to_sbp(const rtcm_msg_clock *msg_clock,
+                                           const rtcm_msg_orbit *msg_orbit,
                                            struct rtcm3_sbp_state *state);
-void rtcm3_ssr_orbit_clock_to_sbp(rtcm_msg_orbit_clock *msg_orbit_clock,
+void rtcm3_ssr_orbit_clock_to_sbp(const rtcm_msg_orbit_clock *msg_orbit_clock,
                                   struct rtcm3_sbp_state *state);
-void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
+void rtcm3_ssr_code_bias_to_sbp(const rtcm_msg_code_bias *msg_code_biases,
                                 struct rtcm3_sbp_state *state);
-void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
+void rtcm3_ssr_phase_bias_to_sbp(const rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state);
 
 static inline u16 rtcm_stn_to_sbp_sender_id(u16 rtcm_id) {

@@ -84,8 +84,8 @@ static void rtcm_ssr_clock_to_sbp(const rtcm_msg_ssr_clock_corr *clock,
   sbp_orbit_clock->c2 = clock->c2;
 }
 
-void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
-                                           rtcm_msg_orbit *msg_orbit,
+void rtcm3_ssr_separate_orbit_clock_to_sbp(const rtcm_msg_clock *msg_clock,
+                                           const rtcm_msg_orbit *msg_orbit,
                                            struct rtcm3_sbp_state *state) {
   assert(msg_clock);
   assert(msg_orbit);
@@ -128,7 +128,7 @@ void rtcm3_ssr_separate_orbit_clock_to_sbp(rtcm_msg_clock *msg_clock,
   }
 }
 
-void rtcm3_ssr_orbit_clock_to_sbp(rtcm_msg_orbit_clock *msg_orbit_clock,
+void rtcm3_ssr_orbit_clock_to_sbp(const rtcm_msg_orbit_clock *msg_orbit_clock,
                                   struct rtcm3_sbp_state *state) {
   sbp_msg_t msg;
   sbp_msg_ssr_orbit_clock_t *sbp_orbit_clock = &msg.ssr_orbit_clock;
@@ -150,7 +150,7 @@ void rtcm3_ssr_orbit_clock_to_sbp(rtcm_msg_orbit_clock *msg_orbit_clock,
   }
 }
 
-void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
+void rtcm3_ssr_code_bias_to_sbp(const rtcm_msg_code_bias *msg_code_biases,
                                 struct rtcm3_sbp_state *state) {
   /**
    * C99 static assert to guarantee that there will be no buffer overflow
@@ -206,7 +206,7 @@ void rtcm3_ssr_code_bias_to_sbp(rtcm_msg_code_bias *msg_code_biases,
   }
 }
 
-void rtcm3_ssr_phase_bias_to_sbp(rtcm_msg_phase_bias *msg_phase_biases,
+void rtcm3_ssr_phase_bias_to_sbp(const rtcm_msg_phase_bias *msg_phase_biases,
                                  struct rtcm3_sbp_state *state) {
   if (state->observation_time_estimator != NULL) {
     time_truth_observation_estimator_push(

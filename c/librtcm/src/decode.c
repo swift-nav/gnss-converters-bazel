@@ -14,9 +14,12 @@
 #include <librtcm/internal/decode_helpers.h>
 #include <math.h>
 #include <rtcm3/bits.h>
+#include <rtcm3/constants.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/msm_utils.h>
+#include <rtcm3/ssr_decode.h>
+#include <rtcm3/sta_decode.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -1709,5 +1712,458 @@ rtcm3_rc rtcm3_decode_999_bitstream(swiftnav_in_bitstream_t *buff,
       return rtcm3_decode_999_aux_base(buff, &msg_999->data.aux);
     default:
       return RC_INVALID_MESSAGE;
+  }
+}
+
+rtcm3_rc rtcm3_decode_payload_bitstream(swiftnav_in_bitstream_t *buff,
+                                        rtcm_msg_data_t *rtcm_msg) {
+  assert(buff);
+  assert(rtcm_msg);
+
+  // Check payload/message buffer must be full bytes
+  if ((buff->len % 8 != 0) || (buff->offset % 8 != 0)) {
+    return RC_INVALID_MESSAGE;
+  }
+  uint16_t payload_len = (buff->len - buff->offset) / 8U;
+
+  if (payload_len < RTCM3_MIN_MSG_LEN) {  // #bytes to decode message size
+    return RC_INVALID_MESSAGE;
+  }
+
+  BITSTREAM_DECODE_U16(buff, rtcm_msg->msg_num, 12);
+  buff->offset -= 12;
+
+  rtcm_msg->msg_type = rtcm3_msg_num_to_msg_type(rtcm_msg->msg_num);
+
+  rtcm3_rc ret = RC_OK;
+  switch (rtcm_msg->msg_num) {
+    case 999: {
+      rtcm_msg_999 *msg_999 = &rtcm_msg->message.msg_999;
+      ret = rtcm3_decode_999_bitstream(buff, msg_999);
+      break;
+    }
+    case 1001:
+    case 1003:
+      break;
+    case 1002: {
+      rtcm_obs_message *msg_obs = &rtcm_msg->message.msg_obs;
+      ret = rtcm3_decode_1002_bitstream(buff, msg_obs);
+      break;
+    }
+    case 1004: {
+      rtcm_obs_message *msg_obs = &rtcm_msg->message.msg_obs;
+      ret = rtcm3_decode_1004_bitstream(buff, msg_obs);
+      break;
+    }
+    case 1005: {
+      rtcm_msg_1005 *msg_1005 = &rtcm_msg->message.msg_1005;
+      ret = rtcm3_decode_1005_bitstream(buff, msg_1005);
+      break;
+    }
+    case 1006: {
+      rtcm_msg_1006 *msg_1006 = &rtcm_msg->message.msg_1006;
+      ret = rtcm3_decode_1006_bitstream(buff, msg_1006);
+      break;
+    }
+    case 1007:
+    case 1008:
+      break;
+    case 1010: {
+      rtcm_obs_message *msg_obs = &rtcm_msg->message.msg_obs;
+      ret = rtcm3_decode_1010_bitstream(buff, msg_obs);
+      break;
+    }
+    case 1012: {
+      rtcm_obs_message *msg_obs = &rtcm_msg->message.msg_obs;
+      ret = rtcm3_decode_1012_bitstream(buff, msg_obs);
+      break;
+    }
+    case 1013: {
+      rtcm_msg_1013 *rtcm_1013 = &rtcm_msg->message.msg_1013;
+      ret = rtcm3_decode_1013_bitstream(buff, rtcm_1013, payload_len);
+      break;
+    }
+    case 1019: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_gps_eph_bitstream(buff, msg_eph);
+      break;
+    }
+    case 1020: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_glo_eph_bitstream(buff, msg_eph);
+      break;
+    }
+    case 1042: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_bds_eph_bitstream(buff, msg_eph);
+      break;
+    }
+    case 1044: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_qzss_eph_bitstream(buff, msg_eph);
+      break;
+    }
+    case 1045: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_gal_eph_fnav_bitstream(buff, msg_eph);
+      break;
+    }
+
+    case 1046: {
+      rtcm_msg_eph *msg_eph = &rtcm_msg->message.msg_eph;
+      ret = rtcm3_decode_gal_eph_inav_bitstream(buff, msg_eph);
+      break;
+    }
+    case 1029: {
+      rtcm_msg_1029 *msg_1029 = &rtcm_msg->message.msg_1029;
+      ret = rtcm3_decode_1029_bitstream(buff, msg_1029);
+      break;
+    }
+    case 1033: {
+      rtcm_msg_1033 *msg_1033 = &rtcm_msg->message.msg_1033;
+      ret = rtcm3_decode_1033_bitstream(buff, msg_1033);
+      break;
+    }
+    case 1230: {
+      rtcm_msg_1230 *msg_1230 = &rtcm_msg->message.msg_1230;
+      ret = rtcm3_decode_1230_bitstream(buff, msg_1230);
+      break;
+    }
+
+    /* The following two chunks of messages handle converting separate SSR orbit
+     * correction and SSR clock correction messages into a single SBP message
+     * containing both orbit and clock corrections. This code makes the
+     * following assumptions:
+     *  1. Each pair of orbit and clock messages contain data for the same group
+     * of satellites, this implies that we don't support the multimessage flag
+     * in the RTCM message. We do match the clock correction satid with the
+     * orbit correction satid, so the corrections don't have to be in the same
+     * order but we will silently drop any correction that we can't find a
+     * matching pair for.
+     *  2. The clock and orbit messages are sent at the same frequency. The
+     * epoch time of the two messages must match for them to be considered
+     * pairs.
+     */
+    case 1057:
+    case 1063:
+    case 1240:
+    case 1246:
+    case 1258: {
+      rtcm_msg_orbit *msg_orbit = &rtcm_msg->message.msg_orbit;
+      ret = rtcm3_decode_orbit_bitstream(buff, msg_orbit);
+      break;
+    }
+    case 1058:
+    case 1064:
+    case 1241:
+    case 1247:
+    case 1259: {
+      rtcm_msg_clock *msg_clock = &rtcm_msg->message.msg_clock;
+      ret = rtcm3_decode_clock_bitstream(buff, msg_clock);
+      break;
+    }
+    case 1059:
+    case 1065:
+    case 1242:
+    case 1248:
+    case 1260: {
+      rtcm_msg_code_bias *msg_code_bias = &rtcm_msg->message.msg_code_bias;
+      ret = rtcm3_decode_code_bias_bitstream(buff, msg_code_bias);
+      break;
+    }
+    case 1060:
+    case 1066:
+    case 1243:
+    case 1249:
+    case 1261: {
+      rtcm_msg_orbit_clock *msg_orbit_clock =
+          &rtcm_msg->message.msg_orbit_clock;
+      ret = rtcm3_decode_orbit_clock_bitstream(buff, msg_orbit_clock);
+      break;
+    }
+    case 1265:
+    case 1266:
+    case 1267:
+    case 1268:
+    case 1269:
+    case 1270: {
+      rtcm_msg_phase_bias *msg_phase_bias = &rtcm_msg->message.msg_phase_bias;
+      ret = rtcm3_decode_phase_bias_bitstream(buff, msg_phase_bias);
+      break;
+    }
+    case 1074:
+    case 1084:
+    case 1094:
+    case 1124: {
+      rtcm_msm_message *msg_msm = &rtcm_msg->message.msg_msm;
+      ret = rtcm3_decode_msm4_bitstream(buff, msg_msm);
+      break;
+    }
+    case 1075:
+    case 1085:
+    case 1095:
+    case 1125: {
+      rtcm_msm_message *msg_msm = &rtcm_msg->message.msg_msm;
+      ret = rtcm3_decode_msm5_bitstream(buff, msg_msm);
+      break;
+    }
+    case 1076:
+    case 1086:
+    case 1096:
+    case 1126: {
+      rtcm_msm_message *msg_msm = &rtcm_msg->message.msg_msm;
+      ret = rtcm3_decode_msm6_bitstream(buff, msg_msm);
+      break;
+    }
+    case 1077:
+    case 1087:
+    case 1097:
+    case 1127: {
+      rtcm_msm_message *msg_msm = &rtcm_msg->message.msg_msm;
+      ret = rtcm3_decode_msm7_bitstream(buff, msg_msm);
+      break;
+    }
+    case 1104:
+    case 1105:
+    case 1106:
+    case 1107:
+      /* MSM4-MSM7 of SBAS messages suppressed for now */
+    case 1114:
+    case 1115:
+    case 1116:
+    case 1117:
+      /* MSM4-MSM7 of QZSS messages suppressed for now */
+      break;
+    case 1071:
+    case 1072:
+    case 1073:
+      /* GPS MSM1 - MSM3 */
+    case 1081:
+    case 1082:
+    case 1083:
+      /* GLO MSM1 - MSM3 */
+    case 1091:
+    case 1092:
+    case 1093:
+      /* GAL MSM1 - MSM3 */
+    case 1101:
+    case 1102:
+    case 1103:
+      /* SBAS MSM1 - MSM3 */
+    case 1111:
+    case 1112:
+    case 1113:
+      /* QZSS MSM1 - MSM3 */
+    case 1121:
+    case 1122:
+    case 1123: {
+      /* BDS MSM1 - MSM3 */
+
+      /* MSM1-3 messages (1xx3) are currently not supported, warn the user once
+       * if these messages are seen - only warn once as these messages can be
+       * present in streams that contain MSM4-7 or 1004 and 1012 so are valid */
+      rtcm_msm_message *msg_msm = &rtcm_msg->message.msg_msm;
+      uint32_t stn_id = 0;
+      if (swiftnav_in_bitstream_getbitu(buff, &stn_id, 12, 24)) {
+        msg_msm->header.stn_id = stn_id;
+      }
+      break;
+    }
+    case 4062: {
+      rtcm_msg_swift_proprietary *msg_swift = &rtcm_msg->message.msg_swift_prop;
+      ret = rtcm3_decode_4062_bitstream(buff, msg_swift);
+      break;
+    }
+    case 4075: {
+      rtcm_msg_ndf *msg_ndf = &rtcm_msg->message.msg_ndf;
+      ret = rtcm3_decode_4075_bitstream(buff, msg_ndf);
+      break;
+    }
+    default:
+      ret = RC_INVALID_MESSAGE;
+      break;
+  }
+
+  return ret;
+}
+
+rtcm3_rc rtcm3_decode_frame_bitstream(swiftnav_in_bitstream_t *buff,
+                                      rtcm_frame_t *rtcm_frame) {
+  assert(buff);
+  assert(rtcm_frame);
+  assert(buff->offset % 8 == 0);
+
+  uint32_t buff_offset_start = buff->offset;
+
+  // Check minimum buffer size
+  if ((buff->len - buff_offset_start) <
+      ((RTCM3_MSG_OVERHEAD + RTCM3_MIN_MSG_LEN) * 8U)) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  // Decode general info extracted from RTCM frame
+  // Decode Preamble
+  uint8_t rtcm_preamble = 0;
+  BITSTREAM_DECODE_U8(buff, rtcm_preamble, 8);  // 8 bit preamble
+  if (rtcm_preamble != RTCM3_PREAMBLE) {
+    return RC_INVALID_MESSAGE;
+  }
+
+  // Decode Reserved bits
+  BITSTREAM_DECODE_U8(buff, rtcm_frame->reserve, 6);  // 6 bit reserved
+
+  // Decode message length
+  BITSTREAM_DECODE_U16(buff, rtcm_frame->payload_len, 10);  // 10 bit msg length
+
+  // Decode CRC
+  if ((buff->len - buff_offset_start) <
+      ((RTCM3_MSG_OVERHEAD + rtcm_frame->payload_len) * 8U)) {
+    return RC_INVALID_MESSAGE;
+  }
+  buff->offset = (buff_offset_start + (rtcm_frame->payload_len + 3) * 8U);
+  BITSTREAM_DECODE_U32(buff, rtcm_frame->crc, 24);
+  // Note: this step just decodes the CRC content. It must be verified
+  // separately.
+
+  // Decode payload
+  swiftnav_in_bitstream_t payload_bitstream;
+  swiftnav_in_bitstream_init(
+      &payload_bitstream, buff->data + 3, rtcm_frame->payload_len * 8U);
+  rtcm3_rc ret =
+      rtcm3_decode_payload_bitstream(&payload_bitstream, &rtcm_frame->data);
+  if (RC_OK != ret) {
+    return ret;
+  }
+
+  return RC_OK;
+}
+
+rtcm_msg_type_t rtcm3_msg_num_to_msg_type(uint16_t msg_num) {
+  switch (msg_num) {
+    case 999:
+      return Rtcm999;
+    case 1001:
+    case 1003:
+      // not support
+    case 1002:
+    case 1004:
+    case 1010:
+    case 1012:
+      return RtcmObs;
+    case 1005:
+      return Rtcm1005;
+    case 1006:
+      return Rtcm1006;
+    case 1007:
+      return Rtcm1007;
+    case 1008:
+      return Rtcm1008;
+    case 1013:
+      return Rtcm1013;
+    case 1019:
+    case 1020:
+    case 1042:
+    case 1044:
+    case 1045:
+    case 1046:
+      return RtcmEph;
+    case 1029:
+      return Rtcm1029;
+    case 1033:
+      return Rtcm1033;
+    case 1230:
+      return Rtcm1230;
+    case 1071:
+    case 1072:
+    case 1073:
+      /* GPS MSM1 - MSM3 */
+    case 1081:
+    case 1082:
+    case 1083:
+      /* GLO MSM1 - MSM3 */
+    case 1091:
+    case 1092:
+    case 1093:
+      /* GAL MSM1 - MSM3 */
+    case 1101:
+    case 1102:
+    case 1103:
+      /* SBAS MSM1 - MSM3 */
+    case 1111:
+    case 1112:
+    case 1113:
+      /* QZSS MSM1 - MSM3 */
+    case 1121:
+    case 1122:
+    case 1123:
+      /* BDS MSM1 - MSM3 */
+    case 1104:
+    case 1105:
+    case 1106:
+    case 1107:
+      /* SBAS MSM4-MSM7 */
+    case 1114:
+    case 1115:
+    case 1116:
+    case 1117:
+      /* QZSS MSM4-MSM7 */
+    case 1074:
+    case 1084:
+    case 1094:
+    case 1124:
+      // MSM4
+    case 1075:
+    case 1085:
+    case 1095:
+    case 1125:
+      // MSM5
+    case 1076:
+    case 1086:
+    case 1096:
+    case 1126:
+      // MSM6
+    case 1077:
+    case 1087:
+    case 1097:
+    case 1127:
+      // MSM7
+      return RtcmMSM;
+    case 1057:
+    case 1063:
+    case 1240:
+    case 1246:
+    case 1258:
+      return RtcmOrbit;
+    case 1058:
+    case 1064:
+    case 1241:
+    case 1247:
+    case 1259:
+      return RtcmClock;
+    case 1059:
+    case 1065:
+    case 1242:
+    case 1248:
+    case 1260:
+      return RtcmCodeBias;
+    case 1060:
+    case 1066:
+    case 1243:
+    case 1249:
+    case 1261:
+      return RtcmOrbitClock;
+    case 1265:
+    case 1266:
+    case 1267:
+    case 1268:
+    case 1269:
+    case 1270:
+      return RtcmPhaseBias;
+    case 4062:
+      return RtcmSwiftProp;
+    case 4075:
+      return RtcmNdf;
+    default:
+      return RtcmUnsupported;
   }
 }
