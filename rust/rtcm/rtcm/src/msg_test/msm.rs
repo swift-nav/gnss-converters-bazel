@@ -35,7 +35,7 @@ fn decode_msm(id: u16, buf: &[u8]) -> Message {
 
 #[test]
 fn msm1_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(471),
         tow: U30(419549832),
@@ -97,7 +97,7 @@ fn msm1() -> Result<(), io::Error> {
 
 #[test]
 fn msm2_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(471),
         tow: U30(419549832),
@@ -166,7 +166,7 @@ fn msm2() -> Result<(), io::Error> {
 
 #[test]
 fn msm3_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(471),
         tow: U30(419549832),
@@ -235,7 +235,7 @@ fn msm3() -> Result<(), io::Error> {
 
 #[test]
 fn msm4_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(349),
         tow: U30(504821000),
@@ -318,7 +318,7 @@ fn msm4() -> Result<(), io::Error> {
 
 #[test]
 fn msm5_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(2709),
         tow: U30(333421000),
@@ -399,7 +399,7 @@ fn msm5() -> Result<(), io::Error> {
 
 #[test]
 fn msm6_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(0),
         tow: U30(467022184),
@@ -478,7 +478,7 @@ fn msm6() -> Result<(), io::Error> {
 
 #[test]
 fn msm7_full() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_header = MsmHeader {
         station_id: U12(0),
         tow: U30(467022184),

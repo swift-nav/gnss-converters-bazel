@@ -1,9 +1,8 @@
 [package]
-name = "rtcm-cli"
+name = "rtcm2json"
 version = "0.1.0"
 authors = ["Swift Navigation <dev@swiftnav.com>"]
-edition = "2018"
-repository = "https://github.com/swift-nav/rtcm"
+edition = "2021"
 
 [[bin]]
 name = "rtcm2json"
@@ -11,8 +10,8 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.58"
-clap = { version = "3", features = ["derive"] }
-rtcm = { path = "../rtcm", features = ["serde_json"] }
+clap = { version = "3" }
+rtcm = { path = "../rtcm", features = ["json"] }
 serde_json = "1"
 if_chain = "1"
 

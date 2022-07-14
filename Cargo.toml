@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "rust",
-    "rust/rtcm2json/rtcm",
-    "rust/rtcm2json/rtcm_cli",
+    "rust/rtcm/rtcm",
+    "rust/rtcm/rtcm2json",
+    "rust/rtcm/json2rtcm",
 ]
 exclude = [
     "c/afl/afl-runner",

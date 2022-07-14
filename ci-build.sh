@@ -15,6 +15,7 @@ function build_haskell () {
 
 function build_rust () {
   VERBOSE=1 cargo test --all-features --all-targets --release -vv
+  VERBOSE=1 cargo build --package rtcm --no-default-features --features sbp_master -vv
   VERBOSE=1 cargo build --all-features --all-targets --release -vv
 }
 

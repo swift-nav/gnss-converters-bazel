@@ -1,0 +1,23 @@
+[package]
+name = "json2rtcm"
+version = "0.1.0"
+authors = ["Swift Navigation <dev@swiftnav.com>"]
+edition = "2021"
+
+[[bin]]
+name = "json2rtcm"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.58"
+clap = { version = "3" }
+rtcm = { path = "../rtcm", features = ["json"] }
+if_chain = "1"
+deku = "0.13"
+
+[build-dependencies]
+vergen = { version = "7", default-features = false, features = ["git"] }
+
+[dev-dependencies]
+assert_cmd = "2.0.4"
+predicates = "2.1.1"

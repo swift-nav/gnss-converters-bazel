@@ -2,8 +2,7 @@
 name = "rtcm"
 version = "0.1.0"
 authors = ["Swift Navigation <dev@swiftnav.com>"]
-edition = "2018"
-repository = "https://github.com/swift-nav/rtcm"
+edition = "2021"
 license = "MIT"
 description = "RTCM parsing utilities"
 
@@ -23,16 +22,18 @@ base64 = "0.13.0"
 package = "sbp"
 version = "4.4.0"
 optional = true
-features = ["json"]
+features = ["serde"]
 
 [dependencies.sbp_staging]
 package = "sbp"
 git = "https://github.com/swift-nav/libsbp.git"
 branch = "staging"
 optional = true
-features = ["json"]
+features = ["serde"]
 
 [features]
 debug_deku = []
-default = ["dep:sbp_master"]
+default = ["sbp_master"]
+json = ["serde_json", "sbp_master/json", "sbp_staging/json"]
+sbp_master = ["dep:sbp_master"]
 sbp_staging = ["dep:sbp_staging"]

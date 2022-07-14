@@ -4,7 +4,7 @@ use std::{fs, io};
 
 #[test]
 fn msg1004() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1004 {
         header: Header1004 {
             reference_station_id: U12(3315),
@@ -47,7 +47,7 @@ fn msg1004() -> Result<(), io::Error> {
 
 #[test]
 fn msg1012() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1012 {
         header: Header1012 {
             reference_station_id: U12(3315),
@@ -91,7 +91,7 @@ fn msg1012() -> Result<(), io::Error> {
 
 #[test]
 fn msg1230() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1230 {
         reference_station_id: U12(0),
         glo_code_phase_bias_indicator: Bit1(true),

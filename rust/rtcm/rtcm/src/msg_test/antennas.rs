@@ -5,7 +5,7 @@ use std::{fs, io};
 // RTCM section 4.2 example
 #[test]
 fn msg1005() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let raw_msg = fs::read("test_data/1005.rtcm")?;
     let frame = decoder
         .decode(&mut BytesMut::from(&raw_msg[..]))
@@ -31,7 +31,7 @@ fn msg1005() -> Result<(), io::Error> {
 
 #[test]
 fn msg1006() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1006 {
         reference_station_id: U12(2315),
         reserved_itrf_realization_year: U6(0),
@@ -65,7 +65,7 @@ fn msg1006() -> Result<(), io::Error> {
 
 #[test]
 fn msg1008() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1008 {
         reference_station_id: U12(55),
         descriptor_counter: U8(14),
@@ -92,7 +92,7 @@ fn msg1008() -> Result<(), io::Error> {
 
 #[test]
 fn msg1033() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1033 {
         reference_station_id: U12(1132),
         antenna_descriptor_counter: U8(3),

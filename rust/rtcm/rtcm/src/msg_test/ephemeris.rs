@@ -4,7 +4,7 @@ use std::{fs, io};
 
 #[test]
 fn msg1019() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1019 {
         satellite_id: U6(30),
         week_number: U10(109),
@@ -55,7 +55,7 @@ fn msg1019() -> Result<(), io::Error> {
 
 #[test]
 fn msg1020() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1020 {
         satellite_id: U6(15),
         satellite_freq_channel_nr: U5(7),
@@ -112,7 +112,7 @@ fn msg1020() -> Result<(), io::Error> {
 
 #[test]
 fn msg1042() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1042 {
         satellite_id: U6(37),
         week_number: U13(801),
@@ -161,7 +161,7 @@ fn msg1042() -> Result<(), io::Error> {
 
 #[test]
 fn msg1045() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1045 {
         satellite_id: U6(4),
         week_number: U12(1184),
@@ -210,7 +210,7 @@ fn msg1045() -> Result<(), io::Error> {
 
 #[test]
 fn msg1046() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1046 {
         satellite_id: U6(36),
         week_number: U12(1133),

@@ -5,7 +5,7 @@ use std::{fs, io};
 // RTCM section 3.5.10 example
 #[test]
 fn msg1029() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1029 {
         reference_station_id: U12(23),
         modified_julian_day_number: U16(132),

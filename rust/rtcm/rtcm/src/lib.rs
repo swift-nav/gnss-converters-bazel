@@ -19,7 +19,7 @@ use bitvec::prelude::*;
 use deku::prelude::*;
 use dencode::{Buf, BytesMut, FramedRead};
 use msg::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 const CRC_LEN: usize = 3;
@@ -39,19 +39,24 @@ const BYTE_SIZE: usize = 8;
 /// todo(DEVINFRA-808): We currently only support serializing a frame from a
 /// message payload
 #[serde_as]
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Deserialize)]
 #[deku(endian = "big")]
 pub struct Frame {
-    #[serde(skip)]
+    #[serde(skip_serializing)]
+    #[serde(default = "Frame::preamble")]
     pub preamble: u8,
     #[serde(skip)]
     #[deku(bits = 6)]
     pub reserved: u8,
     #[deku(bits = 10)]
     pub msg_length: u16,
-    #[deku(reader = "Frame::get_payload(deku::rest, *msg_length)")]
+    #[deku(
+        reader = "Frame::get_payload(deku::rest, *msg_length)",
+        writer = "Frame::write_payload(deku::output, payload)"
+    )]
     #[serde(with = "base64")]
     pub payload: Vec<u8>,
+    #[serde(skip_deserializing)]
     #[serde(flatten)]
     #[serde_as(as = "MessageWithType")]
     #[deku(ctx = "*msg_length", writer = "Frame::write_nothing(deku::output)")]
@@ -106,6 +111,10 @@ impl Frame {
         Ok((rest, ret))
     }
 
+    fn write_payload(output: &mut BitVec<Msb0, u8>, payload: &Vec<u8>) -> Result<(), DekuError> {
+        DekuWrite::write(payload, output, ())
+    }
+
     fn get_padding_length(
         rest: &BitSlice<Msb0, u8>,
         read_bits: usize,
@@ -136,6 +145,10 @@ impl Frame {
     fn write_nothing(_output: &mut BitVec<Msb0, u8>) -> Result<(), DekuError> {
         Ok(())
     }
+
+    pub fn preamble() -> u8 {
+        PREAMBLE
+    }
 }
 
 /// Possible errors while decoding an RTCM frame
@@ -149,7 +162,7 @@ pub enum Error {
     #[error("io error")]
     /// IO Error
     IoError(io::Error),
-    #[cfg(feature = "serde_json")]
+    #[cfg(feature = "json")]
     #[error("JSON error")]
     JsonError(serde_json::Error),
 }
@@ -166,7 +179,7 @@ impl From<CrcError> for Error {
     }
 }
 
-#[cfg(feature = "serde_json")]
+#[cfg(feature = "json")]
 impl From<serde_json::Error> for Error {
     fn from(err: serde_json::Error) -> Self {
         Self::JsonError(err)
@@ -188,9 +201,9 @@ pub struct CrcError {
 
 /// RTCM Decoder
 #[derive(Debug, Clone, Copy)]
-pub struct Decoder;
+pub struct RtcmDecoder;
 
-impl dencode::Decoder for Decoder {
+impl dencode::Decoder for RtcmDecoder {
     type Item = Frame;
     type Error = Error;
 
@@ -203,7 +216,7 @@ impl dencode::Decoder for Decoder {
             }
         };
         src.advance(start);
-        match parse_frame(src) {
+        match Self::parse_frame(src) {
             Some(Ok(frame)) => Ok(Some(frame)),
             Some(Err(err)) => {
                 if src.remaining() == 0 {
@@ -220,26 +233,79 @@ impl dencode::Decoder for Decoder {
     }
 }
 
-fn parse_frame(buf: &mut BytesMut) -> Option<Result<Frame, Error>> {
-    match Frame::from_bytes((&buf[..], 0)) {
-        Ok((_, value)) => {
-            let computed_crc = crc::crc24q(&buf[0..FRAME_HEADER_LEN + value.msg_length as usize]);
-            if computed_crc != value.crc {
-                return Some(Err(Error::from(CrcError {
-                    message_crc: value.crc,
-                    computed_crc,
-                })));
+impl RtcmDecoder {
+    fn parse_frame(buf: &mut BytesMut) -> Option<Result<Frame, Error>> {
+        match Frame::from_bytes((&buf[..], 0)) {
+            Ok((_, value)) => {
+                let computed_crc =
+                    crc::crc24q(&buf[0..FRAME_HEADER_LEN + value.msg_length as usize]);
+                if computed_crc != value.crc {
+                    return Some(Err(Error::from(CrcError {
+                        message_crc: value.crc,
+                        computed_crc,
+                    })));
+                }
+                buf.advance(FRAME_HEADER_LEN + value.msg_length as usize + CRC_LEN);
+                Some(Ok(value))
             }
-            buf.advance(FRAME_HEADER_LEN + value.msg_length as usize + CRC_LEN);
-            Some(Ok(value))
+            Err(DekuError::Incomplete(_)) => None,
+            Err(e) => Some(Err(e.into())),
         }
-        Err(DekuError::Incomplete(_)) => None,
-        Err(e) => Some(Err(e.into())),
     }
 }
 
-pub fn iter_messages<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
-    FramedRead::new(input, Decoder)
+/// JSON Decoder
+#[cfg(feature = "json")]
+#[derive(Debug, Clone, Copy)]
+pub struct DecoderJson;
+
+#[cfg(feature = "json")]
+impl dencode::Decoder for DecoderJson {
+    type Item = Frame;
+    type Error = Error;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        match Self::parse_frame(src) {
+            Some(Ok((frame, consumed_bytes))) => {
+                src.advance(consumed_bytes);
+                Ok(Some(frame))
+            }
+            Some(Err(err)) => {
+                src.advance(1);
+                Err(err)
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+#[cfg(feature = "json")]
+impl DecoderJson {
+    fn parse_frame(buf: &mut BytesMut) -> Option<Result<(Frame, usize), Error>> {
+        let de = serde_json::Deserializer::from_slice(buf.as_ref());
+        let mut stream = de.into_iter::<Frame>();
+        if let Some(res) = stream.next() {
+            match res {
+                Ok(f) => return Some(Ok((f, stream.byte_offset()))),
+                Err(e) => {
+                    if e.is_eof() {
+                        return None;
+                    }
+                    return Some(Err(e.into()));
+                }
+            }
+        }
+        None
+    }
+}
+
+pub fn iter_messages_rtcm<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
+    FramedRead::new(input, RtcmDecoder)
+}
+
+#[cfg(feature = "json")]
+pub fn iter_messages_json<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
+    FramedRead::new(input, DecoderJson)
 }
 
 #[cfg(test)]

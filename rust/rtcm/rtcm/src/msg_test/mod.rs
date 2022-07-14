@@ -21,7 +21,7 @@ const RESERVED: u8 = 0x00;
 
 #[test]
 fn check_start() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let check_start = fs::read("test_data/check_start.rtcm")?;
     let mut buf = BytesMut::from(&check_start[..]);
     let crc_errors_count = 3;
@@ -38,7 +38,7 @@ fn check_start() -> Result<(), io::Error> {
 #[test]
 fn unknown_message() -> Result<(), io::Error> {
     let raw_msm5 = fs::read("test_data/msm5.rtcm")?;
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let mut buffer = BytesMut::new();
     buffer.extend_from_slice(&MSG_UNKNOWN_900_RAW);
     buffer.extend_from_slice(&raw_msm5);
@@ -62,7 +62,7 @@ fn two_messages() -> Result<(), io::Error> {
     buffer.extend_from_slice(&raw_msm5);
     buffer.extend_from_slice(&raw_msm7);
 
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let frame = decoder.decode(&mut buffer).unwrap().unwrap();
     assert!(matches!(frame.message, Message::GpsMsm5(_)));
     let frame = decoder.decode(&mut buffer).unwrap().unwrap();
@@ -72,7 +72,7 @@ fn two_messages() -> Result<(), io::Error> {
 
 #[test]
 fn buffer_cleared_on_none() {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let mut buffer = BytesMut::new();
     buffer.extend_from_slice(&[0, 0, 0, 0, 0]);
     let res = decoder.decode(&mut buffer);
@@ -83,7 +83,7 @@ fn buffer_cleared_on_none() {
 #[test]
 fn buffer_advanced_on_crc_error() -> Result<(), io::Error> {
     let raw_msg = fs::read("test_data/1005.rtcm")?;
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let mut buffer = BytesMut::new();
     buffer.extend_from_slice(&raw_msg[..]);
     buffer.extend_from_slice(&raw_msg[..]);
@@ -102,7 +102,7 @@ fn buffer_advanced_on_crc_error() -> Result<(), io::Error> {
 #[test]
 fn buffer_advanced_on_deku_error() -> Result<(), io::Error> {
     let raw_msg = fs::read("test_data/deku_error.rtcm")?;
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let mut buffer = BytesMut::new();
     buffer.extend_from_slice(&raw_msg[..]);
     let init_buf_len = buffer.len();
@@ -110,6 +110,44 @@ fn buffer_advanced_on_deku_error() -> Result<(), io::Error> {
     let res = decoder.decode(&mut buffer);
     assert!(matches!(res, Err(Error::ParseError(_))));
     assert_eq!(buffer.len(), init_buf_len - 1);
+    Ok(())
+}
+
+#[test]
+fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
+    let mut buffer = BytesMut::new();
+    buffer.extend_from_slice(&fs::read("test_data/1004.rtcm")?);
+    buffer.extend_from_slice(&fs::read("test_data/1005.rtcm")?);
+
+    let frames: Vec<Frame> = iter_messages_rtcm(&buffer[..])
+        .map(|r| r.expect("Couldn't deserialize"))
+        .collect();
+    let mut serialized_json: Vec<u8> = frames
+        .iter()
+        .map(|frame| {
+            serde_json::to_string(frame)
+                .expect("Couldn't serialize to JSON")
+                .as_bytes()
+                .to_vec()
+        })
+        .flatten()
+        .collect();
+
+    // cause json error in first message
+    serialized_json[3] = 10;
+
+    let decoded_frame = {
+        let mut iter_messages = iter_messages_json(&serialized_json[..]);
+        let mut frame = iter_messages.next();
+        loop {
+            if !matches!(frame, Some(Err(Error::JsonError(_)))) {
+                break;
+            }
+            frame = iter_messages.next();
+        }
+        frame
+    };
+    assert!(matches!(decoded_frame, Some(Ok(_))));
     Ok(())
 }
 
@@ -127,7 +165,7 @@ fn reserializing_gives_same_input() -> Result<(), io::Error> {
 
         let file = File::open(test_file.path()).unwrap();
 
-        let frames: Vec<Frame> = iter_messages(file)
+        let frames: Vec<Frame> = iter_messages_rtcm(file)
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -136,13 +174,33 @@ fn reserializing_gives_same_input() -> Result<(), io::Error> {
             })
             .collect();
 
-        let serialized: Vec<u8> = frames
+        let serialized_json: Vec<u8> = frames
+            .iter()
+            .map(|frame| {
+                serde_json::to_string(frame)
+                    .expect("Couldn't serialize to JSON")
+                    .as_bytes()
+                    .to_vec()
+            })
+            .flatten()
+            .collect();
+
+        let decoded_json_frames: Vec<Frame> = iter_messages_json(&serialized_json[..])
+            .map(|r| {
+                r.expect(&format!(
+                    "Couldn't deserialize {}",
+                    test_file_name.to_string_lossy()
+                ))
+            })
+            .collect();
+
+        let serialized: Vec<u8> = decoded_json_frames
             .iter()
             .map(|frame| frame.to_bytes().expect("Couldn't serialize"))
             .flatten()
             .collect();
 
-        let reserialize_frames: Vec<Frame> = iter_messages(&serialized[..])
+        let reserialize_frames: Vec<Frame> = iter_messages_rtcm(&serialized[..])
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -165,7 +223,7 @@ fn reserializing_gives_same_input() -> Result<(), io::Error> {
 #[test]
 fn check_payload() -> Result<(), io::Error> {
     let raw_msg = fs::read("test_data/1005.rtcm")?;
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
 
     let frame = decoder
         .decode(&mut BytesMut::from(&raw_msg[..]))
@@ -207,7 +265,7 @@ fn slow_reader() -> Result<(), io::Error> {
     let reader = SlowReader {
         inner: Box::new(msg_file),
     };
-    let fr = FramedRead::new(reader, Decoder);
+    let fr = FramedRead::new(reader, RtcmDecoder);
     let frames: Vec<Result<Frame, Error>> = fr.collect();
 
     assert_eq!(frames.len(), 1);
@@ -218,6 +276,40 @@ fn slow_reader() -> Result<(), io::Error> {
             ..
         })
     ));
+
+    Ok(())
+}
+
+#[test]
+fn slow_json() -> Result<(), io::Error> {
+    let json = r#"{
+        "msg_length": 33,
+        "payload": "QJWmFE5VTEwgICAgICAgICAgICAgICAgAAAEU1dGVAAA",
+        "msg_type": 1033,
+        "reference_station_id": 1446,
+        "antenna_descriptor_counter": 20,
+        "antenna_descriptor": "NULL                ",
+        "antenna_setup_id": 0,
+        "antenna_serial_number_counter": 0,
+        "antenna_serial_number": "",
+        "receiver_type_descriptor_counter": 4,
+        "receiver_type_descriptor": "SWFT",
+        "receiver_firmware_version_counter": 0,
+        "receiver_firmware_version": "",
+        "receiver_serial_number_counter": 0,
+        "receiver_serial_number": "",
+        "num_padding_bits": 0,
+        "padding": 0,
+        "crc": 5119484
+    }"#;
+
+    let reader = SlowReader {
+        inner: Box::new(json.as_bytes()),
+    };
+
+    let _: Vec<_> = iter_messages_json(reader)
+        .map(|r| r.expect("Couldn't deserialize"))
+        .collect();
 
     Ok(())
 }

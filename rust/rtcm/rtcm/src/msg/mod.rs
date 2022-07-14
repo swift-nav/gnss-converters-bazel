@@ -190,6 +190,16 @@ pub enum Message {
     },
 }
 
+impl Default for Message {
+    fn default() -> Message {
+        Message::Unknown {
+            msg_type: 1,
+            payload: Vec::new(),
+            padding: 0,
+        }
+    }
+}
+
 fn rtcm_msg_type(msg: &Message) -> u16 {
     let default_msg_type = 0;
     match msg.deku_id() {

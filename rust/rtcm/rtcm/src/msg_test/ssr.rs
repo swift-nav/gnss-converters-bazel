@@ -4,7 +4,7 @@ use std::{fs, io};
 
 #[test]
 fn msg1057() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1057 {
         header: Header1057 {
             gps_epoch_time_1s: U20(513555),
@@ -117,7 +117,7 @@ fn msg1057() -> Result<(), io::Error> {
 
 #[test]
 fn msg1058() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1058 {
         header: Header1058 {
             gps_epoch_time_1s: U20(513554),
@@ -197,7 +197,7 @@ fn msg1058() -> Result<(), io::Error> {
 
 #[test]
 fn msg1059() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1059 {
         header: Header1059 {
             gps_epoch_time_1s: U20(418560),
@@ -373,7 +373,7 @@ fn msg1059() -> Result<(), io::Error> {
 
 #[test]
 fn msg1060() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1060 {
         header: Header1060 {
             gps_epoch_time_1s: U20(418590),
@@ -522,7 +522,7 @@ fn msg1060() -> Result<(), io::Error> {
 
 #[test]
 fn msg1240() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1240 {
         header: Header1240 {
             gps_epoch_time_1s: U20(513553),
@@ -624,7 +624,7 @@ fn msg1240() -> Result<(), io::Error> {
 
 #[test]
 fn msg1241() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1241 {
         header: Header1241 {
             gps_epoch_time_1s: U20(513554),
@@ -697,7 +697,7 @@ fn msg1241() -> Result<(), io::Error> {
 
 #[test]
 fn msg1242() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1242 {
         header: Header1242 {
             gal_epoch_time_1s: U20(418560),
@@ -896,7 +896,7 @@ fn msg1242() -> Result<(), io::Error> {
 
 #[test]
 fn msg1243() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1243 {
         header: Header1243 {
             gal_epoch_time_1s: U20(418590),
@@ -1006,7 +1006,7 @@ fn msg1243() -> Result<(), io::Error> {
 
 #[test]
 fn msg1260() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1260 {
         header: Header1260 {
             bds_epoch_time_1s: U20(418553),
@@ -1185,7 +1185,7 @@ fn msg1260() -> Result<(), io::Error> {
 
 #[test]
 fn msg1261() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1261 {
         header: Header1261 {
             bds_epoch_time_1s: U20(418583),
@@ -1357,7 +1357,7 @@ fn msg1261() -> Result<(), io::Error> {
 
 #[test]
 fn msg1265() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1265 {
         header: Header1265 {
             gps_epoch_time_1s: U20(418590),
@@ -1588,7 +1588,7 @@ fn msg1265() -> Result<(), io::Error> {
 
 #[test]
 fn msg1267() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1267 {
         header: Header1267 {
             gal_epoch_time_1s: U20(418590),
@@ -1775,7 +1775,7 @@ fn msg1267() -> Result<(), io::Error> {
 
 #[test]
 fn msg1270() -> Result<(), io::Error> {
-    let mut decoder = Decoder;
+    let mut decoder = RtcmDecoder;
     let expected_msg = Msg1270 {
         header: Header1270 {
             bds_epoch_time_1s: U20(171921),
