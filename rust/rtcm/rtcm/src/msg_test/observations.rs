@@ -90,20 +90,49 @@ fn msg1012() -> Result<(), io::Error> {
 }
 
 #[test]
-fn msg1230() -> Result<(), io::Error> {
+fn msg1230_1() -> Result<(), io::Error> {
     let mut decoder = RtcmDecoder;
     let expected_msg = Msg1230 {
         reference_station_id: U12(0),
         glo_code_phase_bias_indicator: Bit1(true),
         reserved: U3(0),
         glo_fdma_signals_mask: U4(15),
-        glo_l1_c_a_code_phase_bias: I16(0),
-        glo_l1_p_code_phase_bias: I16(0),
-        glo_l2_c_a_code_phase_bias: I16(0),
-        glo_l2_p_code_phase_bias: I16(0),
+        glo_l1_c_a_code_phase_bias: Some(I16(0)),
+        glo_l1_p_code_phase_bias: Some(I16(0)),
+        glo_l2_c_a_code_phase_bias: Some(I16(0)),
+        glo_l2_p_code_phase_bias: Some(I16(0)),
     };
 
-    let raw_msg = fs::read("test_data/1230.rtcm")?;
+    let raw_msg = fs::read("test_data/1230-1.rtcm")?;
+    let frame = decoder
+        .decode(&mut BytesMut::from(&raw_msg[..]))
+        .unwrap()
+        .unwrap();
+    assert_eq!(frame.preamble, PREAMBLE);
+    assert_eq!(frame.reserved, RESERVED);
+    let msg: Msg1230 = match frame.message {
+        Message::Msg1230(msg) => msg,
+        _ => panic!("wrong message type"),
+    };
+    assert_eq!(msg, expected_msg);
+    Ok(())
+}
+
+#[test]
+fn msg1230_2() -> Result<(), io::Error> {
+    let mut decoder = RtcmDecoder;
+    let expected_msg = Msg1230 {
+        reference_station_id: U12(0),
+        glo_code_phase_bias_indicator: Bit1(true),
+        reserved: U3(0),
+        glo_fdma_signals_mask: U4(10),
+        glo_l1_c_a_code_phase_bias: Some(I16(1)),
+        glo_l1_p_code_phase_bias: None,
+        glo_l2_c_a_code_phase_bias: Some(I16(2)),
+        glo_l2_p_code_phase_bias: None,
+    };
+
+    let raw_msg = fs::read("test_data/1230-2.rtcm")?;
     let frame = decoder
         .decode(&mut BytesMut::from(&raw_msg[..]))
         .unwrap()

@@ -1,4 +1,5 @@
 use super::data_types::*;
+use bitvec::prelude::*;
 use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 
@@ -82,8 +83,25 @@ pub struct Msg1230 {
     pub glo_code_phase_bias_indicator: Bit1,
     pub reserved: U3,
     pub glo_fdma_signals_mask: U4,
-    pub glo_l1_c_a_code_phase_bias: I16,
-    pub glo_l1_p_code_phase_bias: I16,
-    pub glo_l2_c_a_code_phase_bias: I16,
-    pub glo_l2_p_code_phase_bias: I16,
+    #[deku(reader = "Msg1230::get_code_phase_bias(deku::rest, glo_fdma_signals_mask.0, 3)")]
+    pub glo_l1_c_a_code_phase_bias: Option<I16>,
+    #[deku(reader = "Msg1230::get_code_phase_bias(deku::rest, glo_fdma_signals_mask.0, 2)")]
+    pub glo_l1_p_code_phase_bias: Option<I16>,
+    #[deku(reader = "Msg1230::get_code_phase_bias(deku::rest, glo_fdma_signals_mask.0, 1)")]
+    pub glo_l2_c_a_code_phase_bias: Option<I16>,
+    #[deku(reader = "Msg1230::get_code_phase_bias(deku::rest, glo_fdma_signals_mask.0, 0)")]
+    pub glo_l2_p_code_phase_bias: Option<I16>,
+}
+
+impl Msg1230 {
+    fn get_code_phase_bias(
+        rest: &BitSlice<Msb0, u8>,
+        mask: u8,
+        index: usize,
+    ) -> Result<(&BitSlice<Msb0, u8>, Option<I16>), DekuError> {
+        if mask & (1 << index) != 0 {
+            return Option::<I16>::read(rest, deku::ctx::Endian::Big);
+        }
+        Ok((rest, None))
+    }
 }

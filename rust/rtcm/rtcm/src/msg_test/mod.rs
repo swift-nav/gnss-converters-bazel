@@ -152,7 +152,7 @@ fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
 }
 
 #[test]
-fn reserializing_gives_same_input() -> Result<(), io::Error> {
+fn reserializing_gives_same_frame() -> Result<(), io::Error> {
     let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm"];
 
     for test_file in fs::read_dir("test_data")? {
@@ -215,6 +215,60 @@ fn reserializing_gives_same_input() -> Result<(), io::Error> {
             "{}",
             test_file_name.to_string_lossy()
         );
+    }
+
+    Ok(())
+}
+
+#[test]
+fn reserializing_gives_same_msg() -> Result<(), io::Error> {
+    let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm"];
+
+    for test_file in fs::read_dir("test_data")? {
+        let test_file = test_file?;
+        let test_file_name = test_file.file_name();
+
+        if files_to_skip.contains(&test_file_name.to_string_lossy().as_ref()) {
+            continue;
+        }
+
+        let file = File::open(test_file.path()).unwrap();
+
+        let frames: Vec<Frame> = iter_messages_rtcm(file)
+            .map(|r| {
+                r.expect(&format!(
+                    "Couldn't deserialize {}",
+                    test_file_name.to_string_lossy()
+                ))
+            })
+            .collect();
+
+        for frame in frames {
+            let mut bit_vec: BitVec<Msb0, u8> = BitVec::new();
+            frame
+                .message
+                .write(&mut bit_vec, (deku::ctx::Endian::Big, frame.msg_length))
+                .expect(&format!(
+                    "Couldn't serialize {}",
+                    test_file_name.to_string_lossy()
+                ));
+
+            let (_, reserialize_msg) = Message::read(
+                bit_vec.as_bitslice(),
+                (deku::ctx::Endian::Big, frame.msg_length),
+            )
+            .expect(&format!(
+                "Couldn't deserialize {}",
+                test_file_name.to_string_lossy()
+            ));
+
+            assert_eq!(
+                reserialize_msg,
+                frame.message,
+                "{}",
+                test_file_name.to_string_lossy()
+            );
+        }
     }
 
     Ok(())
