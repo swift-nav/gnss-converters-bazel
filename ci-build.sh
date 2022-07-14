@@ -94,10 +94,9 @@ function build_codecov() {
 # Assumes that we've already run cargo and stack!
 function package () {
   if [[ "$OS_NAME" == "windows" ]]; then
-    cp "$APPDATA/local/bin/rtcm32json.exe" "$APPDATA/local/bin/json2rtcm3.exe" ./target/release/
     cd ./target/release
-    strip.exe rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm32json.exe json2rtcm3.exe;
-    7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm32json.exe json2rtcm3.exe;
+    strip.exe rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm2json.exe json2rtcm.exe;
+    7z a -tzip ../../gnss_converters_windows.zip rtcm3tosbp.exe sbp2rtcm.exe ubx2sbp.exe ixcom2sbp.exe nov2sbp.exe rtcm2json.exe json2rtcm.exe;
     cd ../..;
     VERSION="$(git describe --always --tags)";
     BUILD_TRIPLET="$($CC -dumpmachine)";
@@ -105,9 +104,8 @@ function package () {
     echo "gnss_converters-${VERSION}-windows-${BUILD_TRIPLET}.zip" >release-archive.filename;
     ls -l;
   else
-    cp "$HOME"/.local/bin/{rtcm32json,json2rtcm3} ./target/release/
-    (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm32json json2rtcm3);
-    tar -C "target/release" -czf gnss_converters.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm32json json2rtcm3;
+    (cd target/release; strip rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm2json json2rtcm);
+    tar -C "target/release" -czf gnss_converters.tar.gz rtcm3tosbp sbp2rtcm ubx2sbp ixcom2sbp nov2sbp rtcm2json json2rtcm;
     VERSION="$(git describe --always --tags --dirty)";
     BUILD_TRIPLET="$($CC -dumpmachine)";
     mv gnss_converters.tar.gz "gnss_converters-${VERSION}-${BUILD_TRIPLET}.tar.gz";
