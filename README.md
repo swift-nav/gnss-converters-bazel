@@ -26,7 +26,8 @@ Then build and install with `cargo`:
 git clone --recursive git@github.com:swift-nav/gnss-converters-private.git
 cd gnss-converters-private
 cargo install --path ./rust
-cargo install --path ./rust/rtcm2json/rtcm_cli
+cargo install --path ./rust/rtcm/rtcm2json
+cargo install --path ./rust/rtcm/json2rtcm
 ```
 
 To build and install the `nov2sbp` tool as well, also run:
@@ -43,6 +44,7 @@ The following tools will be installed in `~/.cargo/bin` (which should be in the 
 - ixcom2sbp
 - nov2sbp
 - rtcm2json
+- json2rtcm
 
 ## Build locally
 
@@ -69,12 +71,6 @@ can be found [on GitHub](https://github.com/swift-nav/ntripping)):
 
 ```
 ntripping --url http://bmookerji:bmookerji@tiburon.geo.berkeley.edu:2101/MONB_RTCM3 | ./rtcm3tosbp | sbp2json | jq .
-```
-
-To install the Haskell tools:
-
-```
-stack install --resolver lts-10.10 sbp rtcm
 ```
 
 [5]: https://github.com/swift-nav/gnss-converters-private/releases

@@ -7,12 +7,6 @@ set -x
 set -o errexit
 set -o pipefail
 
-function build_haskell () {
-    cd haskell/rtcm
-    stack install --test
-    cd ../..
-}
-
 function build_rust () {
   VERBOSE=1 cargo test --all-features --all-targets --release -vv
   VERBOSE=1 cargo build --package rtcm --no-default-features --features sbp_master -vv
@@ -114,9 +108,7 @@ function package () {
   fi
 }
 
-if [ "$TESTENV" == "stack" ]; then
-  build_haskell
-elif [ "$TESTENV" == "codecov" ]; then
+if [ "$TESTENV" == "codecov" ]; then
   build_codecov
 elif [ "$TESTENV" == "rust" ]; then
   build_rust
