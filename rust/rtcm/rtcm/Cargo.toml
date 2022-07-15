@@ -20,7 +20,7 @@ base64 = "0.13.0"
 
 [dependencies.sbp_master]
 package = "sbp"
-version = "4.4.0"
+path = "../../../c/third_party/libsbp/rust/sbp"
 optional = true
 features = ["serde"]
 

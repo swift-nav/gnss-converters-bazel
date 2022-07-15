@@ -38,6 +38,9 @@ fn sbp2rtcm_convert() {
         .success();
     let stat = std::fs::metadata(tempfile.path()).unwrap();
     assert!(stat.len() == 22846);
+    let converted = std::fs::File::open(tempfile.path()).unwrap();
+    let message_count = rtcm::iter_messages_rtcm(converted).count();
+    assert_eq!(message_count, 164);
 }
 
 #[test]

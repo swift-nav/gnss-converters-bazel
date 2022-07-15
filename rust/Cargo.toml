@@ -27,7 +27,7 @@ path = "nov2sbp.rs"
 required-features = ["nov2sbp"]
 
 [[test]]
-name = "integration"
+name = "native-converters"
 path = "tests/lib.rs"
 
 [lib]
@@ -52,4 +52,5 @@ cc = "1.0"
 assert_cmd = "2.0.1"
 predicates = "2.0.2"
 sbp = "4.0"
+rtcm = { path = "rtcm/rtcm" }
 tempfile = "3.2"

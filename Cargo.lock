@@ -402,6 +402,7 @@ dependencies = [
  "libc",
  "num_cpus",
  "predicates",
+ "rtcm",
  "sbp 4.5.0",
  "tempfile",
 ]
@@ -780,7 +781,7 @@ dependencies = [
  "deku",
  "dencode",
  "sbp 4.4.1-alpha",
- "sbp 4.5.0",
+ "sbp 4.5.1-alpha",
  "serde",
  "serde_json",
  "serde_with",
@@ -834,12 +835,23 @@ version = "4.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1c842a7d4819a9109ae0b988d109cb161b98906acec77243ccd13c644620fe7"
 dependencies = [
+ "bytes",
+ "crc16",
+ "dencode",
+ "log",
+]
+
+[[package]]
+name = "sbp"
+version = "4.5.1-alpha"
+dependencies = [
  "base64",
  "bytes",
  "crc16",
  "dencode",
  "log",
  "serde",
+ "serde-big-array",
  "serde_json",
 ]
 
