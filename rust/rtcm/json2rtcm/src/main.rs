@@ -8,7 +8,7 @@ mod cli;
 fn main() -> Result<()> {
     let _ = cli::parse_args();
     let result: Result<(), rtcm::Error> =
-        rtcm::iter_messages_json(io::stdin()).try_for_each(|frame| {
+        rtcm::json::iter_messages(io::stdin()).try_for_each(|frame| {
             let frame = match frame {
                 Ok(frame) => Ok(Some(frame)),
                 Err(err) => match err {

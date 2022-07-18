@@ -119,7 +119,7 @@ fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
     buffer.extend_from_slice(&fs::read("test_data/1004.rtcm")?);
     buffer.extend_from_slice(&fs::read("test_data/1005.rtcm")?);
 
-    let frames: Vec<Frame> = iter_messages_rtcm(&buffer[..])
+    let frames: Vec<Frame> = iter_messages(&buffer[..])
         .map(|r| r.expect("Couldn't deserialize"))
         .collect();
     let mut serialized_json: Vec<u8> = frames
@@ -137,7 +137,7 @@ fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
     serialized_json[3] = 10;
 
     let decoded_frame = {
-        let mut iter_messages = iter_messages_json(&serialized_json[..]);
+        let mut iter_messages = json::iter_messages(&serialized_json[..]);
         let mut frame = iter_messages.next();
         loop {
             if !matches!(frame, Some(Err(Error::JsonError(_)))) {
@@ -165,7 +165,7 @@ fn reserializing_gives_same_frame() -> Result<(), io::Error> {
 
         let file = File::open(test_file.path()).unwrap();
 
-        let frames: Vec<Frame> = iter_messages_rtcm(file)
+        let frames: Vec<Frame> = iter_messages(file)
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -185,7 +185,7 @@ fn reserializing_gives_same_frame() -> Result<(), io::Error> {
             .flatten()
             .collect();
 
-        let decoded_json_frames: Vec<Frame> = iter_messages_json(&serialized_json[..])
+        let decoded_json_frames: Vec<Frame> = json::iter_messages(&serialized_json[..])
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -200,7 +200,7 @@ fn reserializing_gives_same_frame() -> Result<(), io::Error> {
             .flatten()
             .collect();
 
-        let reserialize_frames: Vec<Frame> = iter_messages_rtcm(&serialized[..])
+        let reserialize_frames: Vec<Frame> = iter_messages(&serialized[..])
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -234,7 +234,7 @@ fn reserializing_gives_same_msg() -> Result<(), io::Error> {
 
         let file = File::open(test_file.path()).unwrap();
 
-        let frames: Vec<Frame> = iter_messages_rtcm(file)
+        let frames: Vec<Frame> = iter_messages(file)
             .map(|r| {
                 r.expect(&format!(
                     "Couldn't deserialize {}",
@@ -361,7 +361,7 @@ fn slow_json() -> Result<(), io::Error> {
         inner: Box::new(json.as_bytes()),
     };
 
-    let _: Vec<_> = iter_messages_json(reader)
+    let _: Vec<_> = json::iter_messages(reader)
         .map(|r| r.expect("Couldn't deserialize"))
         .collect();
 

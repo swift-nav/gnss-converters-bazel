@@ -254,58 +254,61 @@ impl RtcmDecoder {
     }
 }
 
-/// JSON Decoder
-#[cfg(feature = "json")]
-#[derive(Debug, Clone, Copy)]
-pub struct DecoderJson;
-
-#[cfg(feature = "json")]
-impl dencode::Decoder for DecoderJson {
-    type Item = Frame;
-    type Error = Error;
-
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        match Self::parse_frame(src) {
-            Some(Ok((frame, consumed_bytes))) => {
-                src.advance(consumed_bytes);
-                Ok(Some(frame))
-            }
-            Some(Err(err)) => {
-                src.advance(1);
-                Err(err)
-            }
-            None => Ok(None),
-        }
-    }
-}
-
-#[cfg(feature = "json")]
-impl DecoderJson {
-    fn parse_frame(buf: &mut BytesMut) -> Option<Result<(Frame, usize), Error>> {
-        let de = serde_json::Deserializer::from_slice(buf.as_ref());
-        let mut stream = de.into_iter::<Frame>();
-        if let Some(res) = stream.next() {
-            match res {
-                Ok(f) => return Some(Ok((f, stream.byte_offset()))),
-                Err(e) => {
-                    if e.is_eof() {
-                        return None;
-                    }
-                    return Some(Err(e.into()));
-                }
-            }
-        }
-        None
-    }
-}
-
-pub fn iter_messages_rtcm<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
+pub fn iter_messages<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
     FramedRead::new(input, RtcmDecoder)
 }
 
 #[cfg(feature = "json")]
-pub fn iter_messages_json<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
-    FramedRead::new(input, DecoderJson)
+pub mod json {
+
+    use super::*;
+
+    #[derive(Debug, Clone, Copy)]
+    pub struct DecoderJson;
+
+    impl dencode::Decoder for DecoderJson {
+        type Item = crate::Frame;
+        type Error = Error;
+
+        fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+            match Self::parse_frame(src) {
+                Some(Ok((frame, consumed_bytes))) => {
+                    src.advance(consumed_bytes);
+                    Ok(Some(frame))
+                }
+                Some(Err(err)) => {
+                    src.advance(1);
+                    Err(err)
+                }
+                None => Ok(None),
+            }
+        }
+    }
+
+    impl DecoderJson {
+        fn parse_frame(buf: &mut BytesMut) -> Option<Result<(crate::Frame, usize), Error>> {
+            let de = serde_json::Deserializer::from_slice(buf.as_ref());
+            let mut stream = de.into_iter::<crate::Frame>();
+            if let Some(res) = stream.next() {
+                match res {
+                    Ok(f) => return Some(Ok((f, stream.byte_offset()))),
+                    Err(e) => {
+                        if e.is_eof() {
+                            return None;
+                        }
+                        return Some(Err(e.into()));
+                    }
+                }
+            }
+            None
+        }
+    }
+
+    pub fn iter_messages<R: io::Read>(
+        input: R,
+    ) -> impl Iterator<Item = Result<crate::Frame, Error>> {
+        FramedRead::new(input, DecoderJson)
+    }
 }
 
 #[cfg(test)]
