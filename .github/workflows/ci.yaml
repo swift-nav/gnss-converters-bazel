@@ -10,6 +10,7 @@ on:
     tags:
       - 'v*'
       - 'starling-v*'
+      - 'gnss-converters-v*'
 
 jobs:
 
