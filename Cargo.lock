@@ -489,7 +489,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "json2rtcm"
+name = "json2rtcm3"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -789,7 +789,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rtcm2json"
+name = "rtcm32json"
 version = "0.1.0"
 dependencies = [
  "anyhow",

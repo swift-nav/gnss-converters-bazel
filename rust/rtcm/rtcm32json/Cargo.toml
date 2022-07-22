@@ -1,11 +1,11 @@
 [package]
-name = "rtcm2json"
+name = "rtcm32json"
 version = "0.1.0"
 authors = ["Swift Navigation <dev@swiftnav.com>"]
 edition = "2021"
 
 [[bin]]
-name = "rtcm2json"
+name = "rtcm32json"
 path = "src/main.rs"
 
 [dependencies]

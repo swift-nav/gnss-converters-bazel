@@ -1,11 +1,11 @@
 [package]
-name = "json2rtcm"
+name = "json2rtcm3"
 version = "0.1.0"
 authors = ["Swift Navigation <dev@swiftnav.com>"]
 edition = "2021"
 
 [[bin]]
-name = "json2rtcm"
+name = "json2rtcm3"
 path = "src/main.rs"
 
 [dependencies]

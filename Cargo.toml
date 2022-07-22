@@ -2,8 +2,8 @@
 members = [
     "rust",
     "rust/rtcm/rtcm",
-    "rust/rtcm/rtcm2json",
-    "rust/rtcm/json2rtcm",
+    "rust/rtcm/rtcm32json",
+    "rust/rtcm/json2rtcm3",
 ]
 exclude = [
     "c/afl/afl-runner",
