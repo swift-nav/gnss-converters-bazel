@@ -14,7 +14,9 @@ macro_rules! def_tuple_struct {
             pub fn reader<'a>(
                 rest: &'a BitSlice<Msb0, u8>,
             ) -> Result<(&'a BitSlice<Msb0, u8>, $typ), DekuError> {
-                if cfg!(feature = "debug_deku") && std::any::type_name::<$type_name>().contains("")
+                if cfg!(feature = "debug_deku")
+                    && cfg!(debug_assertions)
+                    && std::any::type_name::<$type_name>().contains("")
                 {
                     println!("{:x?}", rest.as_raw_slice());
                     println!("{}", std::any::type_name::<$type_name>());
@@ -42,7 +44,7 @@ macro_rules! def_tuple_struct_sm {
             pub fn reader<'a>(
                 rest: &'a BitSlice<Msb0, u8>,
             ) -> Result<(&'a BitSlice<Msb0, u8>, $typ), DekuError> {
-                if cfg!(feature = "debug_deku") && std::any::type_name::<$type_name>().contains("")
+                if cfg!(feature = "debug_deku") && cfg!(debug_assertions) && std::any::type_name::<$type_name>().contains("")
                 {
                     println!("{:x?}", rest.as_raw_slice());
                     println!("{}", std::any::type_name::<$type_name>());
