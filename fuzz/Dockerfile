@@ -14,10 +14,30 @@ RUN apt-get update \
       g++-multilib \
       gcc-multilib \
       git \
-      sudo
+      sudo \
+      wget
+
+ENV RUSTUP_HOME=/opt/rust
+ENV CARGO_HOME=/opt/cargo
+
+ENV PATH=/opt/cargo/bin:/opt/rust/bin:${PATH}
+
+RUN wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --default-toolchain stable; \
+    rustup toolchain install nightly-2022-07-19; \
+    rm rustup-init; \
+    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version
+
+RUN cargo install cargo-fuzz
 
 RUN useradd -u 1001 -ms /bin/bash -G sudo,staff jenkins
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN chown -R jenkins /opt/cargo
 
 ################
 # JENKINS USER #

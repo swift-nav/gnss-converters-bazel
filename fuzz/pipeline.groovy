@@ -18,24 +18,26 @@ pipeline {
   }
 
   environment {
-    AFL_USE_ASAN='1'
     BRANCH_NAME=env.GIT_BRANCH.minus('origin/')
-    CC='/usr/bin/afl-gcc'
-    CXX='/usr/bin/afl-g++'
-    CFLAGS='-m32 -fsanitize=address'
-    CXXFLAGS='-m32 -fsanitize=address'
-    LDFLAGS='-m32 -fsanitize=address'
     HANG_TIMEOUT='5000'
     MEMORY_LIMIT='1500'
   }
 
   stages {
-    stage('AFL') {
+    stage('Fuzz') {
       parallel {
         stage('RTCM to SBP') {
+          environment {
+            AFL_USE_ASAN='1'
+            CC='/usr/bin/afl-gcc'
+            CXX='/usr/bin/afl-g++'
+            CFLAGS='-m32 -fsanitize=address'
+            CXXFLAGS='-m32 -fsanitize=address'
+            LDFLAGS='-m32 -fsanitize=address'
+          }
           agent {
             dockerfile {
-              filename 'Dockerfile.AFL'
+              filename 'fuzz/Dockerfile'
               label params.AGENT
               args dockerMountArgs
             }
@@ -77,9 +79,17 @@ pipeline {
         }
 
         stage('UBX to SBP') {
+          environment {
+            AFL_USE_ASAN='1'
+            CC='/usr/bin/afl-gcc'
+            CXX='/usr/bin/afl-g++'
+            CFLAGS='-m32 -fsanitize=address'
+            CXXFLAGS='-m32 -fsanitize=address'
+            LDFLAGS='-m32 -fsanitize=address'
+          }
           agent {
             dockerfile {
-              filename 'Dockerfile.AFL'
+              filename 'fuzz/Dockerfile'
               label params.AGENT
               args dockerMountArgs
             }
@@ -114,6 +124,54 @@ pipeline {
             always {
               zip(zipFile: 'ubx2sbp.zip', dir: 'afl_output', archive: true)
             }
+            cleanup {
+              cleanWs()
+            }
+          }
+        }
+
+        stage('RTCM to JSON') {
+          agent {
+            dockerfile {
+              filename 'fuzz/Dockerfile'
+              label params.AGENT
+              args dockerMountArgs
+            }
+          }
+          steps {
+            script {
+              sh("echo Running on \${NODE_NAME}")
+              sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
+
+              gitPrep()
+              sh("cargo +nightly-2022-07-19 fuzz run rtcm2json --fuzz-dir rust/rtcm/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
+            }
+          }
+          post {
+            cleanup {
+              cleanWs()
+            }
+          }
+        }
+
+        stage('JSON to RTCM') {
+          agent {
+            dockerfile {
+              filename 'fuzz/Dockerfile'
+              label params.AGENT
+              args dockerMountArgs
+            }
+          }
+          steps {
+            script {
+              sh("echo Running on \${NODE_NAME}")
+              sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
+
+              gitPrep()
+              sh("cargo +nightly-2022-07-19 fuzz run --features=json json2rtcm --fuzz-dir rust/rtcm/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
+            }
+          }
+          post {
             cleanup {
               cleanWs()
             }

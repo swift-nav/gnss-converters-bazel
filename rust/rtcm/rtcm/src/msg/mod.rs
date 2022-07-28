@@ -183,11 +183,21 @@ pub enum Message {
         msg_type: u16,
         // 2 bytes = 12 bits (msg_type) + 4 bits (padding)
         #[serde(skip)]
-        #[deku(count = "length - 2")]
+        #[deku(count = "get_payload_length(length)")]
         payload: Vec<u8>,
         #[deku(bits = 4)]
         padding: u8,
     },
+}
+
+fn get_payload_length(length: u16) -> usize {
+    {
+        if length <= 2 {
+            0
+        } else {
+            length as usize - 2
+        }
+    }
 }
 
 impl Default for Message {

@@ -112,36 +112,38 @@ pipeline {
                         }
                     }
                 }
-                stage('Start Fuzz Testing AFL pipeline') {
+                stage('Start Fuzz Testing pipeline') {
                     steps {
                         script {
                             if (context.isBranchPush(branches: ['master', 'v.*-release', '.*-v.*-release'])) {
-                                sh("echo 'Calling gnss-converters-afl-pipeline for ${env.BRANCH_NAME}'")
+                                sh("echo 'Calling gnss-converters-fuzz-pipeline for ${env.BRANCH_NAME}'")
                                 build(
-                                    job: "standalone/gnss-converters-afl-pipeline/${env.BRANCH_NAME}",
+                                    job: "standalone/gnss-converters-fuzz-pipeline/${env.BRANCH_NAME}",
                                     propagate: true,
                                     wait: true,
                                     parameters: [
                                         string(name: 'FUZZ_TIMEOUT', value: '6h'),
+                                        string(name: 'CARGO_FUZZ_TIMEOUT', value: '21600'),
                                         booleanParam(name: 'SLACK_NOTIFICATION', value: true)
                                     ]
                                 )
                             }
                             else if (context.isTagPush()) {
                                 String tag = context.pipe.env.TAG_NAME
-                                sh("echo 'Calling gnss-converters-afl-pipeline for tag: ${tag}'")
+                                sh("echo 'Calling gnss-converters-fuzz-pipeline for tag: ${tag}'")
                                 build(
-                                    job: "standalone/gnss-converters-afl-pipeline/${tag}",
+                                    job: "standalone/gnss-converters-fuzz-pipeline/${tag}",
                                     propagate: true,
                                     wait: true,
                                     parameters: [
                                         string(name: 'FUZZ_TIMEOUT', value: '6h'),
+                                        string(name: 'CARGO_FUZZ_TIMEOUT', value: '21600'),
                                         booleanParam(name: 'SLACK_NOTIFICATION', value: true)
                                     ]
                                 )
                             }
                             else {
-                                sh('echo "Was not a master/release branch push or tag push, not calling Fuzz Testing AFL"')
+                                sh('echo "Was not a master/release branch push or tag push, not calling Fuzz Testing"')
                             }
                         }
                     }

@@ -121,7 +121,12 @@ impl Frame {
         msg_length: u16,
     ) -> Result<(&BitSlice<Msb0, u8>, usize), DekuError> {
         let expected_bits = (FRAME_HEADER_LEN + msg_length as usize) * BYTE_SIZE;
-        assert!(read_bits <= expected_bits);
+        if read_bits > expected_bits {
+            return Err(DekuError::Assertion(format!(
+                "assertion failed: read_bits <= expected_bits, {} <= {}",
+                read_bits, expected_bits
+            )));
+        }
         if expected_bits > read_bits {
             let padding_bits = expected_bits - read_bits;
             return Ok((rest, padding_bits));

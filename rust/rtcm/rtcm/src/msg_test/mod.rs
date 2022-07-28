@@ -153,7 +153,7 @@ fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
 
 #[test]
 fn reserializing_gives_same_frame() -> Result<(), io::Error> {
-    let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm"];
+    let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm", "length_zero.rtcm"];
 
     for test_file in fs::read_dir("test_data")? {
         let test_file = test_file?;
@@ -222,7 +222,7 @@ fn reserializing_gives_same_frame() -> Result<(), io::Error> {
 
 #[test]
 fn reserializing_gives_same_msg() -> Result<(), io::Error> {
-    let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm"];
+    let files_to_skip = vec!["check_start.rtcm", "deku_error.rtcm", "length_zero.rtcm"];
 
     for test_file in fs::read_dir("test_data")? {
         let test_file = test_file?;
@@ -365,5 +365,12 @@ fn slow_json() -> Result<(), io::Error> {
         .map(|r| r.expect("Couldn't deserialize"))
         .collect();
 
+    Ok(())
+}
+
+#[test]
+fn length_zero() -> Result<(), io::Error> {
+    let msg_file = File::open("test_data/length_zero.rtcm")?;
+    for _ in iter_messages(msg_file) {}
     Ok(())
 }
