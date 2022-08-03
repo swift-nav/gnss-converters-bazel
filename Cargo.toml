@@ -2,6 +2,7 @@
 members = [
     "rust",
     "rust/rtcm/rtcm",
+    "rust/rtcm/mrtjs2rtjs",
     "rust/rtcm/rtcm32json",
     "rust/rtcm/json2rtcm3",
 ]

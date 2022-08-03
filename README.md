@@ -45,6 +45,7 @@ The following tools will be installed in `~/.cargo/bin` (which should be in the 
 - nov2sbp
 - rtcm32json
 - json2rtcm3
+- mrtjs2rtjs
 
 ## Build locally
 

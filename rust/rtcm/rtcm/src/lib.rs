@@ -154,6 +154,11 @@ impl Frame {
     pub fn preamble() -> u8 {
         PREAMBLE
     }
+
+    pub fn from_slice(buf: &[u8]) -> Option<Result<Frame, Error>> {
+        let mut buf = buf;
+        RtcmDecoder::parse_frame(&mut buf)
+    }
 }
 
 /// Possible errors while decoding an RTCM frame
@@ -239,11 +244,13 @@ impl dencode::Decoder for RtcmDecoder {
 }
 
 impl RtcmDecoder {
-    fn parse_frame(buf: &mut BytesMut) -> Option<Result<Frame, Error>> {
-        match Frame::from_bytes((&buf[..], 0)) {
+    fn parse_frame(buf: &mut impl Buf) -> Option<Result<Frame, Error>> {
+        // NOTE: usage of `Buf::chunk` here is not correct for every implementation
+        // of `Buf` but it works for `BytesMut` and &[u8] which is all we are using
+        match Frame::from_bytes((buf.chunk(), 0)) {
             Ok((_, value)) => {
                 let computed_crc =
-                    crc::crc24q(&buf[0..FRAME_HEADER_LEN + value.msg_length as usize]);
+                    crc::crc24q(&buf.chunk()[0..FRAME_HEADER_LEN + value.msg_length as usize]);
                 if computed_crc != value.crc {
                     return Some(Err(Error::from(CrcError {
                         message_crc: value.crc,
