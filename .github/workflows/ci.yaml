@@ -76,7 +76,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-2019, ubuntu-18.04, macos-10.15]
+        os: [windows-2019, ubuntu-18.04, macos-11]
         include:
           - os: windows-2019
             cc: x86_64-w64-mingw32-gcc
@@ -88,7 +88,7 @@ jobs:
             cxx: clang++-6.0
             name: linux
             cmake: Unix Makefiles
-          - os: macos-10.15
+          - os: macos-11
             cc: clang
             cxx: clang++
             name: macos
@@ -129,7 +129,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install stable Rust
-        if: ${{ matrix.os == 'ubuntu-18.04' || matrix.os == 'macos-10.15' }}
+        if: ${{ matrix.os == 'ubuntu-18.04' || matrix.os == 'macos-11' }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
