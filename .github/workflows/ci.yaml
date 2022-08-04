@@ -94,11 +94,26 @@ jobs:
             name: macos
             cmake: Unix Makefiles
     runs-on: ${{ matrix.os }}
+    env:
+      GIT_TRACE_PACKET: 1
+      GIT_TRACE: 1
+      GIT_CURL_VERBOSE: 1
     steps:
       - name: Windows Git Preamble
         if: ${{ matrix.os == 'windows-2019' }}
         run: |
           git config --global core.compression 0
+          git config --global core.packedGitLimit 512m
+          git config --global core.packedGitWindowSize 512m
+          git config --global pack.deltaCacheSize 2047m
+          git config --global pack.packSizeLimit 2047m
+          git config --global pack.windowMemory 2047m
+          git config --global http.postBuffer 1073741824
+      - name: Checkout source (shallow)
+        if: ${{ matrix.os == 'windows-2019' }}
+        uses: actions/checkout@v2
+        with:
+          ssh-key: ${{ secrets.SSH_KEY }}
 
       - name: Checkout source
         uses: actions/checkout@v2
