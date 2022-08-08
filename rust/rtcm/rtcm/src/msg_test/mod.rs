@@ -124,13 +124,12 @@ fn buffer_advanced_on_json_error() -> Result<(), io::Error> {
         .collect();
     let mut serialized_json: Vec<u8> = frames
         .iter()
-        .map(|frame| {
+        .flat_map(|frame| {
             serde_json::to_string(frame)
                 .expect("Couldn't serialize to JSON")
                 .as_bytes()
                 .to_vec()
         })
-        .flatten()
         .collect();
 
     // cause json error in first message
@@ -167,45 +166,40 @@ fn reserializing_gives_same_frame() -> Result<(), io::Error> {
 
         let frames: Vec<Frame> = iter_messages(file)
             .map(|r| {
-                r.expect(&format!(
-                    "Couldn't deserialize {}",
-                    test_file_name.to_string_lossy()
-                ))
+                r.unwrap_or_else(|_| {
+                    panic!("Couldn't deserialize {}", test_file_name.to_string_lossy())
+                })
             })
             .collect();
 
         let serialized_json: Vec<u8> = frames
             .iter()
-            .map(|frame| {
+            .flat_map(|frame| {
                 serde_json::to_string(frame)
                     .expect("Couldn't serialize to JSON")
                     .as_bytes()
                     .to_vec()
             })
-            .flatten()
             .collect();
 
         let decoded_json_frames: Vec<Frame> = json::iter_messages(&serialized_json[..])
             .map(|r| {
-                r.expect(&format!(
-                    "Couldn't deserialize {}",
-                    test_file_name.to_string_lossy()
-                ))
+                r.unwrap_or_else(|_| {
+                    panic!("Couldn't deserialize {}", test_file_name.to_string_lossy())
+                })
             })
             .collect();
 
         let serialized: Vec<u8> = decoded_json_frames
             .iter()
-            .map(|frame| frame.to_bytes().expect("Couldn't serialize"))
-            .flatten()
+            .flat_map(|frame| frame.to_bytes().expect("Couldn't serialize"))
             .collect();
 
         let reserialize_frames: Vec<Frame> = iter_messages(&serialized[..])
             .map(|r| {
-                r.expect(&format!(
-                    "Couldn't deserialize {}",
-                    test_file_name.to_string_lossy()
-                ))
+                r.unwrap_or_else(|_| {
+                    panic!("Couldn't deserialize {}", test_file_name.to_string_lossy())
+                })
             })
             .collect();
 
@@ -236,10 +230,9 @@ fn reserializing_gives_same_msg() -> Result<(), io::Error> {
 
         let frames: Vec<Frame> = iter_messages(file)
             .map(|r| {
-                r.expect(&format!(
-                    "Couldn't deserialize {}",
-                    test_file_name.to_string_lossy()
-                ))
+                r.unwrap_or_else(|_| {
+                    panic!("Couldn't deserialize {}", test_file_name.to_string_lossy())
+                })
             })
             .collect();
 
@@ -248,19 +241,17 @@ fn reserializing_gives_same_msg() -> Result<(), io::Error> {
             frame
                 .message
                 .write(&mut bit_vec, (deku::ctx::Endian::Big, frame.msg_length))
-                .expect(&format!(
-                    "Couldn't serialize {}",
-                    test_file_name.to_string_lossy()
-                ));
+                .unwrap_or_else(|_| {
+                    panic!("Couldn't serialize {}", test_file_name.to_string_lossy())
+                });
 
             let (_, reserialize_msg) = Message::read(
                 bit_vec.as_bitslice(),
                 (deku::ctx::Endian::Big, frame.msg_length),
             )
-            .expect(&format!(
-                "Couldn't deserialize {}",
-                test_file_name.to_string_lossy()
-            ));
+            .unwrap_or_else(|_| {
+                panic!("Couldn't deserialize {}", test_file_name.to_string_lossy())
+            });
 
             assert_eq!(
                 reserialize_msg,

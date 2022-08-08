@@ -27,7 +27,7 @@ fn decode_msm(id: u16, buf: &[u8]) -> Message {
     let msm_buf = replace_msg_type(id, buf);
     let mut bit_vec = BitVec::new();
     bit_vec.extend_from_raw_slice(&msm_buf[FRAME_HEADER_LEN..]);
-    match Message::read(&bit_vec.as_bitslice(), (deku::ctx::Endian::Big, 12)) {
+    match Message::read(bit_vec.as_bitslice(), (deku::ctx::Endian::Big, 12)) {
         Ok((_, message)) => message,
         Err(err) => panic!("decode error {:?}", err),
     }

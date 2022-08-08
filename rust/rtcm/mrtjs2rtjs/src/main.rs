@@ -1,11 +1,12 @@
 use anyhow::Result;
 use clap::{Parser, ValueEnum};
 use rtcm::Frame;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_with::{base64::Base64, serde_as};
 use std::{
     fs::File,
     io::{BufReader, BufWriter, Read, Write},
+    num::ParseIntError,
     path::PathBuf,
 };
 
@@ -99,15 +100,31 @@ pub enum RtjsError {
     AnyhowError(#[from] anyhow::Error),
     #[error("decoding rtcm incomplete")]
     IncompleteDecodingError,
+    #[error(transparent)]
+    ParseIntError(#[from] ParseIntError),
 }
 
 #[serde_as]
 #[derive(Serialize, Deserialize)]
 struct MrtjsFrame {
+    #[serde(deserialize_with = "de_from_string_or_i64")]
     seconds: i64,
     nanoseconds: i32,
     #[serde_as(as = "Base64")]
     rtcm_b64: Vec<u8>,
+}
+
+fn de_from_string_or_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: serde_json::value::Value = serde_json::value::Value::deserialize(deserializer)?;
+    if let Some(s) = s.as_str() {
+        s.parse::<i64>().map_err(serde::de::Error::custom)
+    } else {
+        let s: i64 = s.as_i64().expect("unable to parse string or i64");
+        Ok(s)
+    }
 }
 
 #[serde_as]
@@ -129,7 +146,6 @@ impl TryFrom<MrtjsFrame> for RtjsFrame {
             nanoseconds,
             rtcm_b64,
         } = value;
-
         let frame = match rtcm::Frame::from_slice(&rtcm_b64[..]) {
             Some(result) => Some(result?),
             None => return Err(RtjsError::IncompleteDecodingError),
@@ -176,6 +192,8 @@ mod tests {
     use super::*;
 
     const SSR_CORRECTIONS_SIGNED_PATH: &str = "../../tests/data/piksi-5Hz_signed.rtcm";
+    const MRTJS_SIGNED_PATH_WITH_SECONDS_AS_STRINGS: &str =
+        "../../tests/data/piksi-5Hz_signed_seconds_as_strings.mrtjs";
     const TIMESTAMPS_PER_SECOND: i64 = 1;
     const SSR_CORRECTIONS_SIGNED_NUM_ROWS: i64 = 220;
 
@@ -186,10 +204,13 @@ mod tests {
         rtcm::iter_messages(rtcm_file)
             .try_for_each(|frame| {
                 let rtcm_b64 = frame.unwrap().to_bytes().unwrap();
-
+                let seconds = count / TIMESTAMPS_PER_SECOND;
+                #[allow(clippy::modulo_one)]
+                // If we ever choose another file this logic should just work.
+                let nanoseconds = (count % TIMESTAMPS_PER_SECOND) as i32;
                 let packet = MrtjsFrame {
-                    seconds: count / TIMESTAMPS_PER_SECOND,
-                    nanoseconds: (count % TIMESTAMPS_PER_SECOND) as i32,
+                    seconds,
+                    nanoseconds,
                     rtcm_b64,
                 };
                 count += 1;
@@ -273,8 +294,32 @@ mod tests {
             .lines()
             .map(|js| {
                 let packet: MrtjsFrame = serde_json::from_str(&js.unwrap()).unwrap();
-                let rtcm_ = packet.rtcm_b64;
-                rtcm_
+                packet.rtcm_b64
+            })
+            .collect::<Vec<Vec<u8>>>();
+
+        let rtcm_stream = rtcm_stream.concat();
+        let rtcm_stream = std::io::Cursor::new(&rtcm_stream);
+        let mut count = 0;
+        let _: Result<(), rtcm::Error> = rtcm::iter_messages(rtcm_stream).try_for_each(|frame| {
+            frame.unwrap();
+            count += 1;
+            Ok(())
+        });
+        assert!(count > 0);
+    }
+    #[test]
+    fn test_decode_generated_mrtjs_with_seconds_as_strings() {
+        let mrtjs_path = PathBuf::from(MRTJS_SIGNED_PATH_WITH_SECONDS_AS_STRINGS);
+
+        let mrtjs_file = File::open(mrtjs_path).unwrap();
+
+        let reader = BufReader::new(mrtjs_file);
+        let rtcm_stream = reader
+            .lines()
+            .map(|js| {
+                let packet: MrtjsFrame = serde_json::from_str(&js.unwrap()).unwrap();
+                packet.rtcm_b64
             })
             .collect::<Vec<Vec<u8>>>();
 
