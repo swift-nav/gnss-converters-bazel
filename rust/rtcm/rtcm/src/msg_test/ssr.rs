@@ -1020,148 +1020,148 @@ fn msg1260() -> Result<(), io::Error> {
         sv_blocks: vec![
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(11),
+                    bds_satellite_id: U6(11),
                     no_of_code_biases_processed: U5(1),
                 },
                 code: vec![Code1260 {
-                    gal_signal_and_tracking_mode_indicator: U5(0),
+                    bds_signal_and_tracking_mode_indicator: U5(0),
                     code_bias: I14(0),
                 }],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(14),
+                    bds_satellite_id: U6(14),
                     no_of_code_biases_processed: U5(1),
                 },
                 code: vec![Code1260 {
-                    gal_signal_and_tracking_mode_indicator: U5(0),
+                    bds_signal_and_tracking_mode_indicator: U5(0),
                     code_bias: I14(0),
                 }],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(23),
+                    bds_satellite_id: U6(23),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(673),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(27),
+                    bds_satellite_id: U6(27),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(112),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(28),
+                    bds_satellite_id: U6(28),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(103),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(33),
+                    bds_satellite_id: U6(33),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(-2449),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(37),
+                    bds_satellite_id: U6(37),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(-267),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(42),
+                    bds_satellite_id: U6(42),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(-914),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(43),
+                    bds_satellite_id: U6(43),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(34),
                     },
                 ],
             },
             SvBlock1260 {
                 satellite: Satellite1260 {
-                    gal_satellite_id: U6(46),
+                    bds_satellite_id: U6(46),
                     no_of_code_biases_processed: U5(2),
                 },
                 code: vec![
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(0),
+                        bds_signal_and_tracking_mode_indicator: U5(0),
                         code_bias: I14(0),
                     },
                     Code1260 {
-                        gal_signal_and_tracking_mode_indicator: U5(12),
+                        bds_signal_and_tracking_mode_indicator: U5(12),
                         code_bias: I14(-285),
                     },
                 ],
@@ -1608,15 +1608,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(30),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(3882),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1630,15 +1630,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(9),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(-47090),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1652,15 +1652,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(248),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(-32048),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1674,15 +1674,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(184),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(-4551),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1696,15 +1696,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(53),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(31988),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1718,15 +1718,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(223),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(24704),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
@@ -1740,15 +1740,15 @@ fn msg1267() -> Result<(), io::Error> {
                 yaw_angle: U9(12),
                 yaw_rate: I8(0),
                 phases: vec![
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(1),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(1),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),
                         phase_bias: I20(14076),
                     },
-                    Phase1270 {
-                        bds_signal_and_tracking_mode_indicator: U5(8),
+                    Phase1267 {
+                        gal_signal_and_tracking_mode_indicator: U5(8),
                         signal_integer_indicator: Bit1(true),
                         signals_wide_lane_integer_indicator: U2(0),
                         signal_discontinuity_counter: U4(0),

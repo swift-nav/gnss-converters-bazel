@@ -366,14 +366,14 @@ pub struct Header1260 {
 #[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1260 {
-    pub gal_satellite_id: U6,
+    pub bds_satellite_id: U6,
     pub no_of_code_biases_processed: U5,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Code1260 {
-    pub gal_signal_and_tracking_mode_indicator: U5,
+    pub bds_signal_and_tracking_mode_indicator: U5,
     pub code_bias: I14,
 }
 
@@ -496,7 +496,7 @@ pub struct Satellite1267 {
     pub yaw_angle: U9,
     pub yaw_rate: I8,
     #[deku(count = "no_of_phase_biases_processed.0")]
-    pub phases: Vec<Phase1270>,
+    pub phases: Vec<Phase1267>,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
