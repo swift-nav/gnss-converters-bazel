@@ -431,7 +431,7 @@ dependencies = [
  "num_cpus",
  "predicates",
  "rtcm",
- "sbp 4.5.0",
+ "sbp 4.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile",
 ]
 
@@ -854,7 +854,7 @@ dependencies = [
  "bitvec",
  "deku",
  "dencode",
- "sbp 4.4.1-alpha",
+ "sbp 4.5.1-alpha",
  "sbp 4.6.0",
  "serde",
  "serde_json",
@@ -890,8 +890,8 @@ checksum = "f3f6f92acf49d1b98f7a81226834412ada05458b7364277387724a237f062695"
 
 [[package]]
 name = "sbp"
-version = "4.4.1-alpha"
-source = "git+https://github.com/swift-nav/libsbp.git?branch=staging#9456f0f94b0462be08e7b81cd27f64f5719d6b91"
+version = "4.5.1-alpha"
+source = "git+https://github.com/swift-nav/libsbp.git?branch=staging#22cedcf35c6b5102027b586f3ca832f06e431d17"
 dependencies = [
  "base64",
  "bytes",
@@ -901,18 +901,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
-]
-
-[[package]]
-name = "sbp"
-version = "4.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c842a7d4819a9109ae0b988d109cb161b98906acec77243ccd13c644620fe7"
-dependencies = [
- "bytes",
- "crc16",
- "dencode",
- "log",
 ]
 
 [[package]]
@@ -927,6 +915,18 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
+]
+
+[[package]]
+name = "sbp"
+version = "4.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c673f0b50687dcf3fc27259ead5b89de8b12c622b673e5ebba398934a1a29c1"
+dependencies = [
+ "bytes",
+ "crc16",
+ "dencode",
+ "log",
 ]
 
 [[package]]
