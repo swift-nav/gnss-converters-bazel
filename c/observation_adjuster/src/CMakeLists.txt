@@ -18,7 +18,6 @@ swift_add_library(observation_adjuster
     obs_unpacker.cc
     ${extra_library_options}
 )
-add_library(swiftnav::observation_adjuster ALIAS observation_adjuster)
 
 target_compile_options(observation_adjuster PRIVATE "-UNDEBUG")
 
@@ -31,8 +30,8 @@ endif()
 
 target_link_libraries(observation_adjuster
   PUBLIC
-    gnss_converters
-    gnss_converters_extra
+    swiftnav::gnss_converters
+    swiftnav::gnss_converters_extra
     swiftnav::sbp
     swiftnav::swiftnav
 )

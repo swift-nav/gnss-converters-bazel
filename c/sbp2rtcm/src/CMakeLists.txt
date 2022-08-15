@@ -12,8 +12,8 @@ swift_add_tool(sbp2rtcm
     -Wconversion
 )
 
-target_link_libraries(sbp2rtcm_main PUBLIC gnss_converters)
-target_link_libraries(sbp2rtcm PRIVATE sbp2rtcm_main)
+target_link_libraries(sbp2rtcm_main PUBLIC swiftnav::gnss_converters)
+target_link_libraries(sbp2rtcm PRIVATE swiftnav::sbp2rtcm_main)
 
 install(TARGETS sbp2rtcm_main DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(TARGETS sbp2rtcm DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})

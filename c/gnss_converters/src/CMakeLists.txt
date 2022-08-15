@@ -53,14 +53,13 @@ swift_add_library(gnss_converters
     -Wconversion
     -Wstack-protector
 )
-add_library(swiftnav::gnss_converters ALIAS gnss_converters)
 
 if(I_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
   target_compile_definitions(gnss_converters PRIVATE GNSS_CONVERTERS_DISABLE_CRC_VALIDATION)
 endif()
 
 target_compile_options(gnss_converters PRIVATE "-UNDEBUG")
-target_link_libraries(gnss_converters PUBLIC m swiftnav sbp rtcm ubx ixcom)
+target_link_libraries(gnss_converters PUBLIC m swiftnav::swiftnav swiftnav::sbp swiftnav::rtcm swiftnav::ubx swiftnav::ixcom)
 target_include_directories(gnss_converters PUBLIC ${PROJECT_SOURCE_DIR}/gnss_converters/include)
 target_include_directories(gnss_converters PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(gnss_converters PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ubx_ephemeris)

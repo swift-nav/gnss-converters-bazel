@@ -11,8 +11,8 @@ swift_add_tool(ixcom2sbp
     -Wconversion
 )
 
-target_link_libraries(ixcom2sbp_main PRIVATE gnss_converters)
-target_link_libraries(ixcom2sbp PRIVATE ixcom2sbp_main)
+target_link_libraries(ixcom2sbp_main PRIVATE swiftnav::gnss_converters)
+target_link_libraries(ixcom2sbp PRIVATE swiftnav::ixcom2sbp_main)
 
 install(TARGETS ixcom2sbp_main DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 install(TARGETS ixcom2sbp DESTINATION ${CMAKE_INSTALL_FULL_BINDIR})

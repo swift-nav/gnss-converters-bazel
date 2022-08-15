@@ -11,9 +11,8 @@ swift_add_library(ubx
   REMOVE_COMPILE_OPTIONS
     -Wconversion
 )
-add_library(swiftnav::ubx ALIAS ubx)
 
-target_link_libraries(ubx PUBLIC swiftnav)
+target_link_libraries(ubx PUBLIC swiftnav::swiftnav)
 target_include_directories(ubx PUBLIC ${PROJECT_SOURCE_DIR}/libubx/include)
 target_include_directories(ubx PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 

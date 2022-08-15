@@ -22,7 +22,7 @@ swift_add_test(test-gnss-converters
   INCLUDE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROJECT_SOURCE_DIR}/gnss_converters/src/include/
-  LINK gnss_converters check Threads::Threads
+  LINK swiftnav::gnss_converters check Threads::Threads
   )
 
 swift_set_compile_options(test-gnss-converters REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)
@@ -38,7 +38,7 @@ swift_add_test(test-gnss-converters-cpp
   INCLUDE
     $<TARGET_PROPERTY:gnss_converters,INCLUDE_DIRECTORIES>
   LINK
-    gnss_converters
+    swiftnav::gnss_converters
     gtest
     gtest_main
 )

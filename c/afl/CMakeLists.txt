@@ -43,4 +43,4 @@ swift_add_tool(make-afl-testcases
     -Wconversion
 )
 target_include_directories(make-afl-testcases PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(make-afl-testcases PRIVATE ubx rtcm sbp)
+target_link_libraries(make-afl-testcases PRIVATE swiftnav::ubx swiftnav::rtcm swiftnav::sbp)

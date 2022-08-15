@@ -3,8 +3,8 @@ swift_add_test(test-gnss-converters-extra
   SRCS
     test_sbp_conv.cc
   LINK
-    gnss_converters
-    gnss_converters_extra
+    swiftnav::gnss_converters
+    swiftnav::gnss_converters_extra
     gtest
     gtest_main
 )

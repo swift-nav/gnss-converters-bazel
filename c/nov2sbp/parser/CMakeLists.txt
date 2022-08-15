@@ -29,10 +29,9 @@ swift_add_library(novatel-parser
   REMOVE_COMPILE_OPTIONS
     -pedantic
 )
-add_library(swiftnav::novatel-parser ALIAS novatel-parser)
 
 target_include_directories(novatel-parser PUBLIC ${PROJECT_SOURCE_DIR}/nov2sbp)
-target_link_libraries(novatel-parser PUBLIC swiftnav)
+target_link_libraries(novatel-parser PUBLIC swiftnav::swiftnav)
 
 install(TARGETS novatel-parser DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR})
 
@@ -52,7 +51,7 @@ swift_set_compile_options(test-novatel-parser
     -Wno-effc++
     -Wno-conversion
 )
-target_link_libraries(test-novatel-parser PRIVATE novatel-parser)
+target_link_libraries(test-novatel-parser PRIVATE swiftnav::novatel-parser)
 target_include_directories(test-novatel-parser PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(test-novatel-parser PRIVATE
     UNIT_TEST_DATA_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../data")

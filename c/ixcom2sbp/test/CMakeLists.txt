@@ -8,7 +8,7 @@ swift_add_test(test-ixcom2sbp
   UNIT_TEST
   SRCS check_ixcom2sbp.c
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK gnss_converters check Threads::Threads
+  LINK swiftnav::gnss_converters check Threads::Threads
   )
 
 swift_set_compile_options(test-ixcom2sbp REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)
