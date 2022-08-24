@@ -2,6 +2,7 @@ mod antennas;
 mod ephemeris;
 mod msm;
 mod observations;
+mod sbp;
 mod ssr;
 mod system;
 
