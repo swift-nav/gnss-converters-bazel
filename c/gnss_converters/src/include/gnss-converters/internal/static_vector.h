@@ -57,7 +57,7 @@ class StaticVector final {
   /**
    * @return an iterator to the first element
    */
-  iterator begin() noexcept { return iterator(data()); }
+  iterator begin() noexcept { return static_cast<iterator>(data()); }
 
   /**
    * @return an iterator to the first element
@@ -72,7 +72,7 @@ class StaticVector final {
   /**
    * @return an iterator to the element following the last element
    */
-  iterator end() noexcept { return iterator(&data()[size_]); }
+  iterator end() noexcept { return static_cast<iterator>(&data()[size_]); }
 
   /**
    * @return an iterator to the element following the last element
@@ -292,7 +292,7 @@ class StaticVector final {
    * @return false if the array is already full, otherwise true
    */
   template <typename... Args>
-  bool emplace_back(Args &&... args) noexcept(
+  bool emplace_back(Args &&...args) noexcept(
       std::is_nothrow_constructible<value_type, Args &&...>().value) {
     if (size_ == capacity_) {
       return false;

@@ -11,7 +11,6 @@
  */
 
 #include <gtest/gtest.h>
-
 #include <observation_adjuster/obs_unpacker.h>
 
 namespace obs_adjuster_tests {

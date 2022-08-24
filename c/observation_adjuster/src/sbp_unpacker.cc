@@ -21,8 +21,10 @@ namespace obs_adjuster {
 
 SbpUnpacker::SbpUnpacker(const StreamType stream_type)
     : SbpMessageHandler(this), stream_type_(stream_type) {
-  obs_unpacker.set_obs_callback(std::bind(
-      &SbpUnpacker::handle_unpacked_obs, this, std::placeholders::_1));
+  obs_unpacker.set_obs_callback(
+      [this](const TimestampedSbpObsArray<MAX_OBS_PER_EPOCH>& oa) {
+        handle_unpacked_obs(oa);
+      });
 }
 
 void SbpUnpacker::process(const uint16_t sender,

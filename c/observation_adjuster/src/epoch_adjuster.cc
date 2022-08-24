@@ -97,7 +97,7 @@ uint8_t combine_flags(const uint8_t v1, const uint8_t v2, const uint8_t v3) {
   std::array<uint8_t, 4> or_flags{{0x80}};
 
   for (const uint8_t and_flag : and_flags) {
-    flags |= ((v1 & and_flag) & (v2 & and_flag) & (v3 & and_flag));
+    flags |= (v1 & v2 & v3 & and_flag);
   }
   for (const uint8_t or_flag : or_flags) {
     flags |= ((v1 & or_flag) | (v2 & or_flag) | (v3 & or_flag));

@@ -11,7 +11,6 @@
  */
 
 #include <gtest/gtest.h>
-
 #include <observation_adjuster/sbp_obs_array.h>
 
 TEST(SbpObsArray, AddAndClear) {

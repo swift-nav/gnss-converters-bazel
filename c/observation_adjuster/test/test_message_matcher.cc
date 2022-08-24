@@ -11,7 +11,6 @@
  */
 
 #include <gtest/gtest.h>
-
 #include <observation_adjuster/message_matcher.h>
 
 namespace obs_adjuster {

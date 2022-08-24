@@ -11,7 +11,6 @@
  */
 
 #include <gtest/gtest.h>
-
 #include <observation_adjuster/epoch_adjuster.h>
 #include <swiftnav/signal.h>
 

@@ -30,10 +30,12 @@ ObservationAdjuster::ObservationAdjuster(const double vrs_ecef[3],
                                  obs_adjuster::StreamType::STATION_CORR,
                                  obs_adjuster::StreamType::VRS_CORR}) {
     auto unpacker = std::make_unique<obs_adjuster::SbpUnpacker>(stream_type);
-    unpacker->set_obs_callback(std::bind(&ObservationAdjuster::obs_decoded,
-                                         this,
-                                         std::placeholders::_1,
-                                         std::placeholders::_2));
+    unpacker->set_obs_callback(
+        [this](const obs_adjuster::StreamType st,
+               const obs_adjuster::TimestampedSbpObsArray<
+                   obs_adjuster::MAX_OBS_PER_EPOCH> &oa) {
+          obs_decoded(st, oa);
+        });
     unpackers_.at(type_to_idx(stream_type)) = std::move(unpacker);
   }
 

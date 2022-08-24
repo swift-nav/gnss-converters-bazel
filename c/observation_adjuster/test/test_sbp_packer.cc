@@ -12,10 +12,9 @@
 
 #include <gtest/gtest.h>
 #include <libsbp/v4/navigation/MSG_POS_ECEF.h>
+#include <observation_adjuster/sbp_packer.h>
 #include <observation_adjuster/sbp_unpacker.h>
 #include <swiftnav/memcpy_s.h>
-
-#include <observation_adjuster/sbp_packer.h>
 
 namespace obs_adjuster {
 

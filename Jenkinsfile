@@ -29,18 +29,6 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '3'))
     }
 
-    // Overwrite in stages that need clang
-    environment {
-        // Default compiler. Override in each stage as needed.
-        CC='gcc-6'
-        CXX='g++-6'
-        COMPILER='gcc-6'
-
-        // Default parallelism for make
-        MAKEJ='4'
-
-    }
-
     stages {
         stage('Build') {
             parallel {
@@ -55,30 +43,25 @@ pipeline {
                         script {
                             builder.cmake(workDir: "c", cmakeAddArgs: "-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -Dnov2sbp_BUILD=true")
                             builder.make(workDir: "c/build")
-                            builder.make(workDir: "c/build", target: "clang-format-all")
                         }
-                        /** Run clang-format.
-                         *  If the resulting 'git diff' is non-empty, then it found something,
-                         *  so error out and display the diff.
-                         */
-                        sh '''#!/bin/bash -ex
-                            git --no-pager diff --name-only HEAD > /tmp/clang-format-diff
-                            if [ -s "/tmp/clang-format-diff" ]; then
-                                echo "clang-format warning found"
-                                git --no-pager diff
-                                exit 1
-                            fi
-                            '''
-
-                        sh '''#!/bin/bash -ex
-                            (cd c && cd build && make clang-tidy-all)
-                            if [ -e "c/fixes.yaml" ]; then
-                                echo "clang-tidy warning found"
-                                exit 1
-                            fi
-                            '''
                         script {
                             builder.make(workDir: "c/build", target: "do-all-tests")
+                        }
+                    }
+                }
+                stage('Format & Lint c') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-modern:2022-07-29'
+                            args dockerMountArgs
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            builder.cmake(workDir: "c", cmakeAddArgs: "-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -Dnov2sbp_BUILD=true")
+                            builder.make(workDir: "c/build", target: "clang-format-all-check")
+                            builder.make(workDir: "c/build", target: "clang-tidy-all-check")
                         }
                     }
                     post {
