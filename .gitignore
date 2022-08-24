@@ -13,3 +13,5 @@ CMakeCache.txt
 .vscode
 target/
 .clang-tidy
+# ignore release archives
+gnss_converters.*
