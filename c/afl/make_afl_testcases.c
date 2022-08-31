@@ -22,5 +22,7 @@ int main(int argc, char *argv[]) {
   (void)argv;
   make_rtcm_testcases();
   make_ubx_testcases();
+  make_sbp_decoder_testcases();
+  make_sbp_encoder_testcases();
   return 0;
 }

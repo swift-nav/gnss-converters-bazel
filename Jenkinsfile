@@ -85,9 +85,11 @@ pipeline {
                         gitPrep()
                         fetchTestData()
                         script {
-                            builder.cmake(workDir: 'c', cmakeAddArgs: '-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION=true')
+                            builder.cmake(workDir: 'c', cmakeAddArgs: '-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__GNSS_CONVERTERS_DISABLE_CRC_VALIDATION=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__LIBSBP_DISABLE_CRC_VALIDATION=true')
                             builder.make(workDir: 'c/build', target: 'rerun-known-failures-ubx2sbp')
                             builder.make(workDir: 'c/build', target: 'rerun-known-failures-rtcm3tosbp')
+                            builder.make(workDir: 'c/build', target: 'rerun-known-failures-sbp2sbp-encoder')
+                            builder.make(workDir: 'c/build', target: 'rerun-known-failures-sbp2sbp-decoder')
                         }
                     }
                 }

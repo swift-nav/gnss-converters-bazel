@@ -130,6 +130,110 @@ pipeline {
           }
         }
 
+        stage('SBP to SBP decoder') {
+          environment {
+            AFL_USE_ASAN='1'
+            CC='/usr/bin/afl-gcc'
+            CXX='/usr/bin/afl-g++'
+            CFLAGS='-m32 -fsanitize=address'
+            CXXFLAGS='-m32 -fsanitize=address'
+            LDFLAGS='-m32 -fsanitize=address'
+          }
+          agent {
+            dockerfile {
+              filename 'fuzz/Dockerfile'
+              label params.AGENT
+              args dockerMountArgs
+            }
+          }
+          steps {
+            script {
+              sh("echo Running on \${NODE_NAME}")
+              sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
+
+              gitPrep()
+              builder.cmake(
+                workDir: 'c',
+                cmakeAddArgs: '-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__LIBSBP_DISABLE_CRC_VALIDATION=true',
+                buildType: 'Release'
+              )
+              builder.make(
+                workDir: 'c/build',
+                target: 'sbp2sbp_decoder'
+              )
+
+              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/afl/testcases/sbp2sbp_decoder -o afl_output c/build/sbp2sbp/src/sbp2sbp_decoder")
+
+              def crashes = findFiles(glob: 'afl_output/**/crashes/*')
+              def hangs = findFiles(glob: 'afl_output/**/hangs/*')
+
+              if (crashes.length > 0 || hangs.length > 0) {
+                error('Detected a crash and/or hang')
+              }
+            }
+          }
+          post {
+            always {
+              zip(zipFile: 'sbp2sbp_decoder.zip', dir: 'afl_output', archive: true)
+            }
+            cleanup {
+              cleanWs()
+            }
+          }
+        }
+
+        stage('SBP to SBP encoder') {
+          environment {
+            AFL_USE_ASAN='1'
+            CC='/usr/bin/afl-gcc'
+            CXX='/usr/bin/afl-g++'
+            CFLAGS='-m32 -fsanitize=address'
+            CXXFLAGS='-m32 -fsanitize=address'
+            LDFLAGS='-m32 -fsanitize=address'
+          }
+          agent {
+            dockerfile {
+              filename 'fuzz/Dockerfile'
+              label params.AGENT
+              args dockerMountArgs
+            }
+          }
+          steps {
+            script {
+              sh("echo Running on \${NODE_NAME}")
+              sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
+
+              gitPrep()
+              builder.cmake(
+                workDir: 'c',
+                cmakeAddArgs: '-DTHIRD_PARTY_INCLUDES_AS_SYSTEM=true -DI_KNOW_WHAT_I_AM_DOING_AND_HOW_DANGEROUS_IT_IS__LIBSBP_DISABLE_CRC_VALIDATION=true',
+                buildType: 'Release'
+              )
+              builder.make(
+                workDir: 'c/build',
+                target: 'sbp2sbp_encoder'
+              )
+
+              sh("timeout --preserve-status '${params.FUZZ_TIMEOUT}' ./jenkins/afl-parallel.sh -t '${env.HANG_TIMEOUT}' -m '${env.MEMORY_LIMIT}' -i c/afl/testcases/sbp2sbp_encoder -o afl_output c/build/sbp2sbp/src/sbp2sbp_encoder")
+
+              def crashes = findFiles(glob: 'afl_output/**/crashes/*')
+              def hangs = findFiles(glob: 'afl_output/**/hangs/*')
+
+              if (crashes.length > 0 || hangs.length > 0) {
+                error('Detected a crash and/or hang')
+              }
+            }
+          }
+          post {
+            always {
+              zip(zipFile: 'sbp2sbp_encoder.zip', dir: 'afl_output', archive: true)
+            }
+            cleanup {
+              cleanWs()
+            }
+          }
+        }
+
         stage('RTCM to JSON') {
           agent {
             dockerfile {
