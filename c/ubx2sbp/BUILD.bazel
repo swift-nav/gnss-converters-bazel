@@ -1,0 +1,43 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+
+cc_library(
+    name = "ubx2sbp_impl",
+    srcs = [
+        "src/include/ubx2sbp/internal/time_truth.h",
+        "src/include/ubx2sbp/internal/ubx2sbp.h",
+        "src/time_truth.cc",
+        "src/ubx2sbp.c",
+    ],
+    includes = ["src/include"],
+    deps = [
+        "//c/gnss_converters",
+    ],
+)
+
+cc_binary(
+    name = "ubx2sbp",
+    srcs = ["src/ubx2sbp_main.c"],
+    deps = [":ubx2sbp_impl"],
+)
+
+configure_file(
+    name = "config",
+    out = "config.h",
+    template = "test/config.h.in",
+    vars = {"RELATIVE_PATH_PREFIX": "c/ubx2sbp/test"},
+)
+
+cc_test(
+    name = "ubx2sbp_test",
+    srcs = [
+        "test/check_ubx2sbp.c",
+        ":config",
+    ],
+    data = glob(["test/data/**"]),
+    includes = ["."],
+    deps = [
+        ":ubx2sbp_impl",
+        "@check",
+    ],
+)

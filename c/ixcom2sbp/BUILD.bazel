@@ -1,0 +1,50 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+
+cc_library(
+    name = "ixcom2sbp_impl",
+    srcs = [
+        "src/ixcom2sbp.c",
+    ],
+    hdrs = [
+        "src/include/ixcom2sbp/internal/ixcom2sbp.h",
+    ],
+    includes = ["src/include"],
+    deps = [
+        "//c/gnss_converters",
+    ],
+)
+
+cc_binary(
+    name = "ixcom2sbp",
+    srcs = [
+        "src/ixcom2sbp_main.c",
+    ],
+    deps = [
+        ":ixcom2sbp_impl",
+    ],
+)
+
+configure_file(
+    name = "config",
+    out = "config.h",
+    template = "test/config.h.in",
+    vars = {"RELATIVE_PATH_PREFIX": "c/ixcom2sbp/test"},
+)
+
+cc_test(
+    name = "ixcom2sbp_test",
+    srcs = [
+        "test/check_ixcom2sbp.c",
+        ":config",
+    ],
+    data = [
+        "test/data/ixcom_imuraw.bin",
+        "test/data/ixcom_wheeldata.bin",
+    ],
+    includes = ["."],
+    deps = [
+        "//c/gnss_converters",
+        "@check",
+    ],
+)

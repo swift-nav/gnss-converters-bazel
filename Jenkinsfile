@@ -70,6 +70,33 @@ pipeline {
                         }
                     }
                 }
+                stage('Bazel Build') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-09'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            try {
+                                sh('bazel test //...')
+                            } catch(e) {
+                                // Notify bazel-alerts when master fails
+                                if (context.isBranchPush(branches: ["master"])) {
+                                    slackSend(
+                                        channel: "#bazel-alerts",
+                                        color: 'danger',
+                                        message: 'FAILURE'
+                                            + " on master "
+                                            + ": <${env.RUN_DISPLAY_URL}|${env.JOB_NAME} #${env.BUILD_NUMBER}>"
+                                            + " - "
+                                            + currentBuild.durationString.replace(' and counting', ''))
+                                }
+                            }
+                        }
+                    }
+                }
                 stage('Fuzz Test Checker') {
                     agent {
                         dockerfile {

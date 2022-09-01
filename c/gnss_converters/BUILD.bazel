@@ -1,0 +1,121 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+
+# In the cmake build this is a object target
+# Bazel doesn't have an equivalent capability so
+# here it is it's own library target.
+cc_library(
+    name = "gnss_converters_c11",
+    srcs = ["src/time_truth.c"],
+    hdrs = ["include/gnss-converters/time_truth.h"],
+    includes = ["include"],
+    deps = [
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_library(
+    name = "gnss_converters",
+    srcs = [
+        "src/common.c",
+        "src/ephemeris/sbas.c",
+        "src/ephemeris/sbas.h",
+        "src/include/gnss-converters/internal/common.h",
+        "src/include/gnss-converters/internal/rtcm3_sbp_internal.h",
+        "src/include/gnss-converters/internal/rtcm3_utils.h",
+        "src/include/gnss-converters/internal/sbp_nmea_internal.h",
+        "src/include/gnss-converters/internal/sbp_rtcm3_internal.h",
+        "src/include/gnss-converters/internal/static_vector.h",
+        "src/include/gnss-converters/internal/time_truth_v2.h",
+        "src/ixcom_sbp.c",
+        "src/nmea.c",
+        "src/options.c",
+        "src/rtcm3_sbp.c",
+        "src/rtcm3_sbp_ephemeris.c",
+        "src/rtcm3_sbp_ssr.c",
+        "src/rtcm3_utils.c",
+        "src/sbp_nmea.c",
+        "src/sbp_rtcm3.c",
+        "src/sbp_rtcm3_ephemeris.c",
+        "src/time_truth_v2.cc",
+        "src/ubx_ephemeris/bds.c",
+        "src/ubx_ephemeris/bds.h",
+        "src/ubx_ephemeris/gal.c",
+        "src/ubx_ephemeris/gal.h",
+        "src/ubx_ephemeris/glo.c",
+        "src/ubx_ephemeris/glo.h",
+        "src/ubx_ephemeris/gps.c",
+        "src/ubx_ephemeris/gps.h",
+        "src/ubx_sbp.c",
+    ],
+    hdrs = [
+        "include/gnss-converters/eph_sat_data.h",
+        "include/gnss-converters/ixcom_sbp.h",
+        "include/gnss-converters/nmea.h",
+        "include/gnss-converters/options.h",
+        "include/gnss-converters/rtcm3_sbp.h",
+        "include/gnss-converters/sbp_nmea.h",
+        "include/gnss-converters/sbp_rtcm3.h",
+        "include/gnss-converters/time_truth_v2.h",
+        "include/gnss-converters/ubx_sbp.h",
+        "include/gnss-converters/utils.h",
+    ],
+    copts = [
+        "-Ic/gnss_converters/src",
+        "-Ic/gnss_converters/src/ubx_ephemeris",
+        "-Iexternal/gnss-converters/c/gnss_converters/src",
+        "-Iexternal/gnss-converters/c/gnss_converters/src/ubx_ephemeris",
+        "-UNDEBUG",
+        "-std=c++14",
+    ],  #TODO: move c/c++ standard settings to toolchain.
+    includes = [
+        "include",
+        # Making public since test relies on internal headers.
+        "src/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":gnss_converters_c11",
+        "//c/libixcom:ixcom",
+        "//c/librtcm:rtcm",
+        "//c/libubx:ubx",
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+configure_file(
+    name = "config",
+    out = "config.h",
+    template = "test/config.h.in",
+    vars = {"RELATIVE_PATH_PREFIX": "c/gnss_converters/test"},
+)
+
+cc_test(
+    name = "gnss_converters_test",
+    srcs = [
+        "test/check_gnss_converters.h",
+        "test/check_gnss_converters_main.c",
+        "test/check_nmea.c",
+        "test/check_nmea_gpths.c",
+        "test/check_options.c",
+        "test/check_rtcm_time.c",
+        "test/check_sbp_rtcm.c",
+        "test/check_time_truth.c",
+        "test/check_utils.c",
+        "test/nmea_truth.h",
+        "test/time_truth.cc",
+        "test/time_truth.h",
+        ":config",
+    ],
+    copts = ["-I$(GENDIR)/c/gnss_converters"],
+    data = [
+        "test/data/azel-sbp.sbp",
+        "test/data/nmea.sbp",
+    ],
+    deps = [
+        ":gnss_converters",
+        "@check",
+    ],
+)

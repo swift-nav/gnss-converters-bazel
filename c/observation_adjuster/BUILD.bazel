@@ -1,0 +1,75 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "observation_adjuster",
+    srcs = [
+        "include/observation_adjuster/binding.h",
+        "include/observation_adjuster/epoch_adjuster.h",
+        "include/observation_adjuster/message_matcher.h",
+        "include/observation_adjuster/obs_unpacker.h",
+        "include/observation_adjuster/observation_adjuster.h",
+        "include/observation_adjuster/observation_adjuster_constants.h",
+        "include/observation_adjuster/sbp_obs_array.h",
+        "include/observation_adjuster/sbp_packer.h",
+        "include/observation_adjuster/sbp_unpacker.h",
+        "src/binding.cc",
+        "src/epoch_adjuster.cc",
+        "src/message_matcher.cc",
+        "src/obs_unpacker.cc",
+        "src/observation_adjuster.cc",
+        "src/sbp_packer.cc",
+        "src/sbp_unpacker.cc",
+    ],
+    copts = [
+        "-UNDEBUG",
+        "-std=c++14",
+    ],
+    includes = ["include"],
+    deps = [
+        "//c/gnss_converters",
+        "//c/gnss_converters_extra",
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_test(
+    name = "observation_adjuster_test",
+    srcs = [
+        "test/test_epoch_adjuster.cc",
+        "test/test_helpers.h",
+        "test/test_message_matcher.cc",
+        "test/test_obs_unpacker.cc",
+        "test/test_observation_adjuster.cc",
+        "test/test_sbp_obs_array.cc",
+        "test/test_sbp_packer.cc",
+        "test/test_sbp_unpacker.cc",
+    ],
+    deps = [
+        ":observation_adjuster",
+        "@gtest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "observation_adjuster_pedantic_test",
+    srcs = [
+        "test/check_pedantic.cc",
+    ],
+    copts = [
+        "-pedantic",
+    ],
+    deps = [
+        ":observation_adjuster",
+    ],
+)
+
+cc_test(
+    name = "observation_adjuster_binding_test",
+    srcs = [
+        "test/check_binding.c",
+    ],
+    deps = [
+        ":observation_adjuster",
+    ],
+)

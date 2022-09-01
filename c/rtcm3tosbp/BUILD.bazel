@@ -1,0 +1,51 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+
+cc_library(
+    name = "rtcm3tosbp_impl",
+    srcs = [
+        "src/include/rtcm3tosbp/internal/time_truth.h",
+        "src/rtcm3tosbp.c",
+        "src/time_truth.cc",
+    ],
+    hdrs = [
+        "src/include/rtcm3tosbp/internal/rtcm3tosbp.h",
+    ],
+    includes = ["src/include"],
+    deps = [
+        "//c/gnss_converters",
+    ],
+)
+
+cc_binary(
+    name = "rtcm3tosbp",
+    srcs = ["src/rtcm3tosbp_main.c"],
+    deps = [":rtcm3tosbp_impl"],
+)
+
+configure_file(
+    name = "config",
+    out = "config.h",
+    template = "test/config.h.in",
+    vars = {"RELATIVE_PATH_PREFIX": "c/rtcm3tosbp/test"},
+)
+
+cc_test(
+    name = "rtcm3tosbp_test",
+    srcs = [
+        "test/check_rtcm3.c",
+        "test/check_rtcm3.h",
+        "test/check_rtcm3_main.c",
+        "test/check_rtcm3_ssr.c",
+        ":config",
+    ],
+    data = glob(["test/data/**"]),
+    includes = ["."],
+    deps = [
+        ":rtcm3tosbp",
+        "//c/gnss_converters",
+        "@check",
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)

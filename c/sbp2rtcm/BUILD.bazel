@@ -1,0 +1,22 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_binary")
+
+cc_library(
+    name = "sbp2rtcm_impl",
+    srcs = [
+        "src/sbp2rtcm.c",
+    ],
+    hdrs = [
+        "src/include/sbp2rtcm/internal/sbp2rtcm.h",
+    ],
+    includes = ["src/include"],
+    deps = [
+            "//c/gnss_converters:gnss_converters",
+    ],
+)
+
+cc_binary(
+    name = "sbp2rtcm",
+    srcs = [ "src/sbp2rtcm_main.c" ],
+    deps = [ ":sbp2rtcm_impl" ],
+)
+

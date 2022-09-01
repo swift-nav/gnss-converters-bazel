@@ -1,0 +1,41 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+cc_library(
+    name = "sbp2sbp_decoder_impl",
+    srcs = [
+        "src/include/sbp2sbp/internal/sbp2sbp_decoder.h",
+        "src/include/sbp2sbp/internal/sbp2sbp_io_function.h",
+        "src/sbp2sbp_decoder.c",
+    ],
+    includes = ["src/include"],
+    deps = [
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_binary(
+    name = "sbp2sbp_decoder",
+    srcs = ["src/sbp2sbp_decoder_main.c"],
+    deps = [":sbp2sbp_decoder_impl"],
+)
+
+cc_library(
+    name = "sbp2sbp_encoder_impl",
+    srcs = [
+        "src/include/sbp2sbp/internal/sbp2sbp_encoder.h",
+        "src/include/sbp2sbp/internal/sbp2sbp_io_function.h",
+        "src/sbp2sbp_encoder.c",
+    ],
+    includes = ["src/include"],
+    deps = [
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_binary(
+    name = "sbp2sbp_encoder",
+    srcs = ["src/sbp2sbp_encoder_main.c"],
+    deps = [":sbp2sbp_encoder_impl"],
+)

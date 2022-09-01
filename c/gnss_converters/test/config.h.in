@@ -18,4 +18,3 @@
 #define RELATIVE_PATH_PREFIX "${RELATIVE_PATH_PREFIX}"
 
 #endif /* CONFIG_H */
-

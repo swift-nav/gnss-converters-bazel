@@ -1,0 +1,71 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "novatel_parser",
+    srcs = [
+        "parser/binary_header.cc",
+        "parser/binary_header.h",
+        "parser/crc_checker.cc",
+        "parser/crc_checker.h",
+        "parser/message.h",
+        "parser/message_bestpos.cc",
+        "parser/message_bestpos.h",
+        "parser/message_bestvel.cc",
+        "parser/message_bestvel.h",
+        "parser/message_gloephemeris.cc",
+        "parser/message_gloephemeris.h",
+        "parser/message_gpsephem.cc",
+        "parser/message_gpsephem.h",
+        "parser/message_insatt.cc",
+        "parser/message_insatt.h",
+        "parser/message_rangecmp.cc",
+        "parser/message_rangecmp.h",
+        "parser/message_rawimusx.cc",
+        "parser/message_rawimusx.h",
+        "parser/parser.cc",
+        "parser/parser.h",
+        "parser/read_little_endian.h",
+    ],
+    includes = [
+        ".",
+    ],
+    deps = [
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_library(
+    name = "nov2sbp_impl",
+    srcs = [
+        "parser/novatel.h",
+        "src/nov2sbp.cc",
+        "src/send_sbp_obs_messages.cc",
+        "src/swiftnav_conversion_helpers.cc",
+        "src/swiftnav_conversion_helpers.h",
+    ],
+    hdrs = [
+        "src/include/nov2sbp/internal/nov2sbp.h",
+    ],
+    copts = [
+        "-UNDEBUG",
+    ],
+    includes = ["src/include"],
+    deps = [
+        ":novatel_parser",
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_binary(
+    name = "nov2sbp",
+    srcs = [
+        "src/nov2sbp_main.cc",
+    ],
+    copts = [
+        "-UNDEBUG",
+    ],
+    deps = [
+        ":nov2sbp_impl",
+    ],
+)

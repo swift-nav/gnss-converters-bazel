@@ -1,0 +1,79 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "rtcm",
+    srcs = [
+        "src/bits.c",
+        "src/decode.c",
+        "src/encode.c",
+        "src/eph_decode.c",
+        "src/eph_encode.c",
+        "src/include/librtcm/internal/decode_helpers.h",
+        "src/include/librtcm/internal/encode_helpers.h",
+        "src/logging.c",
+        "src/msm_utils.c",
+        "src/ssr_decode.c",
+        "src/sta_decode.c",
+    ],
+    hdrs = [
+        "include/rtcm3/bits.h",
+        "include/rtcm3/constants.h",
+        "include/rtcm3/decode.h",
+        "include/rtcm3/encode.h",
+        "include/rtcm3/eph_decode.h",
+        "include/rtcm3/eph_encode.h",
+        "include/rtcm3/logging.h",
+        "include/rtcm3/messages.h",
+        "include/rtcm3/msm_utils.h",
+        "include/rtcm3/ssr_decode.h",
+        "include/rtcm3/sta_decode.h",
+    ],
+    copts = [
+        "-Ic/librtcm/src/include",
+        "-Iexternal/gnss-converters/c/librtcm/src/include",
+    ],
+    includes = [
+        "include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_test(
+    name = "rtcm_test",
+    srcs = [
+        "test/rtcm_decoder_tests.c",
+        "test/rtcm_decoder_tests.h",
+        "test/test_assert.h",
+    ],
+    deps = [
+        ":rtcm",
+    ],
+)
+
+cc_test(
+    name = "sta_test",
+    srcs = [
+        "test/sta_rtcm3_tests.c",
+        "test/test_assert.h",
+    ],
+    deps = [
+        ":rtcm",
+    ],
+)
+
+cc_test(
+    name = "rtcm_pedantic_test",
+    srcs = [
+        "test/check_pedantic.cc",
+        "test/test_assert.h",
+    ],
+    copts = [
+        "-pedantic",
+    ],
+    deps = [
+        ":rtcm",
+    ],
+)

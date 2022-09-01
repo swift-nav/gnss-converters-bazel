@@ -1,0 +1,47 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "ixcom",
+    srcs = [
+        "src/decode.c",
+        "src/encode.c",
+        "src/messages.c",
+    ],
+    hdrs = [
+        "include/ixcom/XCOMdat.h",
+        "include/ixcom/decode.h",
+        "include/ixcom/encode.h",
+        "include/ixcom/messages.h",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_test(
+    name = "libixcom_test",
+    srcs = [
+        "test/check_ixcom.c",
+        "test/check_main.c",
+        "test/check_suites.h",
+    ],
+    deps = [
+        ":ixcom",
+        "@check//:check",
+    ],
+)
+
+cc_test(
+    name = "libixcom_pedantic_test",
+    srcs = [
+        "test/check_pedantic.cc",
+    ],
+    copts = [
+        "-pedantic",
+    ],
+    deps = [
+        ":ixcom",
+    ],
+)

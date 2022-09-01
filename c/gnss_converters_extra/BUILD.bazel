@@ -1,0 +1,36 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "gnss_converters_extra",
+    srcs = [
+        "src/logging.c",
+        "src/sbp_conv.c",
+    ],
+    hdrs = [
+        "include/gnss-converters-extra/logging.h",
+        "include/gnss-converters-extra/sbp_conv.h",
+    ],
+    copts = [
+        "-UNDEBUG",
+    ],
+    includes = ["include"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//c/gnss_converters",
+        "//c/librtcm:rtcm",
+        "@libsbp//c:sbp",
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_test(
+    name = "gnss_converters_extra_test",
+    srcs = [
+        "test/test_sbp_conv.cc",
+    ],
+    deps = [
+        ":gnss_converters_extra",
+        "//c/gnss_converters",
+        "@gtest//:gtest_main",
+    ],
+)

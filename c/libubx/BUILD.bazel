@@ -1,0 +1,50 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+cc_library(
+    name = "ubx",
+    srcs = [
+        "src/decode.c",
+        "src/encode.c",
+        "src/include/libubx/internal/decode_helpers.h",
+    ],
+    hdrs = [
+        "include/ubx/constants.h",
+        "include/ubx/decode.h",
+        "include/ubx/encode.h",
+        "include/ubx/ubx_messages.h",
+    ],
+    includes = [
+        "include",
+        "src/include",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@libswiftnav//:swiftnav",
+    ],
+)
+
+cc_test(
+    name = "libubx_test",
+    srcs = [
+        "test/check_main.c",
+        "test/check_suites.h",
+        "test/check_ubx.c",
+    ],
+    deps = [
+        ":ubx",
+        "@check",
+    ],
+)
+
+cc_test(
+    name = "libubx_pedantic_test",
+    srcs = [
+        "test/check_pedantic.cc",
+    ],
+    copts = [
+        "-pedantic",
+    ],
+    deps = [
+        ":ubx",
+    ],
+)
