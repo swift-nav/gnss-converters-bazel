@@ -7,7 +7,7 @@ use crate::SplitInterval;
 #[clap(
     name="mrtjs2rtjs",
     author="Swift Navigation <dev@swiftnav.com>",
-    version=env!("VERGEN_GIT_SEMVER"),
+    version=env!("VERGEN_SEMVER_LIGHTWEIGHT"),
     about="Convert RTCM data to RTCM JSON w/ TIMESTAMPS"
 )]
 pub struct Cli {

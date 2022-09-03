@@ -19,7 +19,7 @@ bytes = "1.2.0"
 thiserror = "1"
 
 [build-dependencies]
-vergen = { version = "7", default-features = false, features = ["git"] }
+vergen = "3"
 
 [dev-dependencies]
 deku = "0.13"
