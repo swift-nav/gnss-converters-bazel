@@ -10,9 +10,21 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <sbp2sbp/internal/sbp2sbp_encoder.h>
+#ifndef RTCM3TOSBP_INTERNAL_RTCM3TOSBP_H
+#define RTCM3TOSBP_INTERNAL_RTCM3TOSBP_H
+
+#include <libsbp/sbp.h>
+#include <stdint.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-  return sbp2sbp_encoder(argc, argv, "", read_fn, read_fn_eof, write_fn, NULL);
-}
+typedef int32_t (*readfn_ptr)(uint8_t *, size_t, void *);
+typedef int32_t (*writefn_ptr)(const uint8_t *, size_t, void *);
+
+int rtcm3tosbp(int argc,
+               char **argv,
+               const char *additional_opts_help,
+               readfn_ptr readfn,
+               sbp_write_fn_t writefn,
+               void *context);
+
+#endif  // RTCM3TOSBP_INTERNAL_RTCM3TOSBP_H

@@ -18,13 +18,13 @@ use libc::{c_char, c_void};
 
 use gnss_converters::*;
 
-#[link(name = "ubx2sbp_main", kind = "static")]
+#[link(name = "ubx2sbp", kind = "static")]
 #[link(name = "gnss_converters", kind = "static")]
 #[link(name = "swiftnav", kind = "static")]
 #[link(name = "sbp", kind = "static")]
 #[link(name = "ubx", kind = "static")]
 extern "C" {
-    fn ubx2sbp_main(
+    fn ubx2sbp(
         argc: i32,
         argv: *const *const i8,
         addition_opts_help: *const c_char,
@@ -43,7 +43,7 @@ fn main() {
         let argv = cargs.argv();
         let (argc, argv) = (cargs.len(), argv.as_ptr());
         unsafe {
-            ubx2sbp_main(
+            ubx2sbp(
                 argc,
                 argv,
                 ADDITIONAL_OPTS_HELP.as_ptr(),

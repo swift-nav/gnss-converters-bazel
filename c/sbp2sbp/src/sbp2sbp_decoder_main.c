@@ -10,10 +10,9 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <sbp2sbp/internal/sbp2sbp_decoder_main.h>
+#include <sbp2sbp/internal/sbp2sbp_decoder.h>
 #include <stdlib.h>
 
 int main(int argc, char **argv) {
-  return sbp2sbp_decoder_main(
-      argc, argv, "", read_fn, read_fn_eof, write_fn, NULL);
+  return sbp2sbp_decoder(argc, argv, "", read_fn, read_fn_eof, write_fn, NULL);
 }

@@ -8,7 +8,7 @@ swift_add_test(test-ubx2sbp
   UNIT_TEST
   SRCS check_ubx2sbp.c
   INCLUDE ${CMAKE_CURRENT_BINARY_DIR}
-  LINK swiftnav::ubx2sbp_main check Threads::Threads
+  LINK swiftnav::gnss_converters check Threads::Threads
   )
 
 swift_set_compile_options(test-ubx2sbp REMOVE -Wconversion -Wfloat-equal -Wswitch-enum)

@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <nov2sbp/internal/nov2sbp.h>
 #include <swiftnav/logging.h>
 #include <unistd.h>
 
@@ -262,12 +263,12 @@ static void help(char *arg, const char *additional_opts_help) {
 /**
  * Read Novatel bytes from stdin, write SBP bytes to stdout.
  */
-extern "C" int nov2sbp_main(int argc,
-                            char **argv,
-                            const char *additional_opts_help,
-                            readfn_ptr readfn,
-                            writefn_ptr writefn,
-                            void *context) {
+int nov2sbp(int argc,
+            char **argv,
+            const char *additional_opts_help,
+            readfn_ptr readfn,
+            writefn_ptr writefn,
+            void *context) {
   using Novatel::Parser;
   using Novatel::sbp;
   using Novatel::write_sbp_best_pos;

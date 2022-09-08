@@ -16,6 +16,7 @@
    vs. pre-recorded data.  Note that by default it sets the time to
    the current system time, which may not be suitable for pre-recorded
    data.  */
+
 #include <assert.h>
 #include <getopt.h>
 #include <gnss-converters/options.h>
@@ -23,6 +24,7 @@
 #include <libsbp/edc.h>
 #include <libsbp/sbp.h>
 #include <math.h>
+#include <rtcm3tosbp/internal/rtcm3tosbp.h>
 #include <rtcm3tosbp/internal/time_truth.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -34,9 +36,6 @@
 #include <unistd.h>
 
 #define SBP_PREAMBLE 0x55
-#define STRCMP_EQ 0
-
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
 
 static sbp_write_fn_t rtcm3tosbp_writefn;
 
@@ -44,17 +43,7 @@ static struct rtcm3_sbp_state state;
 static void parse_biases(char *arg);
 static void parse_glonass_code_biases(char *arg);
 static void parse_glonass_phase_biases(char *arg);
-
-static void update_obs_time(const sbp_msg_obs_t *msg) {
-  gps_time_t obs_time;
-  obs_time.tow = msg->header.t.tow / 1000.0; /* ms to sec */
-  obs_time.wn = (s16)msg->header.t.wn;
-  /* Some receivers output a TOW 0 whenever it's in a denied environment
-   * (teseoV) This stops us updating that as a valid observation time */
-  if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
-    rtcm2sbp_set_time(&obs_time, NULL, &state);
-  }
-}
+static void update_obs_time(const sbp_msg_obs_t *msg);
 
 /* Write the SBP packet to STDOUT. */
 static void cb_rtcm_to_sbp(uint16_t sender_id,
@@ -107,7 +96,7 @@ static void help(char *arg, const char *additional_opts_help) {
   fprintf(stderr, "  -v for stderr verbosity\n");
 }
 
-gps_time_t time2gps_apply_offset(const time_t t_unix) {
+static gps_time_t time2gps_apply_offset(const time_t t_unix) {
   /* set time, account for UTC<->GPS leap second difference */
   gps_time_t gps_no_offset = time2gps_t(t_unix);
   double leap_seconds = get_gps_utc_offset(&gps_no_offset, NULL);
@@ -116,18 +105,18 @@ gps_time_t time2gps_apply_offset(const time_t t_unix) {
   return gps_with_offset;
 }
 
-void print_current_gps_time() {
+static void print_current_gps_time() {
   time_t current_time_s = time(NULL);
   gps_time_t gps_time = time2gps_apply_offset(current_time_s);
   printf("%" PRIi16 ":%f\n", gps_time.wn, gps_time.tow);
 }
 
-int rtcm3tosbp_main(int argc,
-                    char **argv,
-                    const char *additional_opts_help,
-                    readfn_ptr readfn,
-                    sbp_write_fn_t writefn,
-                    void *context) {
+int rtcm3tosbp(int argc,
+               char **argv,
+               const char *additional_opts_help,
+               readfn_ptr readfn,
+               sbp_write_fn_t writefn,
+               void *context) {
   /* initialize time from systime */
   time_t ct_utc_unix = 0;
   /* use observations instead of ephemerides as time source */
@@ -335,5 +324,16 @@ static void parse_glonass_phase_biases(char *arg) {
       }
     }
     tok = strtok(NULL, ",");
+  }
+}
+
+static void update_obs_time(const sbp_msg_obs_t *msg) {
+  gps_time_t obs_time;
+  obs_time.tow = msg->header.t.tow / 1000.0; /* ms to sec */
+  obs_time.wn = (s16)msg->header.t.wn;
+  /* Some receivers output a TOW 0 whenever it's in a denied environment
+   * (teseoV) This stops us updating that as a valid observation time */
+  if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
+    rtcm2sbp_set_time(&obs_time, NULL, &state);
   }
 }

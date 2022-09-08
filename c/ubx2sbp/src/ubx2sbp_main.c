@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <ubx2sbp/internal/ubx2sbp_main.h>
+#include <ubx2sbp/internal/ubx2sbp.h>
 #include <unistd.h>
 
 static int readfn(uint8_t *buf, size_t len, void *context) {
@@ -28,5 +28,5 @@ static int writefn(uint8_t *buff, uint32_t n, void *context) {
 }
 
 int main(int argc, char **argv) {
-  return ubx2sbp_main(argc, argv, NULL, readfn, writefn, 0);
+  return ubx2sbp(argc, argv, NULL, readfn, writefn, 0);
 }

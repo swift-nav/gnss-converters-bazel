@@ -18,14 +18,14 @@ use libc::{c_char, c_void};
 
 use gnss_converters::*;
 
-#[link(name = "ubx2sbp_main", kind = "static")]
+#[link(name = "ubx2sbp", kind = "static")]
 #[link(name = "gnss_converters", kind = "static")]
 #[link(name = "gnss_converters_extra", kind = "static")]
 #[link(name = "swiftnav", kind = "static")]
 #[link(name = "sbp", kind = "static")]
 #[link(name = "rtcm", kind = "static")]
 extern "C" {
-    fn sbp2rtcm_main(
+    fn sbp2rtcm(
         argc: i32,
         argv: *const *const i8,
         addition_opts_help: *const c_char,
@@ -45,7 +45,7 @@ fn main() {
         let (argc, argv) = (cargs.len(), argv.as_ptr());
         let mut context = Context::new(reader, writer);
         unsafe {
-            sbp2rtcm_main(
+            sbp2rtcm(
                 argc,
                 argv,
                 ADDITIONAL_OPTS_HELP.as_ptr(),

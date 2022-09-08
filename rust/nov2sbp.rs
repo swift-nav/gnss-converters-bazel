@@ -22,12 +22,12 @@ use libc::{c_char, c_void};
 
 use gnss_converters::*;
 
-#[link(name = "nov2sbp_main", kind = "static")]
+#[link(name = "nov2sbp", kind = "static")]
 #[link(name = "novatel-parser", kind = "static")]
 #[link(name = "sbp", kind = "static")]
 #[link(name = "swiftnav", kind = "static")]
 extern "C" {
-    fn nov2sbp_main(
+    fn nov2sbp(
         argc: i32,
         argv: *const *const i8,
         addition_opts_help: *const c_char,
@@ -35,7 +35,6 @@ extern "C" {
         writefn: unsafe extern "C" fn(*const u8, usize, *mut c_void) -> i32,
         context: *mut c_void,
     ) -> i32;
-
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -47,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let argv = cargs.argv();
         let (argc, argv) = (cargs.len(), argv.as_ptr());
         unsafe {
-            nov2sbp_main(
+            nov2sbp(
                 argc,
                 argv,
                 ADDITIONAL_OPTS_HELP.as_ptr(),

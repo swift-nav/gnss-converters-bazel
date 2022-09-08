@@ -122,11 +122,11 @@ fn main() -> Result<(), Error> {
     println!("cargo:rustc-link-search=native={}/lib64", dst_c.display());
 
     if cfg!(target_os = "macos") || cfg!(target_os = "linux") || cfg!(target_os = "windows") {
-        println!("cargo:rustc-link-lib=static=nov2sbp_main");
-        println!("cargo:rustc-link-lib=static=rtcm3tosbp_main");
-        println!("cargo:rustc-link-lib=static=ubx2sbp_main");
-        println!("cargo:rustc-link-lib=static=sbp2rtcm_main");
-        println!("cargo:rustc-link-lib=static=ixcom2sbp_main");
+        println!("cargo:rustc-link-lib=static=nov2sbp");
+        println!("cargo:rustc-link-lib=static=rtcm3tosbp");
+        println!("cargo:rustc-link-lib=static=ubx2sbp");
+        println!("cargo:rustc-link-lib=static=sbp2rtcm");
+        println!("cargo:rustc-link-lib=static=ixcom2sbp");
         println!("cargo:rustc-link-lib=static=gnss_converters");
         println!("cargo:rustc-link-lib=static=gnss_converters_extra");
         println!("cargo:rustc-link-lib=static=novatel-parser");

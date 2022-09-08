@@ -10,30 +10,20 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <ixcom2sbp/internal/ixcom2sbp.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <unistd.h>
 
-static int readfn(uint8_t *buf, size_t len, void *context) {
+static inline int read_fn(uint8_t *buf, size_t len, void *context) {
   (void)context;
   return (int)read(STDIN_FILENO, buf, len);
 }
 
-static int writefn(uint8_t *buff, uint32_t n, void *context) {
+static inline int write_fn(uint8_t *buff, uint32_t n, void *context) {
   (void)context;
   return (int)write(STDOUT_FILENO, buff, sizeof(uint8_t) * n);
 }
 
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
-
-int ixcom2sbp_main(int argc,
-                   char **argv,
-                   const char *additional_opts_help,
-                   readfn_ptr readfn,
-                   writefn_ptr writefn,
-                   void *context);
-
 int main(int argc, char **argv) {
-  return ixcom2sbp_main(argc, argv, "", readfn, writefn, NULL);
+  return ixcom2sbp(argc, argv, "", read_fn, write_fn, NULL);
 }

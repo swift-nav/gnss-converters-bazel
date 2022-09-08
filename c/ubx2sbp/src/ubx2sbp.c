@@ -16,10 +16,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ubx2sbp/internal/time_truth.h>
-#include <ubx2sbp/internal/ubx2sbp_main.h>
+#include <ubx2sbp/internal/ubx2sbp.h>
 
 static sbp_state_t sbp_state;
-
 static writefn_ptr ubx2sbp_writefn;
 
 static void sbp_write(uint16_t sender_id,
@@ -49,12 +48,12 @@ static void help(char *arg, const char *additional_opts_help) {
           "purposes other than to run fuzz testing on it.\n");
 }
 
-int ubx2sbp_main(int argc,
-                 char **argv,
-                 const char *additional_opts_help,
-                 readfn_ptr readfn,
-                 writefn_ptr writefn,
-                 void *context) {
+int ubx2sbp(int argc,
+            char **argv,
+            const char *additional_opts_help,
+            readfn_ptr readfn,
+            writefn_ptr writefn,
+            void *context) {
   /* TODO(STAR-917) accept sender id as a cmdline argument */
 
   sbp_state_init(&sbp_state);

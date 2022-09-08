@@ -17,15 +17,12 @@
 #include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/sbp.h>
 #include <math.h>
+#include <sbp2rtcm/internal/sbp2rtcm.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <swiftnav/gnss_time.h>
 #include <unistd.h>
-
-typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
-typedef int32_t (*read_eof_fn_ptr)(void *);
-typedef int32_t (*writefn_ptr)(uint8_t *, uint16_t, void *);
 
 static writefn_ptr sbp2rtcm_writefn;
 
@@ -74,13 +71,13 @@ static void sbp2rtcm_sbp_void_cb(uint16_t sender_id,
   sbp2rtcm_sbp_cb(sender_id, msg_type, msg, (struct rtcm3_out_state *)context);
 }
 
-int sbp2rtcm_main(int argc,
-                  char **argv,
-                  const char *additional_opts_help,
-                  readfn_ptr readfn,
-                  read_eof_fn_ptr read_eof_fn,
-                  writefn_ptr writefn,
-                  void *context) {
+int sbp2rtcm(int argc,
+             char **argv,
+             const char *additional_opts_help,
+             readfn_ptr readfn,
+             read_eof_fn_ptr read_eof_fn,
+             writefn_ptr writefn,
+             void *context) {
   int opt = -1;
   while ((opt = getopt(argc, argv, "h")) != -1) {
     switch (opt) {

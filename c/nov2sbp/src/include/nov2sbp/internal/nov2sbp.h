@@ -10,9 +10,25 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <sbp2sbp/internal/sbp2sbp_encoder.h>
+#ifndef NOV2SBP_INTERNAL_NOV2SBP_H
+#define NOV2SBP_INTERNAL_NOV2SBP_H
+
+#include <stdint.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-  return sbp2sbp_encoder(argc, argv, "", read_fn, read_fn_eof, write_fn, NULL);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
+typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
+
+int nov2sbp(int argc,
+            char **argv,
+            const char *additional_opts_help,
+            readfn_ptr,
+            writefn_ptr,
+            void *);
 }
+
+#endif  // NOV2SBP_INTERNAL_NOV2SBP_H

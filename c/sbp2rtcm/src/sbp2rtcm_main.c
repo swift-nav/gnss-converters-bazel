@@ -10,6 +10,7 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <sbp2rtcm/internal/sbp2rtcm.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -18,7 +19,7 @@
 
 static bool at_eof = false;
 
-static int32_t readfn(uint8_t *buff, uint32_t n, void *context) {
+static int32_t read_fn(uint8_t *buff, uint32_t n, void *context) {
   (void)context;
   ssize_t read_bytes = read(STDIN_FILENO, buff, n);
   if (read_bytes < 0) {
@@ -31,13 +32,13 @@ static int32_t readfn(uint8_t *buff, uint32_t n, void *context) {
   return (int32_t)read_bytes;
 }
 
-static int32_t read_eof_fn(void *context) {
+static inline int32_t read_eof_fn(void *context) {
   (void)context;
   return at_eof ? 1 : 0;
 }
 
 /* Write the RTCM frame to STDOUT. */
-static int32_t writefn(uint8_t *buffer, uint16_t n, void *context) {
+static int32_t write_fn(uint8_t *buffer, uint16_t n, void *context) {
   (void)(context);
   ssize_t numwritten = write(STDOUT_FILENO, buffer, n);
   if (numwritten < n) {
@@ -47,13 +48,6 @@ static int32_t writefn(uint8_t *buffer, uint16_t n, void *context) {
   return (int32_t)numwritten;
 }
 
-typedef int32_t (*readfn_ptr)(uint8_t *, uint32_t, void *);
-typedef int32_t (*read_eof_fn_ptr)(void *);
-typedef int32_t (*writefn_ptr)(uint8_t *, uint16_t, void *);
-
-int sbp2rtcm_main(
-    int, char **, const char *, readfn_ptr, read_eof_fn_ptr, writefn_ptr);
-
 int main(int argc, char **argv) {
-  return sbp2rtcm_main(argc, argv, "", readfn, read_eof_fn, writefn);
+  return sbp2rtcm(argc, argv, "", read_fn, read_eof_fn, write_fn, NULL);
 }

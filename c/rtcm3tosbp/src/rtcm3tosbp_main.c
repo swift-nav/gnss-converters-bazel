@@ -10,32 +10,21 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <libsbp/sbp.h>
+#include <rtcm3tosbp/internal/rtcm3tosbp.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-static int readfn(uint8_t *buf, size_t len, void *context) {
-  (void)context; /* squash warning */
-  return (int)read(STDIN_FILENO, buf, len);
-}
-
-static s32 writefn(u8 *buff, u32 n, void *context) {
+static inline int32_t read_fn(uint8_t *buf, size_t len, void *context) {
   (void)context;
-  return (s32)write(STDOUT_FILENO, buff, n);
+  return (int32_t)read(STDIN_FILENO, buf, len);
 }
 
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(const uint8_t *, size_t, void *);
-
-int rtcm3tosbp_main(int argc,
-                    char **argv,
-                    const char *additional_opts_help,
-                    readfn_ptr readfn,
-                    sbp_write_fn_t writefn,
-                    void *context);
+static inline int32_t write_fn(uint8_t *buff, uint32_t n, void *context) {
+  (void)context;
+  return (int32_t)write(STDOUT_FILENO, buff, n);
+}
 
 int main(int argc, char **argv) {
-  return rtcm3tosbp_main(argc, argv, "", readfn, writefn, NULL);
+  return rtcm3tosbp(argc, argv, "", read_fn, write_fn, NULL);
 }

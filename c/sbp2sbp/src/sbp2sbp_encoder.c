@@ -17,7 +17,7 @@
 #include <getopt.h>
 #include <libsbp/edc.h>
 #include <libsbp/sbp.h>
-#include <sbp2sbp/internal/sbp2sbp_encoder_main.h>
+#include <sbp2sbp/internal/sbp2sbp_encoder.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -117,13 +117,13 @@ static void help(char *arg, const char *additional_opts_help) {
   fprintf(stderr, "  -h this message\n");
 }
 
-int sbp2sbp_encoder_main(int argc,
-                         char **argv,
-                         const char *additional_opts_help,
-                         readfn_ptr readfn,
-                         readfn_eof_ptr readfn_eof,
-                         writefn_ptr writefn,
-                         void *context) {
+int sbp2sbp_encoder(int argc,
+                    char **argv,
+                    const char *additional_opts_help,
+                    readfn_ptr readfn,
+                    readfn_eof_ptr readfn_eof,
+                    writefn_ptr writefn,
+                    void *context) {
   sbp2sbp_enc_writefn = writefn;
 
   // In state

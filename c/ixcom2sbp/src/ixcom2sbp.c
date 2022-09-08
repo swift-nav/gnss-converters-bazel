@@ -12,16 +12,13 @@
 
 #include <getopt.h>
 #include <gnss-converters/ixcom_sbp.h>
+#include <ixcom2sbp/internal/ixcom2sbp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-sbp_state_t sbp_state;
-
-typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
-
-sbp_write_fn_t g_writefn;
+static sbp_state_t sbp_state;
+static sbp_write_fn_t g_writefn;
 
 static void sbp_write(u16 sender_id,
                       sbp_msg_type_t msg_type,
@@ -42,12 +39,12 @@ static void help(char *arg, const char *additional_opts_help) {
       DEFAULT_IXCOM_SENDER_ID);
 }
 
-int ixcom2sbp_main(int argc,
-                   char **argv,
-                   const char *additional_opts_help,
-                   readfn_ptr readfn,
-                   writefn_ptr writefn,
-                   void *context) {
+int ixcom2sbp(int argc,
+              char **argv,
+              const char *additional_opts_help,
+              readfn_ptr readfn,
+              writefn_ptr writefn,
+              void *context) {
   g_writefn = writefn;
 
   sbp_state_init(&sbp_state);

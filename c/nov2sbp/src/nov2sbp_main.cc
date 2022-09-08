@@ -10,21 +10,11 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
+#include <nov2sbp/internal/nov2sbp.h>
+#include <unistd.h>
+
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
-
-typedef int (*readfn_ptr)(uint8_t *, uint32_t, void *);
-typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
-
-extern "C" int nov2sbp_main(int argc,
-                            char **argv,
-                            const char *additional_opts_help,
-                            readfn_ptr,
-                            writefn_ptr,
-                            void *);
-
-extern "C" void nov2sbp_proj_context_set_search_paths(const char *path);
 
 static int readfn(uint8_t *bytes, uint32_t n_bytes, void *context) {
   (void)context;
@@ -42,5 +32,5 @@ static int32_t nov2sbp_writefn(uint8_t *bytes,
 }
 
 int main(int argc, char **argv) {
-  return nov2sbp_main(argc, argv, "", readfn, nov2sbp_writefn, nullptr);
+  return nov2sbp(argc, argv, "", readfn, nov2sbp_writefn, nullptr);
 }

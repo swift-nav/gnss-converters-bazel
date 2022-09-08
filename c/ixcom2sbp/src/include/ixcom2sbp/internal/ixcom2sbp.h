@@ -10,9 +10,20 @@
  * WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#include <sbp2sbp/internal/sbp2sbp_encoder.h>
+#ifndef IXCOM2SBP_INTERNAL_IXCOM2SBP_H
+#define IXCOM2SBP_INTERNAL_IXCOM2SBP_H
+
+#include <stdint.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv) {
-  return sbp2sbp_encoder(argc, argv, "", read_fn, read_fn_eof, write_fn, NULL);
-}
+typedef int (*readfn_ptr)(uint8_t *, size_t, void *);
+typedef int (*writefn_ptr)(uint8_t *, uint32_t, void *);
+
+int ixcom2sbp(int argc,
+              char **argv,
+              const char *additional_opts_help,
+              readfn_ptr readfn,
+              writefn_ptr writefn,
+              void *context);
+
+#endif  // IXCOM2SBP_INTERNAL_IXCOM2SBP_H
