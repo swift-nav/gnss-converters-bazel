@@ -290,6 +290,21 @@ pipeline {
         if (params.SLACK_NOTIFICATION) {
           context.slackNotify(channel: '#fuzz-testing', branches: ['.*'])
         }
+        if (context.isTagPush()) {
+            if ((context.tagName().startsWith("starling-v") || context.tagName().startsWith("orion-v")) && !context.tagName().contains("develop")) {
+                def pipelineLink = "https://jenkins.ci.swift-nav.com/blue/organizations/jenkins/standalone%2Fgnss-converters-fuzz-pipeline/detail/" + context.tagName() + "/" +  currentBuild.id 
+                if (currentBuild.currentResult == 'SUCCESS') {
+                   slackSend(channel:"#release", 
+                              color: "good",
+                              message: "Fuzz testing completed: " + context.tagName() + "\nTest Artifacts: " + pipelineLink + "/artifacts")
+                }
+                if (currentBuild.currentResult == 'FAILURE') {
+                   slackSend(channel:"#release", 
+                              color: "danger",
+                              message: "Fuzz testing failed: " + context.tagName() + "\n" + pipelineLink + "/pipeline")
+                }
+            }
+        }
       }
     }
   }
