@@ -14,6 +14,11 @@ name = "ubx2sbp"
 path = "ubx2sbp.rs"
 
 [[bin]]
+name = "ubx2json"
+path = "ubx2json.rs"
+required-features = ["ublox", "serde_json"]
+
+[[bin]]
 name = "sbp2rtcm"
 path = "sbp2rtcm.rs"
 
@@ -42,6 +47,8 @@ nov2sbp = []
 libc = "0.2"
 lazy_static = "1"
 if_chain = "1"
+ublox = { git = "https://github.com/swift-nav/ublox", branch = "adrian/serialize", optional = true }
+serde_json = { version = "1", optional = true }
 
 [build-dependencies]
 num_cpus = "1"

@@ -41,6 +41,7 @@ The following tools will be installed in `~/.cargo/bin` (which should be in the 
 - sbp2rtcm
 - rtcm3tosbp
 - ubx2sbp
+- ubx2json
 - ixcom2sbp
 - nov2sbp
 - rtcm32json

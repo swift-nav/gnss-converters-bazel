@@ -398,7 +398,9 @@ dependencies = [
  "predicates",
  "rtcm",
  "sbp 4.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json",
  "tempfile",
+ "ublox",
 ]
 
 [[package]]
@@ -1073,6 +1075,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8d82e1a7758622a465f8cee077614c73484dac5b836c02ff6a40d5d1010324d7"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "ublox"
+version = "0.4.2"
+source = "git+https://github.com/swift-nav/ublox?branch=adrian/serialize#1276da2b98f24f8c1eb77ec2ba02999f64382103"
+dependencies = [
+ "bitflags",
+ "chrono",
+ "num-traits",
+ "serde",
+ "ublox_derive",
+]
+
+[[package]]
+name = "ublox_derive"
+version = "0.0.4"
+source = "git+https://github.com/swift-nav/ublox?branch=adrian/serialize#1276da2b98f24f8c1eb77ec2ba02999f64382103"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
