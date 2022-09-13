@@ -47,7 +47,7 @@ nov2sbp = []
 libc = "0.2"
 lazy_static = "1"
 if_chain = "1"
-ublox = { git = "https://github.com/swift-nav/ublox", branch = "adrian/serialize", optional = true }
+ublox = { git = "https://github.com/swift-nav/ublox", optional = true }
 serde_json = { version = "1", optional = true }
 
 [build-dependencies]

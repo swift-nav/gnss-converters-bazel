@@ -397,7 +397,7 @@ dependencies = [
  "num_cpus",
  "predicates",
  "rtcm",
- "sbp 4.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sbp 4.7.0",
  "serde_json",
  "tempfile",
  "ublox",
@@ -785,7 +785,7 @@ dependencies = [
  "deku",
  "dencode",
  "sbp 4.5.1-alpha",
- "sbp 4.7.0",
+ "sbp 4.7.1-alpha",
  "serde",
  "serde_json",
  "serde_with 1.14.0",
@@ -839,6 +839,18 @@ dependencies = [
 [[package]]
 name = "sbp"
 version = "4.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31bf91f1c41eb33c86cbdad77579719523ab3651d48566e51449dbd6dd55b32e"
+dependencies = [
+ "bytes",
+ "crc16",
+ "dencode",
+ "log",
+]
+
+[[package]]
+name = "sbp"
+version = "4.7.1-alpha"
 dependencies = [
  "base64",
  "bytes",
@@ -848,18 +860,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "serde_json",
-]
-
-[[package]]
-name = "sbp"
-version = "4.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31bf91f1c41eb33c86cbdad77579719523ab3651d48566e51449dbd6dd55b32e"
-dependencies = [
- "bytes",
- "crc16",
- "dencode",
- "log",
 ]
 
 [[package]]
@@ -1080,7 +1080,7 @@ dependencies = [
 [[package]]
 name = "ublox"
 version = "0.4.2"
-source = "git+https://github.com/swift-nav/ublox?branch=adrian/serialize#1276da2b98f24f8c1eb77ec2ba02999f64382103"
+source = "git+https://github.com/swift-nav/ublox#38bb5c10d651cb8940d021c18552607ded0cc438"
 dependencies = [
  "bitflags",
  "chrono",
@@ -1092,7 +1092,7 @@ dependencies = [
 [[package]]
 name = "ublox_derive"
 version = "0.0.4"
-source = "git+https://github.com/swift-nav/ublox?branch=adrian/serialize#1276da2b98f24f8c1eb77ec2ba02999f64382103"
+source = "git+https://github.com/swift-nav/ublox#38bb5c10d651cb8940d021c18552607ded0cc438"
 dependencies = [
  "proc-macro2",
  "quote",
