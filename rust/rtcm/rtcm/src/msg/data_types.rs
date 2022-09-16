@@ -5,7 +5,7 @@ use deku::{ctx::Endian, prelude::*};
 macro_rules! def_tuple_struct {
     ($type_name:ident, $bits:expr, $typ:ty) => {
         #[derive(
-            Debug, PartialEq, deku::DekuRead, deku::DekuWrite, serde::Serialize, Clone, Copy,
+            Debug, PartialEq, Eq, deku::DekuRead, deku::DekuWrite, serde::Serialize, Clone, Copy,
         )]
         #[deku(endian = "_endian", ctx = "_endian: Endian")]
         pub struct $type_name(#[deku(bits = $bits, reader = "Self::reader(deku::rest)")] pub $typ);
@@ -35,7 +35,7 @@ macro_rules! def_tuple_struct {
 macro_rules! def_tuple_struct_sm {
     ($type_name:ident, $bits:expr, $typ:ty, $dec_typ:ty) => {
         #[derive(
-            Debug, PartialEq, deku::DekuRead, deku::DekuWrite, serde::Serialize, Clone, Copy,
+            Debug, PartialEq, Eq, deku::DekuRead, deku::DekuWrite, serde::Serialize, Clone, Copy,
         )]
         #[deku(endian = "_endian", ctx = "_endian: Endian")]
         pub struct $type_name(#[deku(bits = $bits, reader = "Self::reader(deku::rest)", writer = "Self::writer(deku::output, self.0)")] pub $typ);

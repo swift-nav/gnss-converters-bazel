@@ -3,7 +3,7 @@ use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 
 /// GPS Satellite Ephemeris Data
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1019 {
     pub satellite_id: U6,
@@ -39,7 +39,7 @@ pub struct Msg1019 {
 }
 
 /// GLONASS Satellite Ephemeris Data
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1020 {
     pub satellite_id: U6,
@@ -81,7 +81,7 @@ pub struct Msg1020 {
 }
 
 /// BDS Satellite Ephemeris Data
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1042 {
     pub satellite_id: U6,
@@ -115,7 +115,7 @@ pub struct Msg1042 {
 }
 
 /// Galileo F/NAV Satellite Ephemeris Data
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1045 {
     pub satellite_id: U6,
@@ -149,7 +149,7 @@ pub struct Msg1045 {
 }
 
 /// Galileo I/NAV Satellite Ephemeris Data
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1046 {
     pub satellite_id: U6,

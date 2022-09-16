@@ -2,7 +2,7 @@ use super::data_types::*;
 use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1057 {
     pub gps_epoch_time_1s: U20,
@@ -15,7 +15,7 @@ pub struct Header1057 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1057 {
     pub gps_satellite_id: U6,
@@ -28,7 +28,7 @@ pub struct Satellite1057 {
     pub dot_delta_cross_track: I19,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1057 {
     pub header: Header1057,
@@ -36,7 +36,7 @@ pub struct Msg1057 {
     pub satellites: Vec<Satellite1057>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1058 {
     pub gps_epoch_time_1s: U20,
@@ -48,7 +48,7 @@ pub struct Header1058 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1058 {
     pub gps_satellite_id: U6,
@@ -57,7 +57,7 @@ pub struct Satellite1058 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1058 {
     pub header: Header1058,
@@ -65,7 +65,7 @@ pub struct Msg1058 {
     pub satellites: Vec<Satellite1058>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1059 {
     pub gps_epoch_time_1s: U20,
@@ -77,21 +77,21 @@ pub struct Header1059 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1059 {
     pub gps_satellite_id: U6,
     pub no_of_code_biases_processed: U5,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Code1059 {
     pub gps_signal_and_tracking_mode_indicator: U5,
     pub code_bias: I14,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct SvBlock1059 {
     pub satellite: Satellite1059,
@@ -99,7 +99,7 @@ pub struct SvBlock1059 {
     pub code: Vec<Code1059>,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1059 {
     pub header: Header1059,
@@ -107,7 +107,7 @@ pub struct Msg1059 {
     pub sv_blocks: Vec<SvBlock1059>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1060 {
     pub gps_epoch_time_1s: U20,
@@ -120,7 +120,7 @@ pub struct Header1060 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1060 {
     pub gps_satellite_id: U6,
@@ -136,7 +136,7 @@ pub struct Satellite1060 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1060 {
     pub header: Header1060,
@@ -144,7 +144,7 @@ pub struct Msg1060 {
     pub satellites: Vec<Satellite1060>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1240 {
     pub gps_epoch_time_1s: U20,
@@ -157,7 +157,7 @@ pub struct Header1240 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1240 {
     pub gal_satellite_id: U6,
@@ -170,7 +170,7 @@ pub struct Satellite1240 {
     pub dot_delta_cross_track: I19,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1240 {
     pub header: Header1240,
@@ -178,7 +178,7 @@ pub struct Msg1240 {
     pub satellites: Vec<Satellite1240>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1241 {
     pub gps_epoch_time_1s: U20,
@@ -190,7 +190,7 @@ pub struct Header1241 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1241 {
     pub gal_satellite_id: U6,
@@ -199,7 +199,7 @@ pub struct Satellite1241 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1241 {
     pub header: Header1241,
@@ -207,7 +207,7 @@ pub struct Msg1241 {
     pub satellites: Vec<Satellite1241>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1242 {
     pub gal_epoch_time_1s: U20,
@@ -219,21 +219,21 @@ pub struct Header1242 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1242 {
     pub gal_satellite_id: U6,
     pub no_of_code_biases_processed: U5,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Code1242 {
     pub gal_signal_and_tracking_mode_indicator: U5,
     pub code_bias: I14,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct SvBlock1242 {
     pub satellite: Satellite1242,
@@ -241,7 +241,7 @@ pub struct SvBlock1242 {
     pub code: Vec<Code1242>,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1242 {
     pub header: Header1242,
@@ -249,7 +249,7 @@ pub struct Msg1242 {
     pub sv_blocks: Vec<SvBlock1242>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1243 {
     pub gal_epoch_time_1s: U20,
@@ -262,7 +262,7 @@ pub struct Header1243 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1243 {
     pub gal_satellite_id: U6,
@@ -278,7 +278,7 @@ pub struct Satellite1243 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1243 {
     pub header: Header1243,
@@ -286,7 +286,7 @@ pub struct Msg1243 {
     pub satellites: Vec<Satellite1243>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1258 {
     pub bds_epoch_time_1s: U20,
@@ -299,7 +299,7 @@ pub struct Header1258 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1258 {
     pub bds_satellite_id: U6,
@@ -313,7 +313,7 @@ pub struct Satellite1258 {
     pub dot_delta_cross_track: I19,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1258 {
     pub header: Header1258,
@@ -321,7 +321,7 @@ pub struct Msg1258 {
     pub satellites: Vec<Satellite1258>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1259 {
     pub bds_epoch_time_1s: U20,
@@ -334,7 +334,7 @@ pub struct Header1259 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1259 {
     pub bds_satellite_id: U6,
@@ -343,7 +343,7 @@ pub struct Satellite1259 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1259 {
     pub header: Header1259,
@@ -351,7 +351,7 @@ pub struct Msg1259 {
     pub satellites: Vec<Satellite1259>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1260 {
     pub bds_epoch_time_1s: U20,
@@ -363,21 +363,21 @@ pub struct Header1260 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1260 {
     pub bds_satellite_id: U6,
     pub no_of_code_biases_processed: U5,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Code1260 {
     pub bds_signal_and_tracking_mode_indicator: U5,
     pub code_bias: I14,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct SvBlock1260 {
     pub satellite: Satellite1260,
@@ -385,7 +385,7 @@ pub struct SvBlock1260 {
     pub code: Vec<Code1260>,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1260 {
     pub header: Header1260,
@@ -393,7 +393,7 @@ pub struct Msg1260 {
     pub sv_blocks: Vec<SvBlock1260>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1261 {
     pub bds_epoch_time_1s: U20,
@@ -406,7 +406,7 @@ pub struct Header1261 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1261 {
     pub bds_satellite_id: U6,
@@ -423,7 +423,7 @@ pub struct Satellite1261 {
     pub delta_clock_c2: I27,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1261 {
     pub header: Header1261,
@@ -431,7 +431,7 @@ pub struct Msg1261 {
     pub satellites: Vec<Satellite1261>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1265 {
     pub gps_epoch_time_1s: U20,
@@ -445,7 +445,7 @@ pub struct Header1265 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1265 {
     pub gps_satellite_id: U6,
@@ -456,7 +456,7 @@ pub struct Satellite1265 {
     pub phases: Vec<Phase1265>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Phase1265 {
     pub gps_signal_and_tracking_mode_indicator: U5,
@@ -466,7 +466,7 @@ pub struct Phase1265 {
     pub phase_bias: I20,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1265 {
     pub header: Header1265,
@@ -474,7 +474,7 @@ pub struct Msg1265 {
     pub satellites: Vec<Satellite1265>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1267 {
     pub gal_epoch_time_1s: U20,
@@ -488,7 +488,7 @@ pub struct Header1267 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1267 {
     pub gal_satellite_id: U6,
@@ -499,7 +499,7 @@ pub struct Satellite1267 {
     pub phases: Vec<Phase1267>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Phase1267 {
     pub gal_signal_and_tracking_mode_indicator: U5,
@@ -509,7 +509,7 @@ pub struct Phase1267 {
     pub phase_bias: I20,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1267 {
     pub header: Header1267,
@@ -517,7 +517,7 @@ pub struct Msg1267 {
     pub satellites: Vec<Satellite1267>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1270 {
     pub bds_epoch_time_1s: U20,
@@ -531,7 +531,7 @@ pub struct Header1270 {
     pub no_of_satellites: U6,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1270 {
     pub bds_satellite_id: U6,
@@ -542,7 +542,7 @@ pub struct Satellite1270 {
     pub phases: Vec<Phase1270>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Phase1270 {
     pub bds_signal_and_tracking_mode_indicator: U5,
@@ -552,7 +552,7 @@ pub struct Phase1270 {
     pub phase_bias: I20,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1270 {
     pub header: Header1270,

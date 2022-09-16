@@ -3,7 +3,7 @@ use bitvec::prelude::*;
 use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1004 {
     pub reference_station_id: U12,
@@ -14,7 +14,7 @@ pub struct Header1004 {
     pub gps_smoothing_interval: U3,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1004 {
     pub satellite_id: U6,
@@ -31,7 +31,7 @@ pub struct Satellite1004 {
     pub l2_cnr: U8,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1004 {
     pub header: Header1004,
@@ -39,7 +39,7 @@ pub struct Msg1004 {
     pub satellites: Vec<Satellite1004>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Header1012 {
     pub reference_station_id: U12,
@@ -50,7 +50,7 @@ pub struct Header1012 {
     pub glo_smoothing_interval: U3,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Satellite1012 {
     pub satellite_id: U6,
@@ -68,7 +68,7 @@ pub struct Satellite1012 {
     pub l2_cnr: U8,
 }
 
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1012 {
     pub header: Header1012,
@@ -76,7 +76,7 @@ pub struct Msg1012 {
     pub satellites: Vec<Satellite1012>,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1230 {
     pub reference_station_id: U12,

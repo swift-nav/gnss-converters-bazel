@@ -3,7 +3,7 @@ use bitvec::prelude::*;
 use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1005 {
     pub reference_station_id: U12,
@@ -20,7 +20,7 @@ pub struct Msg1005 {
     pub antenna_reference_point_ecef_z: I38,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1006 {
     pub reference_station_id: U12,
@@ -39,7 +39,7 @@ pub struct Msg1006 {
 }
 
 // use 'reader' instead of 'bytes_read' + 'map' because 'bytes_read = 0' ends with decode error
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1008 {
     pub reference_station_id: U12,
@@ -59,7 +59,7 @@ pub struct Msg1008 {
 }
 
 // use 'reader' instead of 'bytes_read' + 'map' because 'bytes_read = 0' ends with decode error
-#[derive(Debug, PartialEq, Clone, DekuRead, DekuWrite, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, DekuRead, DekuWrite, Serialize)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msg1033 {
     pub reference_station_id: U12,

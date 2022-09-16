@@ -4,7 +4,7 @@ use deku::{ctx::Endian, prelude::*};
 use serde::Serialize;
 use std::cmp::min;
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone, Copy)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct MsmHeader {
     pub station_id: U12,
@@ -53,14 +53,14 @@ impl MsmHeader {
     }
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, nsats: u32")]
 pub struct Msm1_2_3SatelliteData {
     #[deku(count = "nsats")]
     pub rough_ranges_modulo_ms: Vec<U10>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, nsats: u32")]
 pub struct Msm4_6SatelliteData {
     #[deku(count = "nsats")]
@@ -68,7 +68,7 @@ pub struct Msm4_6SatelliteData {
     #[deku(count = "nsats")]
     pub rough_ranges_modulo_ms: Vec<U10>,
 }
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, nsats: u32")]
 pub struct Msm5_7SatelliteData {
     #[deku(count = "nsats")]
@@ -81,14 +81,14 @@ pub struct Msm5_7SatelliteData {
     pub rough_phaseranges_rate: Vec<I14>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm1SignalData {
     #[deku(count = "ncell")]
     pub fine_pseudoranges: Vec<I15>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm2SignalData {
     #[deku(count = "ncell")]
@@ -99,7 +99,7 @@ pub struct Msm2SignalData {
     pub half_cycle_ambiguity_indicators: Vec<Bit1>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm3SignalData {
     #[deku(count = "ncell")]
@@ -112,7 +112,7 @@ pub struct Msm3SignalData {
     pub half_cycle_ambiguity_indicators: Vec<Bit1>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm4SignalData {
     #[deku(count = "ncell")]
@@ -127,7 +127,7 @@ pub struct Msm4SignalData {
     pub signal_cnrs: Vec<U6>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm5SignalData {
     #[deku(count = "ncell")]
@@ -144,7 +144,7 @@ pub struct Msm5SignalData {
     pub fine_phaserange_rates: Vec<I15>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm6SignalData {
     #[deku(count = "ncell")]
@@ -159,7 +159,7 @@ pub struct Msm6SignalData {
     pub signal_cnrs: Vec<U10>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian, ncell: u32")]
 pub struct Msm7SignalData {
     #[deku(count = "ncell")]
@@ -176,7 +176,7 @@ pub struct Msm7SignalData {
     pub fine_phaserange_rates: Vec<I15>,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm1 {
     pub header: MsmHeader,
@@ -186,7 +186,7 @@ pub struct Msm1 {
     pub signal_data: Msm1SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm2 {
     pub header: MsmHeader,
@@ -196,7 +196,7 @@ pub struct Msm2 {
     pub signal_data: Msm2SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm3 {
     pub header: MsmHeader,
@@ -206,7 +206,7 @@ pub struct Msm3 {
     pub signal_data: Msm3SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm4 {
     pub header: MsmHeader,
@@ -216,7 +216,7 @@ pub struct Msm4 {
     pub signal_data: Msm4SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm5 {
     pub header: MsmHeader,
@@ -226,7 +226,7 @@ pub struct Msm5 {
     pub signal_data: Msm5SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm6 {
     pub header: MsmHeader,
@@ -236,7 +236,7 @@ pub struct Msm6 {
     pub signal_data: Msm6SignalData,
 }
 
-#[derive(Debug, PartialEq, DekuRead, DekuWrite, Serialize, Clone)]
+#[derive(Debug, PartialEq, Eq, DekuRead, DekuWrite, Serialize, Clone)]
 #[deku(endian = "endian", ctx = "endian: Endian")]
 pub struct Msm7 {
     pub header: MsmHeader,
