@@ -1,0 +1,68 @@
+[package]
+name = "rtcm"
+version = "0.1.0"
+authors = ["Swift Navigation <dev@swiftnav.com>"]
+edition = "2021"
+license = "LGPL"
+description = "RTCM parsing utilities"
+
+[[bin]]
+name = "rtcm-converter"
+path = "src/bin/rtcm-converter.rs"
+required-features = ["json"]
+
+[[bin]]
+name = "rtcm32json"
+path = "src/bin/rtcm2json.rs"
+required-features = ["json"]
+
+[[bin]]
+name = "json2rtcm3"
+path = "src/bin/json2rtcm.rs"
+required-features = ["json"]
+
+[[bin]]
+name = "mrtjs2rtjs"
+path = "src/bin/mrtjs2rtjs.rs"
+required-features = ["json"]
+
+[dependencies]
+anyhow = "1.0.58"
+base64 = "0.13.0"
+bitvec = "^0.22"
+bytes = "1.2.0"
+clap = { version = "3", features = ["derive"], optional = true}
+deku = "0.13"
+dencode = "0.3"
+filename = "0.1.1"
+if_chain = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["std"], optional = true }
+serde_with = { version = "2", features = ["base64"] }
+thiserror = "1"
+
+[dependencies.sbp_master]
+package = "sbp"
+path = "../../c/third_party/libsbp/rust/sbp"
+optional = true
+features = ["serde"]
+
+[dependencies.sbp_staging]
+package = "sbp"
+git = "https://github.com/swift-nav/libsbp.git"
+branch = "staging"
+optional = true
+features = ["serde"]
+
+[build-dependencies]
+vergen = { version = "3", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+debug_deku = []
+default = ["sbp_master"]
+json = ["serde_json", "sbp_master/json", "sbp_staging/json", "clap", "vergen"]
+sbp_master = ["dep:sbp_master"]
+sbp_staging = ["dep:sbp_staging"]

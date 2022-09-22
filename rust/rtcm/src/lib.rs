@@ -10,7 +10,11 @@
 )]
 
 mod base64;
+#[cfg(feature = "json")]
+pub mod conversions;
 mod crc;
+#[cfg(feature = "json")]
+pub mod helpers;
 pub mod msg;
 
 use std::io;
@@ -175,6 +179,18 @@ pub enum Error {
     #[cfg(feature = "json")]
     #[error("JSON error")]
     JsonError(serde_json::Error),
+    #[cfg(feature = "json")]
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
+    #[cfg(feature = "json")]
+    #[error("incomplete rtcm slice")]
+    IncompleteDecoding,
+    #[cfg(feature = "json")]
+    #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
+    #[cfg(feature = "json")]
+    #[error("incomplete or missing timestamp")]
+    InvalidTimestamp,
 }
 
 impl From<DekuError> for Error {
