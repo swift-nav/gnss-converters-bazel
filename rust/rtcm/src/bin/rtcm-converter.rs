@@ -121,10 +121,18 @@ impl Cli {
                 raw::from_json(input, output)?;
             }
             ConversionFormat::Minimal => {
-                minimal::from_json(input, output)?;
+                if matches!(args.input_format, ConversionFormat::Rtcm) {
+                    minimal::from_raw(input, output)?;
+                } else {
+                    minimal::from_json(input, output)?;
+                }
             }
             ConversionFormat::Expanded => {
-                expanded::from_json(input, output)?;
+                if matches!(args.input_format, ConversionFormat::Rtcm) {
+                    expanded::from_raw(input, output)?;
+                } else {
+                    expanded::from_json(input, output)?;
+                }
             }
             ConversionFormat::MinimalPlusTimestamps => {
                 minimal_plus_timestamps::from_json(input, output)?;

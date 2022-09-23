@@ -42,6 +42,7 @@ path = "lib.rs"
 [features]
 default = []
 nov2sbp = []
+json = []
 
 [dependencies]
 libc = "0.2"
@@ -59,5 +60,5 @@ cc = "1.0"
 assert_cmd = "2.0.1"
 predicates = "2.0.2"
 sbp = "4.0"
-rtcm = { path = "rtcm" }
+rtcm = { path = "rtcm", features = ["json"] }
 tempfile = "3.2"
