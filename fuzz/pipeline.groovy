@@ -248,7 +248,7 @@ pipeline {
               sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
 
               gitPrep()
-              sh("cargo +nightly-2022-07-19 fuzz run rtcm2json --fuzz-dir rust/rtcm/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
+              sh("cargo +nightly-2022-07-19 fuzz run rtcm2json --fuzz-dir rust/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
             }
           }
           post {
@@ -272,7 +272,7 @@ pipeline {
               sh('echo "" | sudo tee /proc/sys/kernel/core_pattern')
 
               gitPrep()
-              sh("cargo +nightly-2022-07-19 fuzz run --features=json json2rtcm --fuzz-dir rust/rtcm/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
+              sh("cargo +nightly-2022-07-19 fuzz run --features=json json2rtcm --fuzz-dir rust/rtcm/fuzz/ -j \$(nproc --all) -- -max_total_time='${params.CARGO_FUZZ_TIMEOUT}' -timeout='${env.HANG_TIMEOUT}' -rss_limit_mb='${env.MEMORY_LIMIT}'")
             }
           }
           post {
