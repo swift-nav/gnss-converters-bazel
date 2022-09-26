@@ -43,7 +43,7 @@ static struct rtcm3_sbp_state state;
 static void parse_biases(char *arg);
 static void parse_glonass_code_biases(char *arg);
 static void parse_glonass_phase_biases(char *arg);
-static void update_obs_time(const sbp_msg_obs_t *msg);
+static void update_obs_time(const sbp_observation_header_t *header);
 
 /* Write the SBP packet to STDOUT. */
 static void cb_rtcm_to_sbp(uint16_t sender_id,
@@ -52,7 +52,9 @@ static void cb_rtcm_to_sbp(uint16_t sender_id,
                            void *context) {
   if (rtcm2sbp_is_using_user_provided_time(&state)) {
     if (msg_type == SbpMsgObs) {
-      update_obs_time((const sbp_msg_obs_t *)msg);
+      update_obs_time(&msg->obs.header);
+    } else if (msg_type == SbpMsgOsr) {
+      update_obs_time(&msg->osr.header);
     }
   }
 
@@ -327,10 +329,10 @@ static void parse_glonass_phase_biases(char *arg) {
   }
 }
 
-static void update_obs_time(const sbp_msg_obs_t *msg) {
+static void update_obs_time(const sbp_observation_header_t *header) {
   gps_time_t obs_time;
-  obs_time.tow = msg->header.t.tow / 1000.0; /* ms to sec */
-  obs_time.wn = (s16)msg->header.t.wn;
+  obs_time.tow = header->t.tow / 1000.0; /* ms to sec */
+  obs_time.wn = (s16)header->t.wn;
   /* Some receivers output a TOW 0 whenever it's in a denied environment
    * (teseoV) This stops us updating that as a valid observation time */
   if (fabs(obs_time.tow) > FLOAT_EQUALITY_EPS) {
