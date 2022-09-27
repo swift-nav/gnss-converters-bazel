@@ -22,6 +22,7 @@ local_repository(
 )
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Rules for integrating with cmake builds
 http_archive(
@@ -47,3 +48,14 @@ http_archive(
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 
 hedron_compile_commands_setup()
+
+# Bazel SonarQube tool is needed for converting code coverage report into SonarQube xml format
+git_repository(
+    name = "bazel_sonarqube",
+    commit = "37261de24f80b661bbc4726e3382ef43e9d66a6e",
+    remote = "https://github.com/Zetten/bazel-sonarqube",
+)
+
+load("@bazel_sonarqube//:repositories.bzl", "bazel_sonarqube_repositories")
+
+bazel_sonarqube_repositories()
