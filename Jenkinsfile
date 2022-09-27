@@ -86,14 +86,15 @@ pipeline {
                 stage('Sonarcloud') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-09'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:test'
                         }
                     }
                     steps {
                         gitPrep()
                         script {
-                            sh('apt-get update && apt-get -y install ssh apt-transport-https curl gcov lcov')
-                            sh('bazel coverage --collect_code_coverage --combined_report=lcov //...')
+                            withCredentials([string(credentialsId: 'sonarcloud-gnss-converters-token'), variable: 'SONAR_TOKEN')]) {
+                                sh('./build-ci.sh coverage')
+                            }
                         }
                     }
                 }
