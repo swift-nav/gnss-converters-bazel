@@ -92,7 +92,7 @@ pipeline {
                     steps {
                         gitPrep()
                         script {
-                            sh('sudo apt-get update && sudo apt-get -y install ssh apt-transport-https curl gcov lcov')
+                            sh('apt-get update && apt-get -y install ssh apt-transport-https curl gcov lcov')
                             sh('bazel coverage --collect_code_coverage --combined_report=lcov //...')
                         }
                     }
