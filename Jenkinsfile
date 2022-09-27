@@ -83,6 +83,20 @@ pipeline {
                         }
                     }
                 }
+                stage('Sonarcloud') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-09'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            sh('sudo apt-get update && sudo apt-get -y install ssh apt-transport-https curl gcov lcov')
+                            sh('bazel coverage --collect_code_coverage --combined_report=lcov //...')
+                        }
+                    }
+                }
             }
         }
     }
