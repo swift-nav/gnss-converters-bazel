@@ -93,7 +93,7 @@ pipeline {
                         gitPrep()
                         script {
                             withCredentials([string(credentialsId: 'sonarcloud-gnss-converters-token', variable: 'SONAR_TOKEN')]) {
-                                sh('./ci-build.sh coverage')
+                                sh('TESTENV=codecov ./ci-build.sh')
                             }
                         }
                     }
