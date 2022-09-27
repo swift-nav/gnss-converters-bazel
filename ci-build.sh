@@ -58,7 +58,7 @@ function build_codecov() {
       "-Dsonar.host.url=https://sonarcloud.io" \
       "-Dsonar.projectName=gnss-converters-bazel" \
       "-Dsonar.projectKey=swift-nav_gnss-converters-bazel" \
-      ${SONAR_OTHER_ARGS} \
+      ${SONAR_OTHER_ARGS}
 }
 
 # Assumes that we've already run cargo and stack!
