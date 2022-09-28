@@ -28,7 +28,7 @@ function build_c() {
 
 function build_codecov() {
 
-    bazel run //:refresh_compile_commands
+    bazel run @hedron_compile_commands//:refresh_all
     bazel coverage --collect_code_coverage --combined_report=lcov --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator //...
 
     if [[ -z "${SONAR_SCANNER_VERSION}" ]]; then
