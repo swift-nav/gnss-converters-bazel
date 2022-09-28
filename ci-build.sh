@@ -31,7 +31,6 @@ function build_codecov() {
     bazel run @hedron_compile_commands//:refresh_all
     bazel coverage --collect_code_coverage --combined_report=lcov --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator //...
 
-    export SONAR_SCANNER_VERSION="4.7.0.2747"
     export SONAR_SCANNER_HOME="${HOME}/.sonar/sonar-scanner-${SONAR_SCANNER_VERSION}-linux"
     export SONAR_SCANNER_OPTS="-server"
 
