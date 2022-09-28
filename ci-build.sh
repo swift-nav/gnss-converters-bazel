@@ -28,8 +28,6 @@ function build_c() {
 
 function build_codecov() {
 
-    mkdir "${HOME}/.sonar"
-
     bazel run //:refresh_compile_commands
     bazel coverage --collect_code_coverage --combined_report=lcov --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator //...
 
