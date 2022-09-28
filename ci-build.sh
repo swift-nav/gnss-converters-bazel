@@ -50,6 +50,7 @@ function build_codecov() {
     sonar-scanner \
       "-Dsonar.login=${SONAR_TOKEN}" \
       "-Dsonar.host.url=https://sonarcloud.io" \
+      "-Dsonar.organization=swift-nav" \
       "-Dsonar.projectName=gnss-converters-bazel" \
       "-Dsonar.projectKey=swift-nav_gnss-converters-bazel" \
       ${SONAR_OTHER_ARGS}
