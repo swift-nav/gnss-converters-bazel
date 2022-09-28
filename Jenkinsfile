@@ -73,13 +73,28 @@ pipeline {
                 stage('Bazel Build') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-09'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-28'
                         }
                     }
                     steps {
                         gitPrep()
                         script {
                             sh('bazel test //...')
+                        }
+                    }
+                }
+                stage('Sonarcloud') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-28'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            withCredentials([string(credentialsId: 'sonarcloud-gnss-converters-token', variable: 'SONAR_TOKEN')]) {
+                                sh('TESTENV=codecov ./ci-build.sh')
+                            }
                         }
                     }
                 }
