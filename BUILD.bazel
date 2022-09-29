@@ -1,0 +1,5 @@
+filegroup(
+    name = "clang_format_config",
+    srcs = ["c/.clang-format"],
+    visibility = ["//visibility:public"],
+)
