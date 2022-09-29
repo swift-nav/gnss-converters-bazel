@@ -1,6 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_library", "swift_cc_test")
 
-cc_library(
+swift_cc_library(
     name = "gnss_converters_extra",
     srcs = [
         "src/logging.c",
@@ -23,11 +23,12 @@ cc_library(
     ],
 )
 
-cc_test(
+swift_cc_test(
     name = "gnss_converters_extra_test",
     srcs = [
         "test/test_sbp_conv.cc",
     ],
+    type = UNIT,
     deps = [
         ":gnss_converters_extra",
         "//c/gnss_converters",

@@ -1,6 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_library", "swift_cc_test")
 
-cc_library(
+swift_cc_library(
     name = "ixcom",
     srcs = [
         "src/decode.c",
@@ -20,8 +20,9 @@ cc_library(
     ],
 )
 
-cc_test(
+swift_cc_test(
     name = "libixcom_test",
+    type = UNIT,
     srcs = [
         "test/check_ixcom.c",
         "test/check_main.c",
@@ -33,8 +34,9 @@ cc_test(
     ],
 )
 
-cc_test(
+swift_cc_test(
     name = "libixcom_pedantic_test",
+    type = UNIT,
     srcs = [
         "test/check_pedantic.cc",
     ],

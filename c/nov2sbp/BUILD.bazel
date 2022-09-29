@@ -1,6 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_tool", "swift_cc_tool_library", "swift_cc_test")
 
-cc_library(
+swift_cc_tool_library(
     name = "novatel_parser",
     srcs = [
         "parser/binary_header.cc",
@@ -34,7 +34,7 @@ cc_library(
     ],
 )
 
-cc_library(
+swift_cc_tool_library(
     name = "nov2sbp_impl",
     srcs = [
         "parser/novatel.h",
@@ -57,7 +57,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+swift_cc_tool(
     name = "nov2sbp",
     srcs = [
         "src/nov2sbp_main.cc",

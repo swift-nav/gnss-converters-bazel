@@ -1,10 +1,10 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_library", "swift_cc_test")
 load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
 
 # In the cmake build this is a object target
 # Bazel doesn't have an equivalent capability so
 # here it is it's own library target.
-cc_library(
+swift_cc_library(
     name = "gnss_converters_c11",
     srcs = ["src/time_truth.c"],
     hdrs = ["include/gnss-converters/time_truth.h"],
@@ -15,7 +15,7 @@ cc_library(
     ],
 )
 
-cc_library(
+swift_cc_library(
     name = "gnss_converters",
     srcs = [
         "src/common.c",
@@ -92,7 +92,7 @@ configure_file(
     vars = {"RELATIVE_PATH_PREFIX": "c/gnss_converters/test"},
 )
 
-cc_test(
+swift_cc_test(
     name = "gnss_converters_test",
     srcs = [
         "test/check_gnss_converters.h",
@@ -114,6 +114,7 @@ cc_test(
         "test/data/azel-sbp.sbp",
         "test/data/nmea.sbp",
     ],
+    type = UNIT,
     deps = [
         ":gnss_converters",
         "@check",

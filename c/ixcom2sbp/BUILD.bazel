@@ -1,7 +1,7 @@
-load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_test", "swift_cc_tool", "swift_cc_tool_library")
 
-cc_library(
+swift_cc_tool_library(
     name = "ixcom2sbp_impl",
     srcs = [
         "src/ixcom2sbp.c",
@@ -15,7 +15,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+swift_cc_tool(
     name = "ixcom2sbp",
     srcs = [
         "src/ixcom2sbp_main.c",
@@ -32,7 +32,7 @@ configure_file(
     vars = {"RELATIVE_PATH_PREFIX": "c/ixcom2sbp/test"},
 )
 
-cc_test(
+swift_cc_test(
     name = "ixcom2sbp_test",
     srcs = [
         "test/check_ixcom2sbp.c",
@@ -43,6 +43,7 @@ cc_test(
         "test/data/ixcom_wheeldata.bin",
     ],
     includes = ["."],
+    type = "unit",
     deps = [
         "//c/gnss_converters",
         "@check",
