@@ -70,6 +70,19 @@ pipeline {
                         }
                     }
                 }
+                stage('Bazel Format') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:test'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            sh('bazel build //... --config clang-format-check')
+                        }
+                    }
+                }
                 stage('Bazel Build') {
                     agent {
                         docker {
