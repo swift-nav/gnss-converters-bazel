@@ -1,7 +1,7 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_test", "swift_cc_tool", "swift_cc_tool_library")
 load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
 
-cc_library(
+swift_cc_tool_library(
     name = "ubx2sbp_impl",
     srcs = [
         "src/include/ubx2sbp/internal/time_truth.h",
@@ -15,7 +15,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+swift_cc_tool(
     name = "ubx2sbp",
     srcs = ["src/ubx2sbp_main.c"],
     deps = [":ubx2sbp_impl"],
@@ -28,8 +28,9 @@ configure_file(
     vars = {"RELATIVE_PATH_PREFIX": "c/ubx2sbp/test"},
 )
 
-cc_test(
+swift_cc_test(
     name = "ubx2sbp_test",
+    type = UNIT,
     srcs = [
         "test/check_ubx2sbp.c",
         ":config",

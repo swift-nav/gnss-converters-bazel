@@ -1,6 +1,6 @@
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "swift_cc_tool", "swift_cc_tool_library")
 
-cc_library(
+swift_cc_tool_library(
     name = "sbp2sbp_decoder_impl",
     srcs = [
         "src/include/sbp2sbp/internal/sbp2sbp_decoder.h",
@@ -14,13 +14,13 @@ cc_library(
     ],
 )
 
-cc_binary(
+swift_cc_tool(
     name = "sbp2sbp_decoder",
     srcs = ["src/sbp2sbp_decoder_main.c"],
     deps = [":sbp2sbp_decoder_impl"],
 )
 
-cc_library(
+swift_cc_tool_library(
     name = "sbp2sbp_encoder_impl",
     srcs = [
         "src/include/sbp2sbp/internal/sbp2sbp_encoder.h",
@@ -34,7 +34,7 @@ cc_library(
     ],
 )
 
-cc_binary(
+swift_cc_tool(
     name = "sbp2sbp_encoder",
     srcs = ["src/sbp2sbp_encoder_main.c"],
     deps = [":sbp2sbp_encoder_impl"],
