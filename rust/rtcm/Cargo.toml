@@ -41,17 +41,8 @@ serde_json = { version = "1", features = ["std"], optional = true }
 serde_with = { version = "2", features = ["base64"] }
 thiserror = "1"
 
-[dependencies.sbp_master]
-package = "sbp"
+[dependencies.sbp]
 path = "../../c/third_party/libsbp/rust/sbp"
-optional = true
-features = ["serde"]
-
-[dependencies.sbp_staging]
-package = "sbp"
-git = "https://github.com/swift-nav/libsbp.git"
-branch = "staging"
-optional = true
 features = ["serde"]
 
 [build-dependencies]
@@ -62,7 +53,5 @@ tempfile = "3"
 
 [features]
 debug_deku = []
-default = ["sbp_master"]
-json = ["serde_json", "sbp_master/json", "sbp_staging/json", "clap", "vergen"]
-sbp_master = ["dep:sbp_master"]
-sbp_staging = ["dep:sbp_staging"]
+default = []
+json = ["serde_json", "sbp/json", "clap", "vergen"]

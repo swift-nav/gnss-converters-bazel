@@ -1,7 +1,7 @@
 use super::*;
 use dencode::{BytesMut, Decoder as _};
-use sbp::messages::gnss::{GpsTimeSec, SvId};
-use sbp::messages::ssr::{
+use ::sbp::messages::gnss::{GpsTimeSec, SvId};
+use ::sbp::messages::ssr::{
     GriddedCorrectionHeader, MsgSsrGriddedCorrection, STECResidual, TroposphericDelayCorrection,
 };
 use std::{fs, io};
@@ -13,7 +13,7 @@ fn sbp() -> Result<(), io::Error> {
         msg_type: 1532,
         sender_id: 0,
         length: 128,
-        msg: Sbp::MsgSsrGriddedCorrection(MsgSsrGriddedCorrection {
+        msg: ::sbp::Sbp::MsgSsrGriddedCorrection(MsgSsrGriddedCorrection {
             sender_id: Some(0),
             header: GriddedCorrectionHeader {
                 tile_set_id: 0,

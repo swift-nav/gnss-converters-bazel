@@ -295,7 +295,7 @@ pub mod json {
     pub struct DecoderJson;
 
     impl dencode::Decoder for DecoderJson {
-        type Item = crate::Frame;
+        type Item = Frame;
         type Error = Error;
 
         fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
@@ -314,9 +314,9 @@ pub mod json {
     }
 
     impl DecoderJson {
-        fn parse_frame(buf: &mut BytesMut) -> Option<Result<(crate::Frame, usize), Error>> {
+        fn parse_frame(buf: &mut BytesMut) -> Option<Result<(Frame, usize), Error>> {
             let de = serde_json::Deserializer::from_slice(buf.as_ref());
-            let mut stream = de.into_iter::<crate::Frame>();
+            let mut stream = de.into_iter::<Frame>();
             if let Some(res) = stream.next() {
                 match res {
                     Ok(f) => return Some(Ok((f, stream.byte_offset()))),
@@ -334,7 +334,7 @@ pub mod json {
 
     pub fn iter_messages<R: io::Read>(
         input: R,
-    ) -> impl Iterator<Item = Result<crate::Frame, Error>> {
+    ) -> impl Iterator<Item = Result<Frame, Error>> {
         FramedRead::new(input, DecoderJson)
     }
 }
