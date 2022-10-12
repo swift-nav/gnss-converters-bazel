@@ -108,6 +108,7 @@ pipeline {
                         gitPrep()
                         script {
                             sh('bazel run //:refresh_compile_commands')
+                            sh('bazel run //bazel:qac_compile_commands')
                         }
                         withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=test_tag"]) {
                             withCredentials([usernamePassword(credentialsId: 'helix-qac-dashboard-login', usernameVariable: 'QAC_UPLOAD_SERVER_USERNAME', passwordVariable: 'QAC_UPLOAD_SERVER_PASSWORD')]) {
