@@ -15,7 +15,7 @@ use std::env;
 use std::ffi::CString;
 use std::fs::File;
 
-use std::io::{self, BufReader, BufWriter, Read, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
 use std::slice;
 
@@ -149,28 +149,22 @@ pub fn fetch_io(_prog_name: &str) -> (Box<dyn Read>, Box<dyn Write>) {
 
     fn file_in_file_out(input: &str, output: &str) -> (Box<dyn Read>, Box<dyn Write>) {
         (
-            Box::new(BufReader::new(
-                File::open(input).expect("failed to open input file"),
-            )),
-            Box::new(BufWriter::new(
-                File::create(output).expect("failed to open output file"),
-            )),
+            Box::new(File::open(input).expect("failed to open input file")),
+            Box::new(File::create(output).expect("failed to open output file")),
         )
     }
 
     fn file_in_stdout(input: &str) -> (Box<dyn Read>, Box<dyn Write>) {
         (
-            Box::new(BufReader::new(
-                File::open(input).expect("failed to open input file"),
-            )),
-            Box::new(BufWriter::new(Box::new(STDOUT.lock()))),
+            Box::new(File::open(input).expect("failed to open input file")),
+            Box::new(Box::new(STDOUT.lock())),
         )
     }
 
     fn stdin_stdout() -> (Box<dyn Read>, Box<dyn Write>) {
         (
-            Box::new(BufReader::new(Box::new(STDIN.lock()))),
-            Box::new(BufWriter::new(Box::new(STDOUT.lock()))),
+            Box::new(Box::new(STDIN.lock())),
+            Box::new(Box::new(STDOUT.lock())),
         )
     }
 
