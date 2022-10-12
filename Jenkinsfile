@@ -107,14 +107,10 @@ pipeline {
                     steps {
                         gitPrep()
                         script {
-                            withEnv(["BUILD_ROOT=${env.WORKSPACE}"]) {
+                            withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=test_tag"]) {
                                 sh('bazel run //:refresh_compile_commands')
-                                sh('ls -l')
-                                sh('pwd')
                                 sh('echo $BUILD_ROOT')
-                                sh('whereis qac')
-                                sh('cat /usr/local/bin/qac')
-                                sh('qac setup_license_server')
+                                sh('qac')
                             }
                         }
                     }
