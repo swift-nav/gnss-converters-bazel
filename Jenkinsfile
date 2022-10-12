@@ -110,6 +110,7 @@ pipeline {
                             withEnv(["BUILD_ROOT=${env.WORKSPACE}"]) {
                                 sh('bazel run //:refresh_compile_commands')
                                 sh('ls -l')
+                                sh('echo $BUILD_ROOT')
                                 sh('qac')
                             }
                         }
