@@ -98,6 +98,22 @@ pipeline {
                         }
                     }
                 }
+                stage('Static Code Analysis') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:test'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            withEnv(["BUILD_ROOT=${env.WORKSPACE}"]) {
+                                sh('bazel run //:refresh_compile_commands')
+                                sh('qac || true')
+                            }
+                        }
+                    }
+                }
             }
         }
     }
