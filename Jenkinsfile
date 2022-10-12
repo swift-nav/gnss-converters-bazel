@@ -109,7 +109,8 @@ pipeline {
                         script {
                             withEnv(["BUILD_ROOT=${env.WORKSPACE}"]) {
                                 sh('bazel run //:refresh_compile_commands')
-                                sh('qac || true')
+                                sh('ls -l')
+                                sh('qac')
                             }
                         }
                     }
