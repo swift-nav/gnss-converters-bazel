@@ -112,7 +112,8 @@ pipeline {
                                 sh('ls -l')
                                 sh('pwd')
                                 sh('echo $BUILD_ROOT')
-                                sh('qac')
+                                sh('whereis qac')
+                                sh('qac setup_license_server')
                             }
                         }
                     }
