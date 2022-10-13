@@ -734,7 +734,7 @@ dependencies = [
  "filename",
  "if_chain",
  "sbp 4.5.1-alpha",
- "sbp 4.8.1-alpha",
+ "sbp 4.7.1-alpha",
  "serde",
  "serde_json",
  "serde_with",
@@ -787,7 +787,7 @@ dependencies = [
 
 [[package]]
 name = "sbp"
-version = "4.8.1-alpha"
+version = "4.7.1-alpha"
 dependencies = [
  "base64",
  "bytes",
