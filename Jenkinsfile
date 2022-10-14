@@ -107,7 +107,6 @@ pipeline {
                     steps {
                         gitPrep()
                         script {
-                            sh('bazel run //:refresh_compile_commands')
                             sh('bazel run //bazel:qac_compile_commands')
                         }
                         withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=${env.GIT_COMMIT}"]) {
