@@ -76,8 +76,13 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-18.04, macos-11]
+        os: [windows-2019, ubuntu-18.04, macos-11]
         include:
+          - os: windows-2019
+            cc: x86_64-w64-mingw32-gcc
+            cxx: x86_64-w64-mingw32-g++
+            name: windows
+            cmake: MinGW Makefiles
           - os: ubuntu-18.04
             cc: clang-6.0
             cxx: clang++-6.0
