@@ -22,9 +22,10 @@ swift_cc_library(
     ],
     copts = [
         "-UNDEBUG",
-        "-std=c++14",
+        "-Wall",
     ],
     includes = ["include"],
+#    features = ["cxx20_standard"],
     deps = [
         "//c/gnss_converters",
         "//c/gnss_converters_extra",
