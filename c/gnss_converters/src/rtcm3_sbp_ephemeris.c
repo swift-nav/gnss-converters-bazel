@@ -100,19 +100,6 @@ u32 rtcm3_decode_fit_interval_glo(const u8 p1) {
   }
 }
 
-static bool gps_time_sec_match_weeks(sbp_gps_time_sec_t *t,
-                                     const gps_time_t *ref) {
-  gps_time_t t_u = {.wn = t->wn, .tow = t->tow};
-  if (!gps_time_match_weeks_safe(&t_u, ref)) {
-    return false;
-  }
-  if (!gps_time_valid(&t_u)) {
-    return false;
-  }
-  t->wn = t_u.wn;
-  return true;
-}
-
 gps_time_t week_rollover_adjustment(gps_time_t constellation_time,
                                     gps_time_t absolute_gps_reference_time,
                                     uint8_t constellation_wn_resolution,
@@ -142,6 +129,11 @@ gps_time_t week_rollover_adjustment(gps_time_t constellation_time,
   return adjusted_time;
 }
 
+static bool sbp_gps_time_sec_valid(const sbp_gps_time_sec_t *t) {
+  gps_time_t time_to_verify = {.wn = t->wn, .tow = t->tow};
+  return gps_time_valid(&time_to_verify);
+}
+
 bool rtcm3_gps_eph_to_sbp(const rtcm_msg_eph *msg_eph,
                           sbp_msg_ephemeris_gps_t *sbp_gps_eph,
                           struct rtcm3_sbp_state *state) {
@@ -165,14 +157,13 @@ bool rtcm3_gps_eph_to_sbp(const rtcm_msg_eph *msg_eph,
         state->ephemeris_time_estimator, gnss_signal, toe_time);
   }
 
-  gps_time_t rover_time;
-  rtcm_get_gps_time(&rover_time, state);
-
   sbp_gps_eph->common.toe.wn = toe_time.wn;
   sbp_gps_eph->common.toe.tow = msg_eph->toe * GPS_TOE_RESOLUTION;
-  if (!gps_time_sec_match_weeks(&sbp_gps_eph->common.toe, &rover_time)) {
+
+  if (!sbp_gps_time_sec_valid(&sbp_gps_eph->common.toe)) {
     return false;
   }
+
   sbp_gps_eph->common.sid.sat = msg_eph->sat_id;
   sbp_gps_eph->common.sid.code = CODE_GPS_L1CA;
   sbp_gps_eph->common.ura = convert_ura_to_uri(msg_eph->ura);
@@ -210,7 +201,8 @@ bool rtcm3_gps_eph_to_sbp(const rtcm_msg_eph *msg_eph,
 
   sbp_gps_eph->toc.wn = toe_time.wn;
   sbp_gps_eph->toc.tow = msg_eph->data.kepler.toc * GPS_TOC_RESOLUTION;
-  return gps_time_sec_match_weeks(&sbp_gps_eph->toc, &rover_time);
+
+  return sbp_gps_time_sec_valid(&sbp_gps_eph->toc);
 }
 
 void rtcm3_qzss_eph_to_sbp(const rtcm_msg_eph *msg_eph,
@@ -345,12 +337,10 @@ bool rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
         state->ephemeris_time_estimator, gnss_signal, toe_time);
   }
 
-  gps_time_t rover_time;
-  rtcm_get_gps_time(&rover_time, state);
-
   sbp_gal_eph->common.toe.wn = toe_time.wn;
   sbp_gal_eph->common.toe.tow = msg_eph->toe * GALILEO_TOE_RESOLUTION;
-  if (!gps_time_sec_match_weeks(&sbp_gal_eph->common.toe, &rover_time)) {
+
+  if (!sbp_gps_time_sec_valid(&sbp_gal_eph->common.toe)) {
     return false;
   }
 
@@ -395,7 +385,7 @@ bool rtcm3_gal_eph_to_sbp(const rtcm_msg_eph *msg_eph,
   sbp_gal_eph->toc.tow = msg_eph->data.kepler.toc * GALILEO_TOC_RESOLUTION;
   sbp_gal_eph->source = source;
 
-  return gps_time_sec_match_weeks(&sbp_gal_eph->toc, &rover_time);
+  return sbp_gps_time_sec_valid(&sbp_gal_eph->toc);
 }
 
 void rtcm3_bds_eph_to_sbp(const rtcm_msg_eph *msg_eph,
