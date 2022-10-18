@@ -25,7 +25,7 @@ jobs:
           timeout_minutes: 30
           max_attempts: 60
           command: |
-            expected_total_count=3;
+            expected_total_count=2;
             total_count=$(
               curl -sSL -H 'Accept: application/vnd.github.v3+json' -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' \
                 'https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.event.inputs.run_id }}/artifacts' \
@@ -83,33 +83,12 @@ jobs:
           asset_name: ${{ env.MAC_RELEASE_ARCHIVE }}
           asset_content_type: application/gzip
 
-      - name: Download Windows artifacts
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          name: windows-artifacts
-          workflow: CI
-          run_id: ${{ github.event.inputs.run_id }}
-
-      - run: |
-          echo "WINDOWS_RELEASE_ARCHIVE=$(cat release-archive.filename)" >>$GITHUB_ENV
-
-      - name: Upload release asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.WINDOWS_RELEASE_ARCHIVE }}
-          asset_name: ${{ env.WINDOWS_RELEASE_ARCHIVE }}
-          asset_content_type: application/zip
-          
       - name: Hook into package registry
         uses: swift-nav/swift-cli-publisher@v2
         if: ${{ github.event.ref }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$
         env:
           DL_LINUX: ${{ env.LINUX_RELEASE_ARCHIVE }}
           DL_MAC: ${{ env.MAC_RELEASE_ARCHIVE }}
-          DL_WIN: ${{ env.WINDOWS_RELEASE_ARCHIVE }}
           TOOLS: "sbp2rtcm,rtcm3tosbp,ubx2sbp,ubx2json,ixcom2sbp,nov2sbp,rtcm32json,json2rtcm3,rtcm-converter"
         with:
           token: ${{ secrets.GH_TOKEN }}
