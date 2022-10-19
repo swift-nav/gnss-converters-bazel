@@ -101,13 +101,13 @@ pipeline {
                 stage('Static Code Analysis') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:test'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-qac:test'
                         }
                     }
                     steps {
                         gitPrep()
                         script {
-                            sh('bazel run //bazel:qac_compile_commands')
+                            sh('bazel run //:qac_compile_commands')
                         }
                         withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=${env.GIT_COMMIT}"]) {
                             withCredentials([usernamePassword(credentialsId: 'helix-qac-dashboard-login', usernameVariable: 'QAC_UPLOAD_SERVER_USERNAME', passwordVariable: 'QAC_UPLOAD_SERVER_PASSWORD')]) {

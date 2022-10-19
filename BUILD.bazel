@@ -1,6 +1,12 @@
 load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+load("@gnss-converters//bazel:qac_compile_commands.bzl", "qac_compile_commands")
 
 refresh_compile_commands(
     name = "refresh_compile_commands",
     visibility = ["//visibility:public"],
+)
+
+qac_compile_commands(
+    name = "qac_compile_commands",
+    tool = "//:refresh_compile_commands",
 )
