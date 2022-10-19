@@ -59,3 +59,9 @@ git_repository(
 load("@bazel_sonarqube//:repositories.bzl", "bazel_sonarqube_repositories")
 
 bazel_sonarqube_repositories()
+
+# Toolchains
+register_toolchains(
+    "//toolchain:step_toolchain",
+)
+    
