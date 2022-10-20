@@ -108,8 +108,9 @@ pipeline {
                         gitPrep()
                         script {
                             sh('bazel run //:qac_compile_commands')
+                            sh('./qac/rule_configuration_generator.py > autosar.rcf')
                         }
-                        withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=${env.GIT_COMMIT}"]) {
+                        withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=${env.GIT_COMMIT}", "QAC_RCF_PATH=${env.WORKSPACE}/autosar.rcf"]) {
                             withCredentials([usernamePassword(credentialsId: 'helix-qac-dashboard-login', usernameVariable: 'QAC_UPLOAD_SERVER_USERNAME', passwordVariable: 'QAC_UPLOAD_SERVER_PASSWORD')]) {
                                 sh('qac || true')
                                 sh('qac upload')
