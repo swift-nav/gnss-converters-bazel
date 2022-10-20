@@ -101,7 +101,7 @@ pipeline {
                 stage('Static Code Analysis') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-qac:test'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-qac:2022-10-20'
                         }
                     }
                     steps {
