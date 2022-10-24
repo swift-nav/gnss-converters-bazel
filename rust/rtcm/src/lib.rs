@@ -332,9 +332,7 @@ pub mod json {
         }
     }
 
-    pub fn iter_messages<R: io::Read>(
-        input: R,
-    ) -> impl Iterator<Item = Result<Frame, Error>> {
+    pub fn iter_messages<R: io::Read>(input: R) -> impl Iterator<Item = Result<Frame, Error>> {
         FramedRead::new(input, DecoderJson)
     }
 }

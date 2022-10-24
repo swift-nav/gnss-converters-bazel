@@ -1,9 +1,9 @@
 use super::*;
-use dencode::{BytesMut, Decoder as _};
 use ::sbp::messages::gnss::{GpsTimeSec, SvId};
 use ::sbp::messages::ssr::{
     GriddedCorrectionHeader, MsgSsrGriddedCorrection, STECResidual, TroposphericDelayCorrection,
 };
+use dencode::{BytesMut, Decoder as _};
 use std::{fs, io};
 
 #[test]
