@@ -10,8 +10,8 @@ swift_cc_library(
         "src/eph_encode.c",
         "src/include/librtcm/internal/decode_helpers.h",
         "src/include/librtcm/internal/encode_helpers.h",
+        "src/librtcm_utils.c",
         "src/logging.c",
-        "src/msm_utils.c",
         "src/ssr_decode.c",
         "src/sta_decode.c",
     ],
@@ -22,9 +22,9 @@ swift_cc_library(
         "include/rtcm3/encode.h",
         "include/rtcm3/eph_decode.h",
         "include/rtcm3/eph_encode.h",
+        "include/rtcm3/librtcm_utils.h",
         "include/rtcm3/logging.h",
         "include/rtcm3/messages.h",
-        "include/rtcm3/msm_utils.h",
         "include/rtcm3/ssr_decode.h",
         "include/rtcm3/sta_decode.h",
     ],
@@ -43,12 +43,12 @@ swift_cc_library(
 
 swift_cc_test(
     name = "rtcm_test",
-    type = UNIT,
     srcs = [
         "test/rtcm_decoder_tests.c",
         "test/rtcm_decoder_tests.h",
         "test/test_assert.h",
     ],
+    type = UNIT,
     deps = [
         ":rtcm",
     ],
@@ -56,11 +56,11 @@ swift_cc_test(
 
 swift_cc_test(
     name = "sta_test",
-    type = UNIT,
     srcs = [
         "test/sta_rtcm3_tests.c",
         "test/test_assert.h",
     ],
+    type = UNIT,
     deps = [
         ":rtcm",
     ],
@@ -68,7 +68,6 @@ swift_cc_test(
 
 swift_cc_test(
     name = "rtcm_pedantic_test",
-    type = UNIT,
     srcs = [
         "test/check_pedantic.cc",
         "test/test_assert.h",
@@ -76,6 +75,7 @@ swift_cc_test(
     copts = [
         "-pedantic",
     ],
+    type = UNIT,
     deps = [
         ":rtcm",
     ],
