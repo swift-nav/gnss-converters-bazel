@@ -17,7 +17,7 @@
 #include <rtcm3/constants.h>
 #include <rtcm3/decode.h>
 #include <rtcm3/eph_decode.h>
-#include <rtcm3/msm_utils.h>
+#include <rtcm3/librtcm_utils.h>
 #include <rtcm3/ssr_decode.h>
 #include <rtcm3/sta_decode.h>
 #include <stdio.h>
@@ -1494,13 +1494,39 @@ rtcm3_rc rtcm3_decode_msm7_bitstream(swiftnav_in_bitstream_t *buff,
   return rtcm3_decode_msm_internal(buff, MSM7, msg);
 }
 
+/** Decode Wrapped SBP Message
+ *
+ * \param buff The input data buffer
+ * \param msg SBP message struct
+ * \return  - RC_OK : Success
+ */
+static rtcm3_rc rtcm3_decode_wrapped_sbp(swiftnav_in_bitstream_t *buff,
+                                         rtcm_msg_wrapped_sbp *msg) {
+  BITSTREAM_DECODE_U16(buff, msg->msg_type, 16);
+  BITSTREAM_DECODE_U16(buff, msg->sender_id, 16);
+  BITSTREAM_DECODE_U8(buff, msg->len, 8);
+  for (uint8_t i = 0; i < msg->len; ++i) {
+    BITSTREAM_DECODE_U8(buff, msg->data[i], 8);
+  }
+
+  return RC_OK;
+}
+
+/** Decode Wrapped Swift RTCM Message
+ *
+ * \return  - RC_OK : Success
+ */
+static rtcm3_rc rtcm3_decode_wrapped_swift_rtcm(void) {
+  return RC_INVALID_MESSAGE;
+}
+
 /** Decode Swift Proprietary Message
  *
  * \param buff The input data buffer
  * \param msg  message struct
  * \return  - RC_OK : Success
  *          - RC_MESSAGE_TYPE_MISMATCH : Message type mismatch
- *          - RC_INVALID_MESSAGE : Nonzero reserved bits (invalid format)
+ *          - RC_INVALID_MESSAGE : Unknown protocol of wrapped message
  */
 rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_in_bitstream_t *buff,
                                      rtcm_msg_swift_proprietary *msg) {
@@ -1508,28 +1534,22 @@ rtcm3_rc rtcm3_decode_4062_bitstream(swiftnav_in_bitstream_t *buff,
   uint32_t msg_num;
   BITSTREAM_DECODE_U32(buff, msg_num, 12);
 
-  if (msg_num != 4062) { /* Unexpected message type. */
+  if (msg_num != SWIFT_PROPRIETARY_MSG) { /* Unexpected message type. */
     return RC_MESSAGE_TYPE_MISMATCH;
   }
 
-  uint32_t reserved_bits;
-  BITSTREAM_DECODE_U32(buff, reserved_bits, 4);
+  BITSTREAM_DECODE_U8(buff, msg->protocol_version, 4);
+  const rtcm_msg_protocol_t protocol_type =
+      to_protocol_type(msg->protocol_version);
 
-  /* These bits are reserved for future use, if they aren't 0 it must be a
-     new format we don't know how to handle. */
-  if (reserved_bits != 0) {
-    return RC_INVALID_MESSAGE;
+  rtcm3_rc return_code = RC_INVALID_MESSAGE;
+  if (protocol_type == WRAPPED_SBP) {
+    return_code = rtcm3_decode_wrapped_sbp(buff, &msg->wrapped_msg.sbp);
+  } else if (protocol_type == WRAPPED_SWIFT_RTCM) {
+    return_code = rtcm3_decode_wrapped_swift_rtcm();
   }
 
-  BITSTREAM_DECODE_U16(buff, msg->msg_type, 16);
-  BITSTREAM_DECODE_U16(buff, msg->sender_id, 16);
-  BITSTREAM_DECODE_U8(buff, msg->len, 8);
-
-  for (uint8_t i = 0; i < msg->len; ++i) {
-    BITSTREAM_DECODE_U8(buff, msg->data[i], 8);
-  }
-
-  return RC_OK;
+  return return_code;
 }
 
 /** Decode Navigation Data Frame

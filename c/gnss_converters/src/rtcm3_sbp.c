@@ -48,6 +48,7 @@
 #include <rtcm3/decode.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_decode.h>
+#include <rtcm3/librtcm_utils.h>
 #include <rtcm3/logging.h>
 #include <rtcm3/ssr_decode.h>
 #include <rtcm3/sta_decode.h>
@@ -107,6 +108,13 @@ static void update_cons_meas_map(constellation_t sbp_cons,
  * the elements to "default" values, this function just resets n_signals to 0,
  * saving computation cost. */
 static void reset_cons_meas_map(struct rtcm3_sbp_state *state);
+
+/**
+ * @brief This function decodes a SBP message wrapped in a Swift Proprietary
+ * message.
+ */
+static void handle_rtcm3_4062_wrapped_sbp(const rtcm_msg_wrapped_sbp *swift_msg,
+                                          struct rtcm3_sbp_state *state);
 
 void rtcm2sbp_init(struct rtcm3_sbp_state *state,
                    TimeTruth *time_truth,
@@ -555,16 +563,17 @@ void rtcm2sbp_convert(const rtcm_msg_data_t *rtcm_msg,
       const rtcm_msg_swift_proprietary *swift_msg =
           &rtcm_msg->message.msg_swift_prop;
 
-      sbp_msg_t sbp_msg;
-      if (SBP_OK == sbp_message_decode(swift_msg->data,
-                                       swift_msg->len,
-                                       NULL,
-                                       (sbp_msg_type_t)swift_msg->msg_type,
-                                       &sbp_msg)) {
-        state->cb_rtcm_to_sbp(swift_msg->sender_id,
-                              swift_msg->msg_type,
-                              &sbp_msg,
-                              state->context);
+      switch (to_protocol_type(swift_msg->protocol_version)) {
+        case WRAPPED_SBP:
+          handle_rtcm3_4062_wrapped_sbp(&swift_msg->wrapped_msg.sbp, state);
+          break;
+        case WRAPPED_SWIFT_RTCM:
+        case WRAPPED_UNKNOWN:
+        default:
+          log_warn(
+              "Unsupported protocol type when decoding Swift proprietary "
+              "message");
+          break;
       }
       break;
     }
@@ -2462,5 +2471,18 @@ static void handle_rtcm3_999_subframe(const rtcm_msg_999 *msg_999,
     }
     default:
       break;
+  }
+}
+
+static void handle_rtcm3_4062_wrapped_sbp(const rtcm_msg_wrapped_sbp *swift_msg,
+                                          struct rtcm3_sbp_state *state) {
+  sbp_msg_t sbp_msg;
+  if (SBP_OK == sbp_message_decode(swift_msg->data,
+                                   swift_msg->len,
+                                   NULL,
+                                   (sbp_msg_type_t)swift_msg->msg_type,
+                                   &sbp_msg)) {
+    state->cb_rtcm_to_sbp(
+        swift_msg->sender_id, swift_msg->msg_type, &sbp_msg, state->context);
   }
 }

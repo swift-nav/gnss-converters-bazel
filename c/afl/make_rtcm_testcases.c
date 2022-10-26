@@ -806,16 +806,19 @@ void make_1033(void) {
 }
 
 void make_4062(void) {
-  rtcm_msg_swift_proprietary msg;
-  msg.msg_type = SBP_MSG_LOG;
-  msg_log_t *log_msg = (msg_log_t *)msg.data;
-  msg.len = sizeof(*log_msg) + 3;
-  msg.sender_id = 0x1000;
+  rtcm_msg_swift_proprietary rtcm_msg;
+  rtcm_msg.protocol_version = 0;
+
+  rtcm_msg_wrapped_sbp *sbp_msg = &rtcm_msg.wrapped_msg.sbp;
+  sbp_msg->msg_type = SBP_MSG_LOG;
+  msg_log_t *log_msg = (msg_log_t *)sbp_msg->data;
+  sbp_msg->len = sizeof(*log_msg) + 3;
+  sbp_msg->sender_id = 0x1000;
   memcpy(log_msg->text, "ABC", 3);
   log_msg->level = 1;
 
   uint8_t payload[4096];
-  uint16_t payload_len = rtcm3_encode_4062(&msg, payload);
+  uint16_t payload_len = rtcm3_encode_4062(&rtcm_msg, payload);
   add_payload_to_output(payload, payload_len);
 
   write_output("4062.rtcm");

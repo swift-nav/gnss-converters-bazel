@@ -11,7 +11,7 @@
  */
 
 #include <assert.h>
-#include <rtcm3/msm_utils.h>
+#include <rtcm3/librtcm_utils.h>
 #include <stdio.h>
 
 #define LIBRTCM_LOG_INTERNAL
@@ -114,4 +114,14 @@ uint8_t find_nth_mask_value(const uint8_t mask_size,
   assert(!"n is larger than count_mask_values");
   /* this will never be reached */
   return 0;
+}
+
+rtcm_msg_protocol_t to_protocol_type(const uint8_t protocol_version) {
+  rtcm_msg_protocol_t output = WRAPPED_UNKNOWN;
+  if (protocol_version == 0) {
+    output = WRAPPED_SBP;
+  } else if (protocol_version == 1) {
+    output = WRAPPED_SWIFT_RTCM;
+  }
+  return output;
 }

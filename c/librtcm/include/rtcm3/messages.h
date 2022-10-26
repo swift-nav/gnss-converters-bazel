@@ -110,6 +110,13 @@ typedef enum rtcm3_rc_e {
   RC_INVALID_MESSAGE = -2
 } rtcm3_rc;
 
+/* Supported protocol types in a Swift proprietary message */
+typedef enum {
+  WRAPPED_UNKNOWN = -1,
+  WRAPPED_SBP,
+  WRAPPED_SWIFT_RTCM
+} rtcm_msg_protocol_t;
+
 typedef struct {
   uint16_t msg_num; /* Msg Num DF002 uint16 12*/
   uint16_t stn_id;  /* Station Id DF003 uint16 12*/
@@ -454,6 +461,23 @@ typedef struct {
   uint16_t sender_id;
   uint8_t len;
   uint8_t data[255];
+} rtcm_msg_wrapped_sbp;
+
+typedef struct {
+  uint16_t message_number;
+  union {
+    rtcm_msg_orbit_clock ssr_orbit_clock;
+    rtcm_msg_code_bias ssr_code_bias;
+    rtcm_msg_phase_bias ssr_phase_bias;
+  } message_contents;
+} rtcm_msg_wrapped_swift_rtcm;
+
+typedef struct {
+  uint8_t protocol_version;
+  union {
+    rtcm_msg_wrapped_sbp sbp;
+    rtcm_msg_wrapped_swift_rtcm swift_rtcm;
+  } wrapped_msg;
 } rtcm_msg_swift_proprietary;
 
 typedef struct {

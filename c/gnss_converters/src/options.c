@@ -14,7 +14,6 @@
 #include <gnss-converters/internal/rtcm3_utils.h>
 #include <gnss-converters/options.h>
 #include <rtcm3/constants.h>
-#include <rtcm3/msm_utils.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/signal.h>
 

@@ -14,8 +14,8 @@
 #include <gnss-converters/internal/rtcm3_utils.h>
 #include <gnss-converters/options.h>
 #include <math.h>
+#include <rtcm3/librtcm_utils.h>
 #include <rtcm3/messages.h>
-#include <rtcm3/msm_utils.h>
 
 #define FLOAT_EPS 1e-6
 

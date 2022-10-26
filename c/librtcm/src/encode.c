@@ -17,7 +17,7 @@
 #include <rtcm3/constants.h>
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_encode.h>
-#include <rtcm3/msm_utils.h>
+#include <rtcm3/librtcm_utils.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -1346,9 +1346,27 @@ rtcm3_rc rtcm3_encode_msm5_bitstream(swiftnav_out_bitstream_t *buff,
   return rtcm3_encode_msm_internal(buff, msg_msm5);
 }
 
+/** Encode Wrapped SBP Message
+ *
+ * \param msg_sbp The input SBP message struct
+ * \param buff Data buffer large enough to hold the message
+ * \return  - RC_OK : Success
+ */
+static rtcm3_rc rtcm3_encode_wrapped_sbp(swiftnav_out_bitstream_t *buff,
+                                         const rtcm_msg_wrapped_sbp *msg_sbp) {
+  BITSTREAM_ENCODE_U16(buff, msg_sbp->msg_type, 16);
+  BITSTREAM_ENCODE_U16(buff, msg_sbp->sender_id, 16);
+  BITSTREAM_ENCODE_U8(buff, msg_sbp->len, 8);
+  for (size_t i = 0; i < msg_sbp->len; ++i) {
+    BITSTREAM_ENCODE_U8(buff, msg_sbp->data[i], 8);
+  }
+
+  return RC_OK;
+}
+
 /** Encode the Swift Proprietary Message
  *
- * \param msg The input RTCM message struct
+ * \param msg_4062 The input RTCM message struct
  * \param buff Data buffer large enough to hold the message
  * \return Number of bytes written or 0 on failure
  */
@@ -1357,18 +1375,22 @@ rtcm3_rc rtcm3_encode_4062_bitstream(
     const rtcm_msg_swift_proprietary *msg_4062) {
   assert(buff);
 
-  const uint32_t MSG_NUM = 4062;
-  BITSTREAM_ENCODE_U32(buff, MSG_NUM, 12);
-  /* These 4 bits are currently reserved, and should always be 0 */
-  BITSTREAM_ENCODE_U8(buff, (uint8_t)0, 4);
-  BITSTREAM_ENCODE_U16(buff, msg_4062->msg_type, 16);
-  BITSTREAM_ENCODE_U16(buff, msg_4062->sender_id, 16);
-  BITSTREAM_ENCODE_U8(buff, msg_4062->len, 8);
-  for (size_t i = 0; i < msg_4062->len; ++i) {
-    BITSTREAM_ENCODE_U8(buff, msg_4062->data[i], 8);
-  }
+  BITSTREAM_ENCODE_U32(buff, SWIFT_PROPRIETARY_MSG, 12);
+  BITSTREAM_ENCODE_U8(buff, msg_4062->protocol_version, 4);
 
-  return RC_OK;
+  rtcm3_rc return_code = RC_INVALID_MESSAGE;
+  // SBP origin is always wrapped as SBP and other cases such as encoding from
+  // SBP to SWIFT RTCM are not expected to happen.
+  switch (to_protocol_type(msg_4062->protocol_version)) {
+    case WRAPPED_SBP:
+      return_code = rtcm3_encode_wrapped_sbp(buff, &msg_4062->wrapped_msg.sbp);
+      break;
+    case WRAPPED_SWIFT_RTCM:
+    case WRAPPED_UNKNOWN:
+    default:
+      break;
+  }
+  return return_code;
 }
 
 rtcm3_rc rtcm3_encode_payload_bitstream(swiftnav_out_bitstream_t *buff,

@@ -144,4 +144,6 @@ typedef enum {
 
 #define PRN_INVALID 0
 
+#define SWIFT_PROPRIETARY_MSG 4062
+
 #endif /* SWIFTNAV_RTCM3_CONSTANTS_H */

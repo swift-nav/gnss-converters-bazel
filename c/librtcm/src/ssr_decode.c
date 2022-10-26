@@ -13,7 +13,7 @@
 #include <assert.h>
 #include <librtcm/internal/decode_helpers.h>
 #include <rtcm3/bits.h>
-#include <rtcm3/msm_utils.h>
+#include <rtcm3/librtcm_utils.h>
 #include <rtcm3/ssr_decode.h>
 #include <stdio.h>
 #include <swiftnav/bitstream.h>

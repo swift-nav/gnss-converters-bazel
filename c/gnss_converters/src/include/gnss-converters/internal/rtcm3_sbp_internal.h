@@ -16,7 +16,6 @@
 #include <gnss-converters/internal/common.h>
 #include <gnss-converters/rtcm3_sbp.h>
 #include <rtcm3/messages.h>
-#include <rtcm3/msm_utils.h>
 #include <swiftnav/bitstream.h>
 #include <swiftnav/constants.h>
 #include <swiftnav/gnss_time.h>

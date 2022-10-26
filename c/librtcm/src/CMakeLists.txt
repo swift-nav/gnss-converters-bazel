@@ -9,21 +9,21 @@ set(librtcm_HEADERS
   ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/eph_decode.h
   ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/eph_encode.h
   ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/ssr_decode.h
-  ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/msm_utils.h
+  ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/librtcm_utils.h
   ${PROJECT_SOURCE_DIR}/librtcm/include/rtcm3/logging.h
   )
 
 swift_add_library(rtcm
   SOURCES
+    bits.c
     decode.c
     encode.c
-    msm_utils.c
     eph_decode.c
     eph_encode.c
+    librtcm_utils.c
+    logging.c
     ssr_decode.c
     sta_decode.c
-    bits.c
-    logging.c
   REMOVE_COMPILE_OPTIONS
     -Wconversion -Wstack-protector
   )

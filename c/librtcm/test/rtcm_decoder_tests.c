@@ -18,8 +18,8 @@
 #include <rtcm3/encode.h>
 #include <rtcm3/eph_decode.h>
 #include <rtcm3/eph_encode.h>
+#include <rtcm3/librtcm_utils.h>
 #include <rtcm3/messages.h>
-#include <rtcm3/msm_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2194,27 +2194,31 @@ void test_rtcm_msm7(void) {
 
 void test_rtcm_4062(void) {
   rtcm_msg_swift_proprietary msg_in;
-  msg_in.msg_type = 12345;
-  msg_in.sender_id = 56789;
-  msg_in.len = 255;
-  for (uint8_t i = 0; i < msg_in.len; ++i) {
-    msg_in.data[i] = rand();
+  msg_in.protocol_version = 0;
+
+  rtcm_msg_wrapped_sbp *sbp_msg_in = &msg_in.wrapped_msg.sbp;
+  sbp_msg_in->msg_type = 12345;
+  sbp_msg_in->sender_id = 56789;
+  sbp_msg_in->len = 255;
+  for (uint8_t i = 0; i < sbp_msg_in->len; ++i) {
+    sbp_msg_in->data[i] = rand();
   }
 
   uint8_t buff[RTCM3_MAX_MSG_LEN] = {0};
   uint16_t num_bytes = rtcm3_encode_4062(&msg_in, buff);
 
-  assert(num_bytes == (msg_in.len + 7));  // RTCM msg type + SBP msg type +
-                                          // SBP sender id + SBP len
+  assert(num_bytes == (sbp_msg_in->len + 7));  // RTCM msg type + SBP msg type +
+                                               // SBP sender id + SBP len
 
   rtcm_msg_swift_proprietary msg_out;
   rtcm3_rc ret = rtcm3_decode_4062(buff, &msg_out);
 
-  assert((RC_OK == ret) && (msg_in.msg_type == msg_out.msg_type) &&
-         (msg_in.sender_id == msg_out.sender_id) &&
-         (msg_in.len == msg_out.len));
-  for (uint8_t i = 0; i < msg_in.len; ++i) {
-    assert(msg_in.data[i] == msg_out.data[i]);
+  rtcm_msg_wrapped_sbp *sbp_msg_out = &msg_out.wrapped_msg.sbp;
+  assert((RC_OK == ret) && (sbp_msg_in->msg_type == sbp_msg_out->msg_type) &&
+         (sbp_msg_in->sender_id == sbp_msg_out->sender_id) &&
+         (sbp_msg_in->len == sbp_msg_out->len));
+  for (uint8_t i = 0; i < sbp_msg_in->len; ++i) {
+    assert(sbp_msg_in->data[i] == sbp_msg_out->data[i]);
   }
 }
 

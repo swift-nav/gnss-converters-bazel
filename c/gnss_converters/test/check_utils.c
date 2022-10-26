@@ -19,6 +19,7 @@
 #include <gnss-converters/sbp_rtcm3.h>
 #include <libsbp/legacy/logging.h>
 #include <math.h>
+#include <rtcm3/librtcm_utils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

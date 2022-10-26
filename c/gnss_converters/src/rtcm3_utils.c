@@ -24,7 +24,7 @@
 #include <assert.h>
 #include <gnss-converters/internal/rtcm3_utils.h>
 #include <rtcm3/constants.h>
-#include <rtcm3/msm_utils.h>
+#include <rtcm3/librtcm_utils.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <swiftnav/constants.h>

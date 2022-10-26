@@ -23,6 +23,7 @@ msm_enum to_msm_type(uint16_t msg_num);
 rtcm_constellation_t to_constellation(uint16_t msg_num);
 uint8_t count_mask_values(uint8_t mask_size, const bool mask[]);
 uint8_t find_nth_mask_value(uint8_t mask_size, const bool mask[], uint8_t n);
+rtcm_msg_protocol_t to_protocol_type(const uint8_t protocol_version);
 
 #ifdef __cplusplus
 }

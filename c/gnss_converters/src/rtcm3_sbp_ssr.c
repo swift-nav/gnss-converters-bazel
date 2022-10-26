@@ -14,7 +14,6 @@
 #include <gnss-converters/internal/rtcm3_sbp_internal.h>
 #include <libsbp/v4/ssr.h>
 #include <math.h>
-#include <rtcm3/msm_utils.h>
 #include <string.h>
 
 #define SSR_MESSAGE_LENGTH 256
