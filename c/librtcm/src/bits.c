@@ -14,6 +14,7 @@
 #include <librtcm/internal/encode_helpers.h>
 #include <rtcm3/bits.h>
 #include <rtcm3/messages.h>
+#include <swiftnav/logging.h>
 
 /** Get bit field from buffer as an unsigned integer.
  * Unpacks `len` bits at bit position `pos` from the start of the buffer.
@@ -180,8 +181,15 @@ void rtcm_setbitsl(uint8_t *buff, uint32_t pos, uint32_t len, int64_t data) {
 int32_t rtcm_get_sign_magnitude_bit(const uint8_t *buff,
                                     uint32_t pos,
                                     uint8_t len) {
-  int32_t value = rtcm_getbitu(buff, pos + 1, len - 1);
-  return rtcm_getbitu(buff, pos, 1) ? -value : value;
+  uint32_t sign = rtcm_getbitu(buff, pos, 1);
+  uint32_t value = rtcm_getbitu(buff, pos + 1, len - 1);
+
+  // Refer to Note 1, page 36 "RTCM STANDARD 10403.3": Negative zero is not used
+  if ((sign == 1) && (value == 0)) {
+    log_error("Negative zero is invalid in Sign-magnitude representation.");
+    assert(false);
+  }
+  return (sign == 1) ? -(int32_t)value : (int32_t)value;
 }
 
 /* Set sign-magnitude bits, See Note 1, Table 3.3-1, RTCM 3.3
@@ -201,11 +209,17 @@ void rtcm_set_sign_magnitude_bit(uint8_t *buff,
 rtcm3_rc rtcm_get_sign_magnitude_bitstream(swiftnav_in_bitstream_t *buff,
                                            uint8_t len,
                                            s32 *out) {
-  uint32_t sign;
-  int32_t value;
-  BITSTREAM_DECODE_S32(buff, sign, 1);
+  uint32_t sign = 0;
+  uint32_t value = 0;
+  BITSTREAM_DECODE_U32(buff, sign, 1);
   BITSTREAM_DECODE_U32(buff, value, len - 1);
-  *out = sign ? -(s32)value : (s32)value;
+
+  // Refer to Note 1, page 36 "RTCM STANDARD 10403.3": Negative zero is not used
+  if ((sign == 1) && (value == 0)) {
+    log_error("Negative zero is invalid in Sign-magnitude representation.");
+    return RC_INVALID_MESSAGE;
+  }
+  *out = (sign == 1 ? -(int32_t)value : (int32_t)value);
   return RC_OK;
 }
 
