@@ -1,5 +1,5 @@
 load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_library", "swift_cc_test")
-load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file", "var")
 
 # In the cmake build this is a object target
 # Bazel doesn't have an equivalent capability so
@@ -93,7 +93,7 @@ configure_file(
     name = "config",
     out = "config.h",
     template = "test/config.h.in",
-    vars = {"RELATIVE_PATH_PREFIX": "c/gnss_converters/test"},
+    vars = var("RELATIVE_PATH_PREFIX", "c/gnss_converters/test"),
 )
 
 swift_cc_test(

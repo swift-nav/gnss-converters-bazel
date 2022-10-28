@@ -1,5 +1,5 @@
-load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
-load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_tool_library", "swift_cc_tool", "swift_cc_test")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file", "var")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_test", "swift_cc_tool", "swift_cc_tool_library")
 
 swift_cc_tool_library(
     name = "rtcm3tosbp_impl",
@@ -29,12 +29,11 @@ configure_file(
     name = "config",
     out = "config.h",
     template = "test/config.h.in",
-    vars = {"RELATIVE_PATH_PREFIX": "c/rtcm3tosbp/test"},
+    vars = var("RELATIVE_PATH_PREFIX", "c/rtcm3tosbp/test"),
 )
 
 swift_cc_test(
     name = "rtcm3tosbp_test",
-    type = UNIT,
     srcs = [
         "test/check_rtcm3.c",
         "test/check_rtcm3.h",
@@ -44,6 +43,7 @@ swift_cc_test(
     ],
     data = glob(["test/data/**"]),
     includes = ["."],
+    type = UNIT,
     deps = [
         ":rtcm3tosbp",
         "//c/gnss_converters",

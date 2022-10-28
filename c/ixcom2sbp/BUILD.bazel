@@ -1,4 +1,4 @@
-load("@gnss-converters//bazel:configure_file.bzl", "configure_file")
+load("@gnss-converters//bazel:configure_file.bzl", "configure_file", "var")
 load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_test", "swift_cc_tool", "swift_cc_tool_library")
 
 swift_cc_tool_library(
@@ -29,7 +29,7 @@ configure_file(
     name = "config",
     out = "config.h",
     template = "test/config.h.in",
-    vars = {"RELATIVE_PATH_PREFIX": "c/ixcom2sbp/test"},
+    vars = var("RELATIVE_PATH_PREFIX", "c/ixcom2sbp/test"),
 )
 
 swift_cc_test(
