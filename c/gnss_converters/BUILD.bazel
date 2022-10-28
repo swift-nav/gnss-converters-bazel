@@ -8,6 +8,7 @@ swift_cc_library(
     name = "gnss_converters_c11",
     srcs = ["src/time_truth.c"],
     hdrs = ["include/gnss-converters/time_truth.h"],
+    copts = ["-std=gnu11"],
     includes = ["include"],
     deps = [
         "@libsbp//c:sbp",
@@ -67,12 +68,15 @@ swift_cc_library(
         "-Iexternal/gnss-converters/c/gnss_converters/src",
         "-Iexternal/gnss-converters/c/gnss_converters/src/ubx_ephemeris",
         "-UNDEBUG",
-        "-std=c++14",
-    ],  #TODO: move c/c++ standard settings to toolchain.
+    ],
     includes = [
         "include",
         # Making public since test relies on internal headers.
         "src/include",
+    ],
+    nocopts = [
+        "-Wconversion",
+        "-Wstack-protector"
     ],
     visibility = ["//visibility:public"],
     deps = [

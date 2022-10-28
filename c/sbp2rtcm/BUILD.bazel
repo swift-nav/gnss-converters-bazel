@@ -9,6 +9,7 @@ swift_cc_tool_library(
         "src/include/sbp2rtcm/internal/sbp2rtcm.h",
     ],
     includes = ["src/include"],
+    nocopts = ["-Wconversion"],
     deps = [
             "//c/gnss_converters:gnss_converters",
     ],

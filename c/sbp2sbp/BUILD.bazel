@@ -8,6 +8,7 @@ swift_cc_tool_library(
         "src/sbp2sbp_decoder.c",
     ],
     includes = ["src/include"],
+    nocopts = ["-Wconversion"],
     deps = [
         "@libsbp//c:sbp",
         "@libswiftnav//:swiftnav",
@@ -17,6 +18,7 @@ swift_cc_tool_library(
 swift_cc_tool(
     name = "sbp2sbp_decoder",
     srcs = ["src/sbp2sbp_decoder_main.c"],
+    nocopts = ["-Wconversion"],
     deps = [":sbp2sbp_decoder_impl"],
 )
 
@@ -28,6 +30,7 @@ swift_cc_tool_library(
         "src/sbp2sbp_encoder.c",
     ],
     includes = ["src/include"],
+    nocopts = ["-Wconversion"],
     deps = [
         "@libsbp//c:sbp",
         "@libswiftnav//:swiftnav",
@@ -37,5 +40,6 @@ swift_cc_tool_library(
 swift_cc_tool(
     name = "sbp2sbp_encoder",
     srcs = ["src/sbp2sbp_encoder_main.c"],
+    nocopts = ["-Wconversion"],
     deps = [":sbp2sbp_encoder_impl"],
 )

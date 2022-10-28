@@ -26,8 +26,10 @@ swift_cc_tool_library(
         "parser/parser.h",
         "parser/read_little_endian.h",
     ],
-    includes = [
-        ".",
+    includes = ["."],
+    nocopts = [
+        "-Wconversion",
+        "-Wstack-protector"
     ],
     deps = [
         "@libswiftnav//:swiftnav",
@@ -46,10 +48,9 @@ swift_cc_tool_library(
     hdrs = [
         "src/include/nov2sbp/internal/nov2sbp.h",
     ],
-    copts = [
-        "-UNDEBUG",
-    ],
+    copts = ["-UNDEBUG"],
     includes = ["src/include"],
+    nocopts = ["-Wconversion"],
     deps = [
         ":novatel_parser",
         "@libsbp//c:sbp",

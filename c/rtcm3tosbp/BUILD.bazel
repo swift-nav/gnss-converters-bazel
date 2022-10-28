@@ -12,6 +12,7 @@ swift_cc_tool_library(
         "src/include/rtcm3tosbp/internal/rtcm3tosbp.h",
     ],
     includes = ["src/include"],
+    nocopts = ["-Wconversion"],
     deps = [
         "//c/gnss_converters",
     ],
@@ -20,6 +21,7 @@ swift_cc_tool_library(
 swift_cc_tool(
     name = "rtcm3tosbp",
     srcs = ["src/rtcm3tosbp_main.c"],
+    nocopts = ["-Wconversion"],
     deps = [":rtcm3tosbp_impl"],
 )
 

@@ -17,6 +17,7 @@ swift_cc_library(
         "include",
         "src/include",
     ],
+    nocopts = ["-Wconversion"],
     visibility = ["//visibility:public"],
     deps = [
         "@libswiftnav//:swiftnav",

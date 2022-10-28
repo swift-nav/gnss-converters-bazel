@@ -22,9 +22,9 @@ swift_cc_library(
     ],
     copts = [
         "-UNDEBUG",
-        "-std=c++14",
     ],
     includes = ["include"],
+    nocopts = ["-Wstack-protector"],
     deps = [
         "//c/gnss_converters",
         "//c/gnss_converters_extra",
