@@ -86,7 +86,7 @@ pipeline {
                 stage('STEP Build') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-step:2022-10-20'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-step:2022-10-28'
                         }
                     }
                     steps {
@@ -99,7 +99,7 @@ pipeline {
                 stage('Sonarcloud') {
                     agent {
                         docker {
-                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-09-28'
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel:2022-10-28'
                         }
                     }
                     steps {
