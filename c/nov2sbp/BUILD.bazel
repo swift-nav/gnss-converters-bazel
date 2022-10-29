@@ -29,7 +29,8 @@ swift_cc_tool_library(
     includes = ["."],
     nocopts = [
         "-Wconversion",
-        "-Wstack-protector"
+        "-Wstack-protector",
+        "-Wcast-align"
     ],
     deps = [
         "@libswiftnav//:swiftnav",
