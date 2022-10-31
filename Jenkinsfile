@@ -111,6 +111,26 @@ pipeline {
                         }
                     }
                 }
+                stage('Static Code Analysis') {
+                    agent {
+                        docker {
+                            image '571934480752.dkr.ecr.us-west-2.amazonaws.com/swift-build-bazel-qac:2022-10-20'
+                        }
+                    }
+                    steps {
+                        gitPrep()
+                        script {
+                            sh('bazel run //:qac_compile_commands')
+                            sh('./qac/rule_configuration_generator.py > autosar.rcf')
+                        }
+                        withEnv(["BUILD_ROOT=${env.WORKSPACE}", "GIT_TAG=${env.GIT_COMMIT}", "QAC_RCF_PATH=${env.WORKSPACE}/autosar.rcf"]) {
+                            withCredentials([usernamePassword(credentialsId: 'helix-qac-dashboard-login', usernameVariable: 'QAC_UPLOAD_SERVER_USERNAME', passwordVariable: 'QAC_UPLOAD_SERVER_PASSWORD')]) {
+                                sh('qac || true')
+                                sh('qac upload')
+                            }
+                        }
+                    }
+                }
             }
         }
     }
