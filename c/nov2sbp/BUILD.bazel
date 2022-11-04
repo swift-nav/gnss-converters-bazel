@@ -1,4 +1,4 @@
-load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_tool", "swift_cc_tool_library", "swift_cc_test")
+load("@gnss-converters//bazel:swift_cc_defs.bzl", "UNIT", "swift_cc_test", "swift_cc_tool", "swift_cc_tool_library")
 
 swift_cc_tool_library(
     name = "novatel_parser",
@@ -30,10 +30,31 @@ swift_cc_tool_library(
     nocopts = [
         "-Wconversion",
         "-Wstack-protector",
-        "-Wcast-align"
+        "-Wcast-align",
     ],
     deps = [
         "@libswiftnav//:swiftnav",
+    ],
+)
+
+swift_cc_test(
+    name = "novatel_parser_test",
+    srcs = [
+        "parser/catch/catch.cpp",
+        "parser/catch/catch.hpp",
+        "parser/test_parser.cc",
+        "parser/test_read_little_endian.cc",
+    ],
+    data = [
+        "data",
+    ],
+    defines = [
+        "UNIT_TEST_DATA_PATH=\\\"c/nov2sbp/data\\\"",
+    ],
+    includes = ["parser"],
+    type = UNIT,
+    deps = [
+        ":novatel_parser",
     ],
 )
 
